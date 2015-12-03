@@ -454,7 +454,6 @@ if (clip->fade_in &&
                         gedl_get_clip2_path (edl), gedl_get_clip2_frame_no (edl), edl->source[1].filter_graph,
                         video_width, video_height, 
                         edl->mix);
-        fprintf (stderr, "%s\n", frame_recipe);
 
         hash = g_checksum_new (G_CHECKSUM_MD5);
         g_checksum_update (hash, (void*)frame_recipe, -1);
@@ -468,7 +467,6 @@ if (clip->fade_in &&
             if (!edl->source[0].audio)
               edl->source[0].audio = gegl_audio_fragment_new (44100, 2, 0, 4000);
             gegl_meta_get_audio (cache_path, edl->source[0].audio);
-            fprintf (stderr, "!\n");
           }
         else
           {
@@ -515,7 +513,7 @@ if (clip->fade_in &&
         }
 
           /* write cached render of this frame */
-          if (1 || make_cache && (clip2 || clip->filter_graph)){
+          if (1 || (make_cache && (clip2 || clip->filter_graph))){
             gchar *cache_path = g_strdup_printf ("/tmp/gedl/%s", g_checksum_get_string(hash));
             GeglNode *save_graph = gegl_node_new ();
             GeglNode *save;
@@ -761,14 +759,12 @@ GeglEDL *gedl_new_from_string (const char *string)
 {
   GString *line = g_string_new ("");
   GeglEDL *edl = gedl_new ();
-  fprintf (stderr, "[[%s]]\n", string);
   for (const char *p = string; p==string || *(p-1); p++)
   {
     switch (*p)
     {
       case 0:
       case '\n':
-       fprintf (stderr, "[%s]\n", line->str);
        gedl_parse_line (edl, line->str);
        g_string_assign (line, "");
        break;
