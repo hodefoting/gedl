@@ -1,0 +1,100 @@
+#ifndef GEDL_H
+#define GEDL_H
+
+typedef struct _GeglEDL GeglEDL;
+
+int gegl_make_thumb_video (const char *path, const char *thumb_path);
+const char *compute_cache_path (const char *path);
+void     gegl_make_video_cache (const char *path, const char *cache_path);
+
+
+GeglEDL *gedl_new                   (void);
+void     gedl_free                  (GeglEDL *edl);
+void     gedl_set_fps               (GeglEDL *edl, double fps);
+double gedl_get_fps                 (GeglEDL *edl);
+int    gedl_get_frames              (GeglEDL *edl);
+double gedl_get_time                (GeglEDL *edl);
+void gedl_parse_line                (GeglEDL *edl, const char *line);
+GeglEDL *gedl_new_from_path         (const char *path);
+GeglAudioFragment  *gedl_get_audio  (GeglEDL *edl);
+GeglBuffer *gedl_get_buffer         (GeglEDL *edl);
+GeglBuffer *gedl_get_buffer2        (GeglEDL *edl);
+double gedl_get_mix                 (GeglEDL *edl);
+const char*gedl_get_clip2_path      (GeglEDL *edl);
+int  gedl_get_clip2_frame_no        (GeglEDL *edl);
+void gedl_set_frame                 (GeglEDL *edl, int    frame);
+void gedl_set_time                  (GeglEDL *edl, double seconds);
+int    gedl_get_frame               (GeglEDL *edl);
+const char *gedl_get_clip_path      (GeglEDL *edl);
+int gedl_get_clip_frame_no          (GeglEDL *edl);
+char *gedl_serialise                (GeglEDL *edl);
+
+
+/*********/
+typedef struct Clip
+{
+  char  *path;  /*path to media file */
+  int    start; /*frame number starting with 0 */
+  int    end;   /*last frame, inclusive fro single frame, make equal to start */
+  
+  double fps;
+  int    duration;
+  int    fade_out; /* the main control for fading in.. */
+  int    fade_in;  /* implied by previous clip fading */
+
+  int    fade_pad_start; 
+  int    fade_pad_end;
+
+  int    is_image;
+
+
+  char  *filter_graph; /* chain of gegl filters */
+} Clip;
+
+typedef struct FrameSource {
+  int                clip_frame_no;
+  const char        *clip_path;
+  GeglBuffer        *buffer;
+  GeglAudioFragment *audio;
+  const char        *filter_graph;
+  GeglNode          *loader;
+  GeglNode          *store_buf;
+  char              *cached_filter_graph;
+} FrameSource;
+
+#if 0
+void frame_source_get_buffer (FrameSource *fsource, int frame_no,
+                              GeglBuffer **buffer, GeglAudio **audio);
+#endif
+struct _GeglEDL
+{
+  //GList             *clip;
+  GList             *clips;
+  int                frame;
+  double             fps;
+  GeglNode          *gegl;
+  int                width;
+  int                height;
+  double             mix;
+
+  GeglNode          *cache_loader;
+
+  FrameSource        source[2];
+} _GeglEDL;
+
+
+Clip *clip_new (void);
+void clip_free (Clip *clip);
+const char *clip_get_path (Clip *clip);
+void clip_set_path (Clip *clip, const char *path);
+int clip_get_start (Clip *clip);
+int clip_get_end (Clip *clip);
+int clip_get_frames (Clip *clip);
+void clip_set_start (Clip *clip, int start);
+void clip_set_end (Clip *clip, int end);
+void clip_set_range (Clip *clip, int start, int end);
+void clip_set_full (Clip *clip, const char *path, int start, int end);
+Clip *clip_new_full (const char *path, int start, int end);
+
+
+#endif
