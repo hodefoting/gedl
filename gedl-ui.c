@@ -118,6 +118,7 @@ static void released_clip (MrgEvent *e, void *data1, void *data2)
 {
   Clip *clip = data1;
   frame_no = e->x;
+  //frame_no = active_clip->abs_start;
   rig_frame (frame_no);
   active_clip = clip;
   mrg_queue_draw (e->mrg, NULL);
@@ -140,6 +141,7 @@ static void nav_right (MrgEvent *event, void *data1, void *data2)
     GList *iter = g_list_find (edl->clips, active_clip);
     if (iter) iter = iter->next;
     if (iter) active_clip = iter->data;
+    frame_no = active_clip->abs_start;
   }
   rig_frame (frame_no);
   mrg_event_stop_propagate (event);
@@ -192,6 +194,7 @@ static void nav_left (MrgEvent *event, void *data1, void *data2)
     GList *iter = g_list_find (edl->clips, active_clip);
     if (iter) iter = iter->prev;
     if (iter) active_clip = iter->data;
+    frame_no = active_clip->abs_start;
   }
   rig_frame (frame_no);
   mrg_event_stop_propagate (event);
@@ -247,6 +250,8 @@ static void clip_end_dec (MrgEvent *event, void *data1, void *data2)
   if (active_clip)
     {
       active_clip->end--;
+      rig_frame (--frame_no);
+      rig_frame (++frame_no);
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
     }
@@ -256,6 +261,8 @@ static void clip_start_inc (MrgEvent *event, void *data1, void *data2)
   if (active_clip)
     {
       active_clip->start++;
+      rig_frame (--frame_no);
+      rig_frame (++frame_no);
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
     }
@@ -265,11 +272,14 @@ static void clip_start_dec (MrgEvent *event, void *data1, void *data2)
   if (active_clip)
     {
       active_clip->start--;
+      rig_frame (--frame_no);
+      rig_frame (++frame_no);
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
     }
 }
 
+long last_frame = 0;
 
 void gedl_ui (Mrg *mrg, void *data);
 void gedl_ui (Mrg *mrg, void *data)
@@ -279,9 +289,8 @@ void gedl_ui (Mrg *mrg, void *data)
   GList *l;
   float y = 50;
   int t = 0;
-  //static int frame_no = 0;
     cairo_t *cr = mrg_cr (mrg);
-  mrg_gegl_blit (mrg, 0, 0, mrg_width (mrg), mrg_height (mrg),
+  mrg_gegl_blit (mrg, 1, 0, mrg_width (mrg), mrg_height (mrg),
                  result, 0,0,1.0, 1.0);
 
   for (l = edl->clips; l; l = l->next)
@@ -303,6 +312,7 @@ void gedl_ui (Mrg *mrg, void *data)
     cairo_fill (cr);
     t += clip_get_frames (clip);
     //mrg_printf (mrg, "%s %i %i\n", clip->path, clip->start, clip->end);
+
   }
     mrg_printf (mrg, "frame: %i\n", frame_no);
 
@@ -317,6 +327,7 @@ void gedl_ui (Mrg *mrg, void *data)
     cairo_fill (cr);
     if (playing) {
       frame_no++;
+      if (frame_no > t ) frame_no = 0;
       rig_frame (frame_no);
       mrg_queue_draw (mrg, NULL);
     }
@@ -350,4 +361,3 @@ int gedl_ui_main (GeglEDL *edl)
 
   return 0;
 }
-

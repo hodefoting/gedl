@@ -308,9 +308,6 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
   if (edl->frame == frame && frame != 0 && 0)
     return;
 
-
-
-
   edl->source[1].clip_path = "unknown";
   edl->source[1].clip_frame_no = 0;
   edl->source[1].filter_graph = NULL;
@@ -323,6 +320,8 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
   {
     Clip *clip = l->data;
     int clip_frames = clip_get_frames (clip);
+
+    clip->abs_start = clip_start;
     if (frame - clip_start < clip_frames)
     {
       const char *clip_path = clip_get_path (clip);

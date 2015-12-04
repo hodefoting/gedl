@@ -49,6 +49,9 @@ typedef struct Clip
 
 
   char  *filter_graph; /* chain of gegl filters */
+
+
+  int    abs_start;
 } Clip;
 
 typedef struct FrameSource {
