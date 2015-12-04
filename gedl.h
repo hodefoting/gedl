@@ -7,6 +7,14 @@ int gegl_make_thumb_video (const char *path, const char *thumb_path);
 const char *compute_cache_path (const char *path);
 void     gegl_make_video_cache (const char *path, const char *cache_path);
 
+#define CACHE_TRY_SIMPLE     (1<<0)
+#define CACHE_TRY_MIX        (1<<1)
+#define CACHE_TRY_FILTERED  (1<<2)
+#define CACHE_TRY_ALL        (CACHE_TRY_SIMPLE | CACHE_TRY_FILTERED | CACHE_TRY_MIX)
+#define CACHE_MAKE_FILTERED (1<<3)
+#define CACHE_MAKE_SIMPLE    (1<<4)
+#define CACHE_MAKE_MIX       (1<<5)
+#define CACHE_MAKE_ALL       (CACHE_MAKE_SIMPLE|CACHE_MAKE_MIX|CACHE_MAKE_FILTERED)
 
 GeglEDL *gedl_new                   (void);
 void     gedl_free                  (GeglEDL *edl);
@@ -71,16 +79,17 @@ void frame_source_get_buffer (FrameSource *fsource, int frame_no,
 #endif
 struct _GeglEDL
 {
-  //GList             *clip;
-  GList             *clips;
-  int                frame;
-  double             fps;
-  GeglNode          *gegl;
-  int                width;
-  int                height;
-  double             mix;
+  char       *path;
+  GList      *clips;
+  int         frame;
+  double      fps;
+  GeglNode   *gegl;
+  int         width;
+  int         height;
+  double      mix;
 
-  GeglNode          *cache_loader;
+  GeglNode   *cache_loader;
+  int         cache_flags;
 
   FrameSource        source[2];
 } _GeglEDL;

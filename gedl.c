@@ -24,14 +24,8 @@ chunks of 320x240 encoded mp4 video files of 5s that contains render of video, f
 /* GEGL edit decision list - a digital video cutter and splicer */
 #include "gedl.h"
 
-#define CACHE_TRY_SIMPLE     (1<<0)
-#define CACHE_TRY_MIX        (1<<1)
-#define CACHE_TRY_FILTERED  (1<<2)
-#define CACHE_TRY_ALL        (CACHE_TRY_SIMPLE | CACHE_TRY_FILTERED | CACHE_TRY_MIX)
-#define CACHE_MAKE_FILTERED (1<<2)
-#define CACHE_MAKE_SIMPLE    (1<<3)
-#define CACHE_MAKE_MIX       (1<<3)
-#define CACHE_MAKE_ALL       (CACHE_MAKE_SIMPLE|CACHE_MAKE_MIX|CACHE_MAKE_FILTERED)
+
+
 
 GeglNode *nop_raw;
 GeglNode *nop_transformed;
@@ -58,8 +52,6 @@ gegl_meta_get_audio (const char        *path,
 #define DEFAULT_frame_start       0
 #define DEFAULT_frame_end         0
 
-int make_cache = 1;
-int use_cache = 1;
 
 const char *output_path      = DEFAULT_output_path;
 const char *video_codec      = DEFAULT_video_codec;
@@ -238,6 +230,7 @@ GeglEDL *gedl_new           (void)
   GeglEDL *edl = g_malloc0(sizeof (GeglEDL));
   int s;
   edl->gegl = gegl_node_new ();
+  edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
 
   edl->cache_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:jpg-load", NULL);
   for (s = 0; s < 2; s++)
@@ -268,6 +261,8 @@ void     gedl_free          (GeglEDL *edl)
     clip_free (edl->clips->data);
     edl->clips = g_list_remove (edl->clips, edl->clips->data);
   }
+  if (edl->path)
+    g_free (edl->path);
  
   g_object_unref (edl->gegl);
   g_free (edl);
@@ -458,7 +453,7 @@ if (clip->fade_in &&
         g_checksum_update (hash, (void*)frame_recipe, -1);
         cache_path  = g_strdup_printf ("/tmp/gedl/%s", g_checksum_get_string(hash));
 
-        if (g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) && use_cache)
+        if (g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) && (edl->cache_flags & CACHE_TRY_ALL))
           {
             was_cached = 1;
             gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
@@ -512,8 +507,12 @@ if (clip->fade_in &&
         }
 
           /* write cached render of this frame */
-          if (1 || (make_cache && (clip2 || clip->filter_graph))){
-            gchar *cache_path = g_strdup_printf ("/tmp/gedl/%s", g_checksum_get_string(hash));
+          if (edl->cache_flags & CACHE_MAKE_ALL){ //1 || (make_cache && (clip2 || clip->filter_graph))){
+            gchar *cache_path = g_strdup_printf ("/tmp/gedl/%s~", g_checksum_get_string(hash));
+            gchar *cache_path_final = g_strdup_printf ("/tmp/gedl/%s", g_checksum_get_string(hash));
+            if (!g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
+                !g_file_test (cache_path_final, G_FILE_TEST_IS_REGULAR))
+            {
             GeglNode *save_graph = gegl_node_new ();
             GeglNode *save;
             save = gegl_node_new_child (save_graph, "operation", "gegl:jpg-save", "path", cache_path, NULL);
@@ -521,8 +520,11 @@ if (clip->fade_in &&
             gegl_node_process (save);
             if (edl->source[0].audio)
               gegl_meta_set_audio (cache_path, edl->source[0].audio);
+              rename (cache_path, cache_path_final);
+              g_object_unref (save_graph);
+            }
             g_free (cache_path);
-            g_object_unref (save_graph);
+            g_free (cache_path_final);
           }
         }
 
@@ -793,6 +795,7 @@ GeglEDL *gedl_new_from_string (const char *string)
 GeglEDL *gedl_new_from_path (const char *path)
 {
   GeglEDL *edl = gedl_new ();
+  edl->path = g_strdup (path);
   FILE *file = fopen (path, "r");
   if (file)
     {
@@ -834,7 +837,6 @@ int gedl_get_clip2_frame_no      (GeglEDL *edl)
 {
   return edl->source[1].clip_frame_no;
 }
-
 
 
 static void setup (void)
@@ -906,10 +908,13 @@ void rig_frame (int frame_no)
   gegl_node_set (encode, "audio", gedl_get_audio (edl), NULL);
 }
 
+int skip_encode = 0;
+
 static void process_frame (int frame_no)
 {
   rig_frame (frame_no);
-  gegl_node_process (encode);
+  if (!skip_encode)
+    gegl_node_process (encode);
 }
 
 static void teardown (void)
@@ -954,6 +959,7 @@ int gegl_make_thumb_video (const char *path, const char *thumb_path)
   return 0;
 }
 
+
 int gedl_ui_main (GeglEDL *edl);
 int main (int argc, char **argv)
 {
@@ -974,7 +980,12 @@ int main (int argc, char **argv)
   edl = gedl_new_from_path (edl_path);
   setup ();
 
-  return gedl_ui_main (edl);
+  for (int i = 1; argv[i]; i++)
+    if (!strcmp (argv[i], "-c"))
+       skip_encode = 1;
+    else
+    if (!strcmp (argv[i], "-ui"))
+      return gedl_ui_main (edl);
 
   tot_frames  = gedl_get_frames (edl);
   if (frame_end == 0)
