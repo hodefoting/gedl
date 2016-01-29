@@ -402,7 +402,7 @@ int gedl_ui_main (GeglEDL *edl)
   active_clip = edl->clips->data;
   edl->cache_flags = CACHE_TRY_ALL;
   renderer_set_range (0, 50);
-  thread = g_thread_new ("renderer", renderer_main, edl);
+  if(0)thread = g_thread_new ("renderer", renderer_main, edl);
   mrg_set_ui (mrg, gedl_ui, &o);
   mrg_main (mrg);
   gegl_exit ();

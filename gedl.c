@@ -900,7 +900,6 @@ void rig_frame (int frame_no)
 {
   gedl_set_frame (edl, frame_no);
 
-
   clip_path = gedl_get_clip_path (edl);
   clip_frame_no = gedl_get_clip_frame_no (edl);
 
