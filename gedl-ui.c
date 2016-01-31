@@ -112,7 +112,7 @@ struct _State {
 Clip *active_clip = NULL;
 
 static int frame_no = 0;
-static int playing = 0;
+static int playing = 1;
 
 void rig_frame (int frame_no);
 static void clicked_clip (MrgEvent *e, void *data1, void *data2)
@@ -120,7 +120,7 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
   Clip *clip = data1;
   frame_no = e->x;
   active_clip = clip;
-  rig_frame (frame_no);
+  //rig_frame (frame_no);
   mrg_queue_draw (e->mrg, NULL);
 }
 
@@ -128,7 +128,7 @@ static void released_clip (MrgEvent *e, void *data1, void *data2)
 {
   Clip *clip = data1;
   frame_no = e->x;
-  rig_frame (frame_no);
+  //rig_frame (frame_no);
   active_clip = clip;
   mrg_queue_draw (e->mrg, NULL);
 }
@@ -152,7 +152,7 @@ static void nav_right (MrgEvent *event, void *data1, void *data2)
     if (iter) active_clip = iter->data;
     frame_no = active_clip->abs_start;
   }
-  rig_frame (frame_no);
+  //rig_frame (frame_no);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -172,7 +172,7 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
     frob_fade (active_clip);
   }
   edl->frame=-1;
-  rig_frame (frame_no);
+  //rig_frame (frame_no);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -191,7 +191,7 @@ static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
     frob_fade (active_clip);
   }
   edl->frame=-1;
-  rig_frame (frame_no);
+  //rig_frame (frame_no);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -207,7 +207,7 @@ static void nav_left (MrgEvent *event, void *data1, void *data2)
     if (iter) active_clip = iter->data;
     frame_no = active_clip->abs_start;
   }
-  rig_frame (frame_no);
+  //rig_frame (frame_no);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -231,7 +231,7 @@ static void toggle_fade (MrgEvent *event, void *data1, void *data2)
   if (!active_clip->fade_out)
     active_clip->fade_pad_end = 0;
   edl->frame = -1;
-  rig_frame (frame_no);
+  //rig_frame (frame_no);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -239,7 +239,7 @@ static void toggle_fade (MrgEvent *event, void *data1, void *data2)
 static void step_frame_back (MrgEvent *event, void *data1, void *data2)
 {
   frame_no --;
-  rig_frame (frame_no);
+  //rig_frame (frame_no);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -247,7 +247,7 @@ static void step_frame_back (MrgEvent *event, void *data1, void *data2)
 static void step_frame (MrgEvent *event, void *data1, void *data2)
 {
   frame_no ++;
-  rig_frame (frame_no);
+  //rig_frame (frame_no);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -259,7 +259,7 @@ static void clip_end_inc (MrgEvent *event, void *data1, void *data2)
     {
       active_clip->end++;
       edl->frame=-1;
-      rig_frame (frame_no);
+      //rig_frame (frame_no);
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
     }
@@ -271,7 +271,7 @@ static void clip_end_dec (MrgEvent *event, void *data1, void *data2)
     {
       active_clip->end--;
       edl->frame=-1;
-      rig_frame (frame_no);
+      //rig_frame (frame_no);
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
     }
@@ -283,7 +283,7 @@ static void clip_start_inc (MrgEvent *event, void *data1, void *data2)
     {
       active_clip->start++;
       edl->frame=-1; // hack - to dirty it
-      rig_frame (frame_no);
+      //rig_frame (frame_no);
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
     }
@@ -295,13 +295,27 @@ static void clip_start_dec (MrgEvent *event, void *data1, void *data2)
     {
       active_clip->start--;
       edl->frame=-1;
-      rig_frame (frame_no);
+      //rig_frame (frame_no);
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
     }
 }
 
 long last_frame = 0;
+
+static int max_frame (GeglEDL *edl)
+{
+  GList *l;
+  int t = 0;
+
+  for (l = edl->clips; l; l = l->next)
+  {
+    Clip *clip = l->data;
+    t += clip_get_frames (clip);
+  }
+
+  return t;
+}
 
 void gedl_ui (Mrg *mrg, void *data);
 void gedl_ui (Mrg *mrg, void *data)
@@ -312,8 +326,27 @@ void gedl_ui (Mrg *mrg, void *data)
   float y = 50;
   int t = 0;
     cairo_t *cr = mrg_cr (mrg);
-  mrg_gegl_blit (mrg, 1, 0, mrg_width (mrg), mrg_height (mrg),
-                 result, 0,0,1.0, 1.0);
+  int complexity = 0;
+
+  if (playing)
+    {
+      frame_no++;
+      if (frame_no > max_frame (edl))
+        frame_no = 0;
+      mrg_queue_draw (mrg, NULL);
+    }
+  complexity = gedl_get_render_complexity (edl, frame_no);
+  fprintf (stderr, "{e:%i f:%i c:%i}\n", edl->frame, frame_no, complexity);
+  if (complexity <= 2)
+  {
+    rig_frame (frame_no);
+    mrg_gegl_blit (mrg, 1, 0, mrg_width (mrg), mrg_height (mrg),
+                   result, 0,0,1.0, 1.0);
+  }
+  else
+  {
+    mrg_printf (mrg, "SKIP  %i\n", complexity);
+  }
 
   for (l = edl->clips; l; l = l->next)
   {
@@ -328,31 +361,29 @@ void gedl_ui (Mrg *mrg, void *data)
 
     cairo_stroke_preserve (cr);
     if (clip == active_clip)
-    cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
+      cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
     else
-    cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
+      cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
     cairo_fill (cr);
     t += clip_get_frames (clip);
     //mrg_printf (mrg, "%s %i %i\n", clip->path, clip->start, clip->end);
 
   }
+
+
     mrg_printf (mrg, "frame: %i\n", frame_no);
 
     if (active_clip)
-    {
-       mrg_printf (mrg, "%s %i %i", active_clip->path, active_clip->start, active_clip->end);
-       if (active_clip->filter_graph)
-         mrg_printf (mrg, " %s", active_clip->filter_graph);
-    }
+      {
+        mrg_printf (mrg, "%s %i %i", active_clip->path, active_clip->start, active_clip->end);
+        if (active_clip->filter_graph)
+          mrg_printf (mrg, " %s", active_clip->filter_graph);
+      }
     cairo_rectangle (cr, frame_no, y-10, 1, 60);
     cairo_set_source_rgba (cr,1,0,0,1);
     cairo_fill (cr);
-    if (playing) {
-      frame_no++;
-      if (frame_no > t ) frame_no = 0;
-      rig_frame (frame_no);
-      mrg_queue_draw (mrg, NULL);
-    }
+
+
 
   mrg_add_binding (mrg, "x", NULL, NULL, remove_clip, edl);
   mrg_add_binding (mrg, "d", NULL, NULL, duplicate_clip, edl);
@@ -367,6 +398,7 @@ void gedl_ui (Mrg *mrg, void *data)
   mrg_add_binding (mrg, "q", NULL, NULL, (void*)mrg_quit, NULL);
   mrg_add_binding (mrg, "/", NULL, NULL, step_frame, edl);
   mrg_add_binding (mrg, "?", NULL, NULL, step_frame_back, edl);
+
 }
 
 GThread *thread;

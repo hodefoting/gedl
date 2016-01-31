@@ -10,22 +10,20 @@
   3 - caches / proxies
 
 for the main timeline have:
-rendered results as full size jpgs
+
+rendered results as full size JPGs
 chunks of 320x240 encoded mp4 video files of 5s that contains render of video, from proxy
 chunks of 320x240 encoded mp4 video files of 5s that contains render of video, from full size jpgs
 
-      for each video have:
-          small 320x240 encoded mp4 video of all videos
-          image full size jpg with audio extract
-          160x120 size jpg with audio extract
-          iconographer slice
+for each video have:
+  small 320x240 encoded mp4 video of all videos
+  image full size jpg with audio extract
+  160x120 size jpg with audio extract
+  iconographer slice
 
 #endif
 /* GEGL edit decision list - a digital video cutter and splicer */
 #include "gedl.h"
-
-
-
 
 GeglNode *nop_raw;
 GeglNode *nop_transformed;
@@ -296,18 +294,35 @@ GeglNode *gegl, *load_buf, *result, *encode, *crop, *scale_size, *opacity,
                 *load_buf2, *crop2, *scale_size2, *over;
 void frob_fade (Clip *clip);
 
+/* also take stat-ing of cache status into account */
+int gedl_get_render_complexity (GeglEDL *edl, int frame)
+{
+  if (edl->frame == frame)
+    return 0;
+  if (edl->frame + 1 == frame)
+    return 1;
+  if (edl->frame <= frame &&
+      (frame - edl->frame) < 16)
+    return 2;
+  return 3;
+}
+
 void gedl_set_frame         (GeglEDL *edl, int    frame)
 {
   GList *l;
   int clip_start = 0;
-  if (edl->frame == frame && frame != 0 && 0)
+  if ((edl->frame) == frame && (frame != 0))
+  {
+    fprintf (stderr, "already done!\n");
     return;
+  }
+  edl->frame = frame;
 
-  edl->source[1].clip_path = "unknown";
+  edl->source[1].clip_path     = "unknown";
   edl->source[1].clip_frame_no = 0;
-  edl->source[1].filter_graph = NULL;
-  edl->source[0].clip_path = "unknown";
-  edl->source[0].filter_graph = NULL;
+  edl->source[1].filter_graph  = NULL;
+  edl->source[0].clip_path     = "unknown";
+  edl->source[0].filter_graph  = NULL;
   edl->source[0].clip_frame_no = 0;
   edl->mix = 0.0;
 
@@ -507,7 +522,7 @@ if (clip->fade_in &&
         }
 
           /* write cached render of this frame */
-          if (edl->cache_flags & CACHE_MAKE_ALL){ //1 || (make_cache && (clip2 || clip->filter_graph))){
+          if (edl->cache_flags & CACHE_MAKE_ALL){ 
             gchar *cache_path = g_strdup_printf ("/tmp/gedl/%s~", g_checksum_get_string(hash));
             gchar *cache_path_final = g_strdup_printf ("/tmp/gedl/%s", g_checksum_get_string(hash));
             if (!g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
@@ -543,7 +558,7 @@ if (clip->fade_in &&
 	    {
 	       gegl_node_connect_to (crop, "output", result, "input");
 	    }
-       }
+    }
 
       return;
     }
@@ -573,7 +588,7 @@ int    gedl_get_frame (GeglEDL *edl)
 }
 double gedl_get_time (GeglEDL *edl)
 {
-  return edl->frame;
+  return edl->frame / edl->fps;
 }
 GeglAudioFragment *gedl_get_audio  (GeglEDL *edl)
 {
@@ -898,6 +913,8 @@ const char *clip_path = NULL;
 void rig_frame (int frame_no);
 void rig_frame (int frame_no)
 {
+  if (edl->frame == frame_no)
+    return;
   gedl_set_frame (edl, frame_no);
 
   clip_path = gedl_get_clip_path (edl);

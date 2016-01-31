@@ -38,6 +38,9 @@ const char *gedl_get_clip_path      (GeglEDL    *edl);
 int         gedl_get_clip_frame_no  (GeglEDL    *edl);
 char       *gedl_serialise          (GeglEDL    *edl);
 
+int         gedl_get_render_complexity (GeglEDL *edl, int frame);
+/* Make it possibly to decide whether we render preview or final frame.. */
+
 /*********/
 typedef struct Clip
 {
