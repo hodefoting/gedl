@@ -348,8 +348,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
       {
         edl->source[0].clip_path = clip_get_path (clip);
 
-        gegl_node_set (edl->source[0].loader, "operation", clip->is_image?"gegl:load":"gegl:ff-load",
-                                    "path", clip_get_path (clip), NULL);
+        gegl_node_set (edl->source[0].loader, "operation", clip->is_image?"gegl:load":"gegl:ff-load", "path", clip_get_path (clip), NULL);
       }
 
       edl->source[0].clip_frame_no = (frame - clip_start) + clip_get_start (clip);
@@ -745,7 +744,8 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
      if (ff_probe && !clip->is_image)
        {
 	 GeglNode *gegl = gegl_node_new ();
-	 GeglNode *probe = gegl_node_new_child (gegl, "operation", "gegl:ff-load", "path", clip->path, NULL);
+	 GeglNode *probe = gegl_node_new_child (gegl, "operation",
+                          "gegl:ff-load", "path", clip->path, NULL);
 	 gegl_node_process (probe);
 
 	 gegl_node_get (probe, "frames", &clip->duration, NULL);
