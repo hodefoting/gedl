@@ -236,6 +236,14 @@ static void toggle_fade (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
+static void save (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  mrg_event_stop_propagate (event);
+  fprintf (stderr, "save %s\n", edl->path);
+  mrg_queue_draw (event->mrg, NULL);
+}
+
 static void step_frame_back (MrgEvent *event, void *data1, void *data2)
 {
   frame_no --;
@@ -392,6 +400,7 @@ void gedl_ui (Mrg *mrg, void *data)
   mrg_add_binding (mrg, "right", NULL, NULL, nav_right, edl);
   mrg_add_binding (mrg, ".", NULL, NULL, clip_end_inc, edl);
   mrg_add_binding (mrg, "f", NULL, NULL, toggle_fade, edl);
+  mrg_add_binding (mrg, "s", NULL, NULL, save, edl);
   mrg_add_binding (mrg, ",", NULL, NULL, clip_end_dec, edl);
   mrg_add_binding (mrg, "k", NULL, NULL, clip_start_inc, edl);
   mrg_add_binding (mrg, "l", NULL, NULL, clip_start_dec, edl);
@@ -427,7 +436,7 @@ gpointer renderer_main (gpointer data)
 int gedl_ui_main (GeglEDL *edl);
 int gedl_ui_main (GeglEDL *edl)
 {
-  Mrg *mrg = mrg_new (1024, 768, NULL);
+  Mrg *mrg = mrg_new (800, 600, NULL);
   State o = {NULL,};
   o.mrg = mrg;
   o.edl = edl;
