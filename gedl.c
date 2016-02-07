@@ -807,6 +807,7 @@ GeglEDL *gedl_new_from_string (const char *string)
   return edl;
 }
 
+
 GeglEDL *gedl_new_from_path (const char *path)
 {
   GeglEDL *edl = gedl_new ();

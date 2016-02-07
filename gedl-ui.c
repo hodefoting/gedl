@@ -239,15 +239,21 @@ static void toggle_fade (MrgEvent *event, void *data1, void *data2)
 static void save (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
+  GList *l;
   mrg_event_stop_propagate (event);
   fprintf (stderr, "save %s\n", edl->path);
+  for (l = edl->clips; l; l = l->next)
+  {
+    Clip *clip = l->data;
+    fprintf (stdout, "%s %i %i%s\n", clip->path, clip->start, clip->end,
+                      clip->fade_out?" [fade]":"");
+  }
   mrg_queue_draw (event->mrg, NULL);
 }
 
 static void step_frame_back (MrgEvent *event, void *data1, void *data2)
 {
   frame_no --;
-  //rig_frame (frame_no);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -255,7 +261,6 @@ static void step_frame_back (MrgEvent *event, void *data1, void *data2)
 static void step_frame (MrgEvent *event, void *data1, void *data2)
 {
   frame_no ++;
-  //rig_frame (frame_no);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -267,7 +272,6 @@ static void clip_end_inc (MrgEvent *event, void *data1, void *data2)
     {
       active_clip->end++;
       edl->frame=-1;
-      //rig_frame (frame_no);
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
     }
@@ -279,7 +283,6 @@ static void clip_end_dec (MrgEvent *event, void *data1, void *data2)
     {
       active_clip->end--;
       edl->frame=-1;
-      //rig_frame (frame_no);
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
     }
@@ -291,7 +294,6 @@ static void clip_start_inc (MrgEvent *event, void *data1, void *data2)
     {
       active_clip->start++;
       edl->frame=-1; // hack - to dirty it
-      //rig_frame (frame_no);
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
     }
@@ -303,7 +305,6 @@ static void clip_start_dec (MrgEvent *event, void *data1, void *data2)
     {
       active_clip->start--;
       edl->frame=-1;
-      //rig_frame (frame_no);
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
     }
@@ -374,8 +375,6 @@ void gedl_ui (Mrg *mrg, void *data)
       cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
     cairo_fill (cr);
     t += clip_get_frames (clip);
-    //mrg_printf (mrg, "%s %i %i\n", clip->path, clip->start, clip->end);
-
   }
 
 
@@ -383,7 +382,8 @@ void gedl_ui (Mrg *mrg, void *data)
 
     if (active_clip)
       {
-        mrg_printf (mrg, "%s %i %i", active_clip->path, active_clip->start, active_clip->end);
+        mrg_printf (mrg, "%s %i %i%s", active_clip->path, active_clip->start, active_clip->end, active_clip->fade_out?" [fade]":"");
+
         if (active_clip->filter_graph)
           mrg_printf (mrg, " %s", active_clip->filter_graph);
       }
