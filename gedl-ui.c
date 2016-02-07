@@ -239,15 +239,7 @@ static void toggle_fade (MrgEvent *event, void *data1, void *data2)
 static void save (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  GList *l;
-  mrg_event_stop_propagate (event);
-  fprintf (stderr, "save %s\n", edl->path);
-  for (l = edl->clips; l; l = l->next)
-  {
-    Clip *clip = l->data;
-    fprintf (stdout, "%s %i %i%s\n", clip->path, clip->start, clip->end,
-                      clip->fade_out?" [fade]":"");
-  }
+  gedl_save_path (edl, edl->path);
   mrg_queue_draw (event->mrg, NULL);
 }
 

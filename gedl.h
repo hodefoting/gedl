@@ -25,6 +25,8 @@ int         gedl_get_frames         (GeglEDL    *edl);
 double      gedl_get_time           (GeglEDL    *edl);
 void        gedl_parse_line         (GeglEDL    *edl, const char *line);
 GeglEDL    *gedl_new_from_path      (const char *path);
+void        gedl_load_path          (GeglEDL *edl, const char *path);
+void        gedl_save_path          (GeglEDL *edl, const char *path);
 GeglAudioFragment  *gedl_get_audio  (GeglEDL    *edl);
 GeglBuffer *gedl_get_buffer         (GeglEDL    *edl);
 GeglBuffer *gedl_get_buffer2        (GeglEDL    *edl);
