@@ -56,6 +56,7 @@ const char *video_codec      = DEFAULT_video_codec;
 const char *audio_codec      = DEFAULT_audio_codec;
 int         video_width      = DEFAULT_video_width;
 int         video_height     = DEFAULT_video_height;
+int         video_size_default = 1;
 int         video_bufsize    = DEFAULT_video_bufsize;
 int         video_bitrate    = DEFAULT_video_bitrate;
 int         video_tolerance  = DEFAULT_video_tolerance;;
@@ -807,11 +808,14 @@ GeglEDL *gedl_new_from_string (const char *string)
   return edl;
 }
 
-
-GeglEDL *gedl_new_from_path (const char *path)
+void gedl_load_path (GeglEDL *edl, const char *path)
 {
-  GeglEDL *edl = gedl_new ();
+  if (edl->path)
+    g_free (edl->path);
   edl->path = g_strdup (path);
+  video_width = DEFAULT_video_width;
+  video_height = DEFAULT_video_height;
+
   FILE *file = fopen (path, "r");
   if (file)
     {
@@ -820,7 +824,10 @@ GeglEDL *gedl_new_from_path (const char *path)
          gedl_parse_line (edl, line);
        fclose (file);
     }
+}
 
+void gedl_update_video_size (GeglEDL *edl)
+{
   if (video_width == 0 || video_height == 0)
     {
       Clip *clip = edl->clips->data;
@@ -833,6 +840,14 @@ GeglEDL *gedl_new_from_path (const char *path)
       video_height = rect.height;
       g_object_unref (gegl);
     }
+}
+
+GeglEDL *gedl_new_from_path (const char *path)
+{
+  GeglEDL *edl = gedl_new ();
+
+  gedl_load_path (edl, path);
+  gedl_update_video_size (edl);
   gedl_set_size (edl, video_width, video_height);
 
   return edl;
