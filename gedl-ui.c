@@ -114,11 +114,13 @@ Clip *active_clip = NULL;
 static int frame_no = 0;
 static int playing = 1;
 
+float pan_x0 = 8;
+
 void rig_frame (int frame_no);
 static void clicked_clip (MrgEvent *e, void *data1, void *data2)
 {
   Clip *clip = data1;
-  frame_no = e->x;
+  frame_no = e->x - pan_x0;
   active_clip = clip;
   //rig_frame (frame_no);
   mrg_queue_draw (e->mrg, NULL);
@@ -127,7 +129,7 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
 static void released_clip (MrgEvent *e, void *data1, void *data2)
 {
   Clip *clip = data1;
-  frame_no = e->x;
+  frame_no = e->x - pan_x0;
   //rig_frame (frame_no);
   active_clip = clip;
   mrg_queue_draw (e->mrg, NULL);
@@ -324,8 +326,8 @@ void gedl_ui (Mrg *mrg, void *data)
   State *o = data;
   GeglEDL *edl = o->edl;
   GList *l;
-  float y = 50;
-  int t = 0;
+  float y = 500;
+  int t = pan_x0;
     cairo_t *cr = mrg_cr (mrg);
   int complexity = 0;
 
@@ -352,7 +354,10 @@ void gedl_ui (Mrg *mrg, void *data)
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
-    if(0)mrg_printf (mrg, "%s %i %i\n", clip->path, clip->start, clip->end);
+    char thumb_path[PATH_MAX];
+    sprintf (thumb_path, "%s.png", clip->path);
+
+    //mrg_printf (mrg, "%s %i %i\n", clip->path, clip->start, clip->end);
     cairo_rectangle (cr, t, y, clip_get_frames (clip), 40);
     cairo_set_source_rgba (cr, 0.1, 0.1, 0.1, 0.5);
 
@@ -360,12 +365,31 @@ void gedl_ui (Mrg *mrg, void *data)
     mrg_listen (mrg, MRG_DRAG, clicked_clip, clip, NULL);
     mrg_listen (mrg, MRG_RELEASE, released_clip, clip, NULL);
 
-    cairo_stroke_preserve (cr);
+    int width, height;
+    MrgImage *img = mrg_query_image (mrg, thumb_path, &width, &height);
+    if (img && width > 0)
+    {
+      cairo_surface_t *surface = mrg_image_get_surface (img);
+      cairo_save (cr);
+      cairo_clip_preserve (cr);
+      cairo_set_source_surface (cr, surface, t - clip->start, y);
+      cairo_paint (cr);
+      cairo_restore (cr);
+      //mrg_image (mrg, t, y, clip_get_frames (clip), 40, thumb_path);
+      //mrg_printf (mrg, "%s\n", thumb_path);
+    }
+    else
+    {
+      cairo_fill_preserve (cr);
+    }
+
     if (clip == active_clip)
       cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
     else
       cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
-    cairo_fill (cr);
+    cairo_stroke (cr);
+
+
     t += clip_get_frames (clip);
   }
 
@@ -379,7 +403,7 @@ void gedl_ui (Mrg *mrg, void *data)
         if (active_clip->filter_graph)
           mrg_printf (mrg, " %s", active_clip->filter_graph);
       }
-    cairo_rectangle (cr, frame_no, y-10, 1, 60);
+    cairo_rectangle (cr, frame_no + pan_x0, y-10, 1, 60);
     cairo_set_source_rgba (cr,1,0,0,1);
     cairo_fill (cr);
 
