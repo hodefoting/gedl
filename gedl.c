@@ -829,13 +829,16 @@ void gedl_load_path (GeglEDL *edl, const char *path)
 void gedl_save_path (GeglEDL *edl, const char *path)
 {
   GList *l;
-  fprintf (stderr, "save to %s\n", path);
+  FILE *file = fopen (path, "w");
+  if (!file)
+    return;
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
-    fprintf (stdout, "%s %i %i%s\n", clip->path, clip->start, clip->end,
+    fprintf (file, "%s %i %i%s\n", clip->path, clip->start, clip->end,
                       clip->fade_out?" [fade]":"");
   }
+  fclose (file);
 }
 
 void gedl_update_video_size (GeglEDL *edl)
