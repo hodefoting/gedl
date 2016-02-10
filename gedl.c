@@ -967,13 +967,6 @@ void rig_frame (int frame_no)
 
 int skip_encode = 0;
 
-static void process_frame (int frame_no)
-{
-  rig_frame (frame_no);
-  if (!skip_encode)
-    gegl_node_process (encode);
-}
-
 static void teardown (void)
 {
   gedl_free (edl);
@@ -993,7 +986,9 @@ static void process_frames (void)
   int frame_no;
   for (frame_no = frame_start; frame_no <= frame_end; frame_no++)
   {
-    process_frame (frame_no);
+    rig_frame (frame_no);
+    if (!skip_encode)
+      gegl_node_process (encode);
     fprintf (stderr, "\r%1.2f%% %04d / %04d %s#%04d  [%s][%s]  ",
      100.0 * (frame_no-frame_start) * 1.0 / (frame_end - frame_start),
      frame_no, frame_end, clip_path, clip_frame_no, edl->source[0].filter_graph, edl->source[1].filter_graph); 
