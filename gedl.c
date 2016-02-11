@@ -308,6 +308,41 @@ int gedl_get_render_complexity (GeglEDL *edl, int frame)
   return 3;
 }
 
+static void rig_filters (GeglEDL *edl, Clip *clip, Clip *clip2, int frame_no)
+{
+       /* create filter graph if a secondary clip is in use */
+       if (edl->mix != 0.0 && edl->source[1].filter_graph)
+         {
+           if (edl->source[1].cached_filter_graph &&
+               !strcmp(edl->source[1].cached_filter_graph,
+               edl->source[1].filter_graph))
+             {
+               /* reuse previous filter graph (should probably set frame for tweening?  */
+             }
+           else
+            {
+              remove_in_betweens (nop_raw2, nop_transformed2);
+              gedl_create_chain (edl,
+                               nop_raw2, nop_transformed2,
+                               edl->source[1].filter_graph,
+                               edl->source[1].clip_frame_no - clip2->end,
+                               clip2->end - clip2->start);
+              if (edl->source[1].cached_filter_graph)
+                g_free (edl->source[1].cached_filter_graph);
+              edl->source[1].cached_filter_graph = g_strdup (edl->source[1].filter_graph);
+            }
+         }
+        else
+         {
+           remove_in_betweens (nop_raw2, nop_transformed2);
+           if (edl->source[1].cached_filter_graph)
+             g_free (edl->source[1].cached_filter_graph);
+           edl->source[1].cached_filter_graph = NULL;
+           gegl_node_link_many (nop_raw2, nop_transformed2, NULL);
+         }
+
+}
+
 void gedl_set_frame         (GeglEDL *edl, int    frame)
 {
   GList *l;
@@ -418,6 +453,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
                 !strcmp(edl->source[0].cached_filter_graph,
                         edl->source[0].filter_graph))
             {
+               /* reuse previous filter graph (should probably set frame for tweening?  */
             }
           else
             {
@@ -437,34 +473,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
            gegl_node_link_many (nop_raw, nop_transformed, NULL);
          }
 
-       if (edl->mix != 0.0 && edl->source[1].filter_graph)
-         {
-           if (edl->source[1].cached_filter_graph &&
-               !strcmp(edl->source[1].cached_filter_graph,
-               edl->source[1].filter_graph))
-             {
-             }
-           else
-            {
-              remove_in_betweens (nop_raw2, nop_transformed2);
-              gedl_create_chain (edl,
-                               nop_raw2, nop_transformed2,
-                               edl->source[1].filter_graph,
-                               edl->source[1].clip_frame_no - clip2->end,
-                               clip2->end - clip2->start);
-              if (edl->source[1].cached_filter_graph)
-                g_free (edl->source[1].cached_filter_graph);
-              edl->source[1].cached_filter_graph = g_strdup (edl->source[1].filter_graph);
-            }
-         }
-        else
-         {
-           remove_in_betweens (nop_raw2, nop_transformed2);
-           if (edl->source[1].cached_filter_graph)
-             g_free (edl->source[1].cached_filter_graph);
-           edl->source[1].cached_filter_graph = NULL;
-           gegl_node_link_many (nop_raw2, nop_transformed2, NULL);
-         }
+       rig_filters (edl, clip, clip2, frame);
 
 
         /**********************************************************************/
@@ -899,7 +908,6 @@ int gedl_get_clip2_frame_no      (GeglEDL *edl)
 {
   return edl->source[1].clip_frame_no;
 }
-
 
 static void setup (void)
 {
