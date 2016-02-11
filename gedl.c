@@ -434,18 +434,18 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
 	           edl->source[1].clip_frame_no = clip2->end + (edl->source[0].clip_frame_no - clip->start);
 
              }
-	   if (!clip2->is_image) 
-	     gegl_node_set (edl->source[1].loader, "frame", edl->source[1].clip_frame_no, NULL);
+	       if (!clip2->is_image) 
+	         gegl_node_set (edl->source[1].loader, "frame", edl->source[1].clip_frame_no, NULL);
         }
       else
         {
           edl->mix = 0.0;
         }
 
-        /** this is both where we can keep filter graphs, and do more global
-         ** cache short circuiting, this would leave the cross fading to still have
-         ** to happen on he fly.. along with audio mix
-         **/
+      /* this is both where we can keep filter graphs, and do more global
+       * cache short circuiting, this would leave the cross fading to still have
+       * to happen on he fly.. along with audio mix
+       */
 
       if (edl->source[0].filter_graph)
         {
@@ -453,7 +453,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
                 !strcmp(edl->source[0].cached_filter_graph,
                         edl->source[0].filter_graph))
             {
-               /* reuse previous filter graph (should probably set frame for tweening?  */
+              /* reuse previous filter graph (should probably set frame for tweening?  */
             }
           else
             {
@@ -475,7 +475,6 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
 
        rig_filters (edl, clip, clip2, frame);
 
-
         /**********************************************************************/
 
         frame_recipe = g_strdup_printf ("%s: %s %i %s %s %i %s %ix%i %f",
@@ -488,7 +487,6 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
         g_checksum_update (hash, (void*)frame_recipe, -1);
         cache_path  = g_strdup_printf ("/tmp/gedl/%s", g_checksum_get_string(hash));
 
-
         /*************************************************************************/
 
         if (g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) && (edl->cache_flags & CACHE_TRY_ALL))
@@ -496,6 +494,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
             was_cached = 1;
             gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
             gegl_node_link_many (edl->cache_loader, result, NULL);
+
             if (!edl->source[0].audio)
               edl->source[0].audio = gegl_audio_fragment_new (44100, 2, 0, 4000);
             gegl_meta_get_audio (cache_path, edl->source[0].audio);
@@ -524,8 +523,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
               gegl_node_get (edl->source[0].loader, "audio", &edl->source[0].audio, NULL);
             if (edl->mix != 0.0)
               {
-               /* directly mix the audio from the secondary into the primary, with proportional weighting
-                * of samples
+               /* directly mix the audio from the secondary into the primary, with proportional weighting of samples
                 */
                 if (clip2->is_image)
                   {
@@ -571,8 +569,8 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
       g_checksum_free (hash);
       g_free (frame_recipe);
 
-
-	  if (!was_cached){
+	  if (!was_cached)
+      {
 	    if (edl->mix != 0.0)
 	    {
 	       gegl_node_set (load_buf2, "buffer", gedl_get_buffer2 (edl), NULL);
@@ -584,7 +582,6 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
 	       gegl_node_connect_to (crop, "output", result, "input");
 	    }
       }
-
       return;
     }
     clip_start += clip_frames;

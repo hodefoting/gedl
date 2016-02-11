@@ -296,6 +296,10 @@ static void clip_start_dec (MrgEvent *event, void *data1, void *data2)
       mrg_queue_draw (event->mrg, NULL);
     }
 }
+static void do_quit (MrgEvent *event, void *data1, void *data2)
+{
+  mrg_quit (event->mrg);
+}
 
 long last_frame = 0;
 
@@ -411,7 +415,7 @@ void gedl_ui (Mrg *mrg, void *data)
   mrg_add_binding (mrg, ",", NULL, NULL, clip_end_dec, edl);
   mrg_add_binding (mrg, "k", NULL, NULL, clip_start_inc, edl);
   mrg_add_binding (mrg, "l", NULL, NULL, clip_start_dec, edl);
-  mrg_add_binding (mrg, "q", NULL, NULL, (void*)mrg_quit, NULL);
+  mrg_add_binding (mrg, "q", NULL, NULL, (void*)do_quit, mrg);
   mrg_add_binding (mrg, "/", NULL, NULL, step_frame, edl);
   mrg_add_binding (mrg, "?", NULL, NULL, step_frame_back, edl);
 
