@@ -122,7 +122,6 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
   Clip *clip = data1;
   frame_no = e->x - pan_x0;
   active_clip = clip;
-  //rig_frame (frame_no);
   mrg_queue_draw (e->mrg, NULL);
 }
 
@@ -130,7 +129,6 @@ static void released_clip (MrgEvent *e, void *data1, void *data2)
 {
   Clip *clip = data1;
   frame_no = e->x - pan_x0;
-  //rig_frame (frame_no);
   active_clip = clip;
   mrg_queue_draw (e->mrg, NULL);
 }
@@ -154,7 +152,6 @@ static void nav_right (MrgEvent *event, void *data1, void *data2)
     if (iter) active_clip = iter->data;
     frame_no = active_clip->abs_start;
   }
-  //rig_frame (frame_no);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -174,7 +171,6 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
     frob_fade (active_clip);
   }
   edl->frame=-1;
-  //rig_frame (frame_no);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -193,7 +189,6 @@ static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
     frob_fade (active_clip);
   }
   edl->frame=-1;
-  //rig_frame (frame_no);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -209,7 +204,6 @@ static void nav_left (MrgEvent *event, void *data1, void *data2)
     if (iter) active_clip = iter->data;
     frame_no = active_clip->abs_start;
   }
-  //rig_frame (frame_no);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -233,7 +227,6 @@ static void toggle_fade (MrgEvent *event, void *data1, void *data2)
   if (!active_clip->fade_out)
     active_clip->fade_pad_end = 0;
   edl->frame = -1;
-  //rig_frame (frame_no);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -339,7 +332,7 @@ void gedl_ui (Mrg *mrg, void *data)
       mrg_queue_draw (mrg, NULL);
     }
   complexity = gedl_get_render_complexity (edl, frame_no);
-  fprintf (stderr, "{e:%i f:%i c:%i}\n", edl->frame, frame_no, complexity);
+  //fprintf (stderr, "{e:%i f:%i c:%i}\n", edl->frame, frame_no, complexity);
   if (complexity <= 2)
   {
     rig_frame (frame_no);

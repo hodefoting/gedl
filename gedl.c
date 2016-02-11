@@ -466,6 +466,9 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
            gegl_node_link_many (nop_raw2, nop_transformed2, NULL);
          }
 
+
+        /**********************************************************************/
+
         frame_recipe = g_strdup_printf ("%s: %s %i %s %s %i %s %ix%i %f",
           "gedl-pre-3", gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl), edl->source[0].filter_graph,
                         gedl_get_clip2_path (edl), gedl_get_clip2_frame_no (edl), edl->source[1].filter_graph,
@@ -475,6 +478,9 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
         hash = g_checksum_new (G_CHECKSUM_MD5);
         g_checksum_update (hash, (void*)frame_recipe, -1);
         cache_path  = g_strdup_printf ("/tmp/gedl/%s", g_checksum_get_string(hash));
+
+
+        /*************************************************************************/
 
         if (g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) && (edl->cache_flags & CACHE_TRY_ALL))
           {
@@ -948,18 +954,12 @@ static void setup (void)
   gegl_node_connect_to (over, "output", result, "input");
 }
 
-int clip_frame_no = 0;
-const char *clip_path = NULL;
-
 void rig_frame (int frame_no);
 void rig_frame (int frame_no)
 {
   if (edl->frame == frame_no)
     return;
   gedl_set_frame (edl, frame_no);
-
-  clip_path = gedl_get_clip_path (edl);
-  clip_frame_no = gedl_get_clip_frame_no (edl);
 
   gegl_node_set (load_buf, "buffer", gedl_get_buffer (edl), NULL);
   gegl_node_set (encode, "audio", gedl_get_audio (edl), NULL);
@@ -991,7 +991,7 @@ static void process_frames (void)
       gegl_node_process (encode);
     fprintf (stderr, "\r%1.2f%% %04d / %04d %s#%04d  [%s][%s]  ",
      100.0 * (frame_no-frame_start) * 1.0 / (frame_end - frame_start),
-     frame_no, frame_end, clip_path, clip_frame_no, edl->source[0].filter_graph, edl->source[1].filter_graph); 
+     frame_no, frame_end, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl), edl->source[0].filter_graph, edl->source[1].filter_graph); 
   }
 }
 
