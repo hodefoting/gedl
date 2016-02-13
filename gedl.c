@@ -224,18 +224,20 @@ static void gedl_create_chain (GeglEDL *edl, GeglNode *op_start, GeglNode *op_en
   g_string_free (op_attr, TRUE);
 }
 
+
+#define CACHE_FORMAT "jpg"
+
 #include <stdlib.h>
 
 GeglEDL *gedl_new           (void)
 {
   GeglEDL *edl = g_malloc0(sizeof (GeglEDL));
   int s;
-  system ("pwd");
-  system ("mkdir .gedl");  /* XXX: create cache dir */
+  system ("mkdir .gedl 2>/dev/null");  /* XXX: create cache dir */
   edl->gegl = gegl_node_new ();
   edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
 
-  edl->cache_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:png-load", NULL);
+  edl->cache_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:"  CACHE_FORMAT  "-load", NULL);
   for (s = 0; s < 2; s++)
    {
      edl->source[s].loader = gegl_node_new_child (edl->gegl, "operation", "gegl:ff-load", NULL);
@@ -557,7 +559,14 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
                 {
                   GeglNode *save_graph = gegl_node_new ();
                   GeglNode *save;
-                  save = gegl_node_new_child (save_graph, "operation", "gegl:png-save", "bitdepth", 8, "path", cache_path, NULL);
+                  save = gegl_node_new_child (save_graph,
+                              "operation", "gegl:" CACHE_FORMAT "-save",
+                              "path", cache_path,
+                              NULL);
+                  if (!strcmp (CACHE_FORMAT, "png"))
+                  {
+                    gegl_node_set (save, "bitdepth", 8, NULL);
+                  }
                   gegl_node_link_many (result, save, NULL);
                   gegl_node_process (save);
                   if (edl->source[0].audio)

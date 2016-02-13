@@ -6,6 +6,8 @@
 #include <gegl.h>
 #include "gedl.h"
 
+long babl_ticks (void);
+
 void frob_fade (void*);
 static unsigned char *copy_buf = NULL;
 static int copy_buf_len = 0;
@@ -335,18 +337,31 @@ void gedl_ui (Mrg *mrg, void *data)
         frame_no = 0;
       mrg_queue_draw (mrg, NULL);
     }
+  {
+  long t = babl_ticks();
   complexity = gedl_get_render_complexity (edl, frame_no);
+  fprintf (stderr, "cpx: %fms\t", (babl_ticks()-t) / 1000.0);
+  }
   //fprintf (stderr, "{e:%i f:%i c:%i}\n", edl->frame, frame_no, complexity);
   if (complexity <= 2)
   {
+    long t;
+    t = babl_ticks ();
     rig_frame (frame_no);
+    fprintf (stderr, "rig: %fms\t", (babl_ticks()-t) / 1000.0);
+    //t = babl_ticks ();
     mrg_gegl_blit (mrg, 1, 0, mrg_width (mrg), mrg_height (mrg),
                    result, 0,0,1.0, 1.0);
+
+    //fprintf (stderr, "\n%s\n", gegl_node_to_xml (result, NULL));
+
+    fprintf (stderr, "rig+blit: %fms\t", (babl_ticks()-t) / 1000.0);
   }
   else
   {
     mrg_printf (mrg, "SKIP  %i\n", complexity);
   }
+  fprintf (stderr, "\n");
 
   for (l = edl->clips; l; l = l->next)
   {
