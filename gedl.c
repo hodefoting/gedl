@@ -224,14 +224,18 @@ static void gedl_create_chain (GeglEDL *edl, GeglNode *op_start, GeglNode *op_en
   g_string_free (op_attr, TRUE);
 }
 
+#include <stdlib.h>
+
 GeglEDL *gedl_new           (void)
 {
   GeglEDL *edl = g_malloc0(sizeof (GeglEDL));
   int s;
+  system ("pwd");
+  system ("mkdir .gedl");  /* XXX: create cache dir */
   edl->gegl = gegl_node_new ();
   edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
 
-  edl->cache_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:jpg-load", NULL);
+  edl->cache_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:png-load", NULL);
   for (s = 0; s < 2; s++)
    {
      edl->source[s].loader = gegl_node_new_child (edl->gegl, "operation", "gegl:ff-load", NULL);
@@ -485,7 +489,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
 
         hash = g_checksum_new (G_CHECKSUM_MD5);
         g_checksum_update (hash, (void*)frame_recipe, -1);
-        cache_path  = g_strdup_printf ("/tmp/gedl/%s", g_checksum_get_string(hash));
+        cache_path  = g_strdup_printf (".gedl/%s", g_checksum_get_string(hash));
 
         /*************************************************************************/
 
@@ -546,14 +550,14 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
           /* write cached render of this frame */
           if (edl->cache_flags & CACHE_MAKE_ALL)
             {
-              gchar *cache_path = g_strdup_printf ("/tmp/gedl/%s~", g_checksum_get_string(hash));
-              gchar *cache_path_final = g_strdup_printf ("/tmp/gedl/%s", g_checksum_get_string(hash));
+              gchar *cache_path = g_strdup_printf (".gedl/%s~", g_checksum_get_string(hash));
+              gchar *cache_path_final = g_strdup_printf (".gedl/%s", g_checksum_get_string(hash));
               if (!g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
                   !g_file_test (cache_path_final, G_FILE_TEST_IS_REGULAR))
                 {
                   GeglNode *save_graph = gegl_node_new ();
                   GeglNode *save;
-                  save = gegl_node_new_child (save_graph, "operation", "gegl:jpg-save", "path", cache_path, NULL);
+                  save = gegl_node_new_child (save_graph, "operation", "gegl:png-save", "bitdepth", 8, "path", cache_path, NULL);
                   gegl_node_link_many (result, save, NULL);
                   gegl_node_process (save);
                   if (edl->source[0].audio)
