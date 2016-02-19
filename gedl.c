@@ -6,7 +6,6 @@
 
 #if 0
   1 - video with audio fragment output (without, already kind of works with ff-save and frame-%06d.png patterns..
-  2 - mrg based ui
   3 - caches / proxies
 
 for the main timeline have:
@@ -16,10 +15,10 @@ chunks of 320x240 encoded mp4 video files of 5s that contains render of video, f
 chunks of 320x240 encoded mp4 video files of 5s that contains render of video, from full size jpgs
 
 for each video have:
+  iconographer slice
   small 320x240 encoded mp4 video of all videos
   image full size jpg with audio extract
   160x120 size jpg with audio extract
-  iconographer slice
 
 #endif
 /* GEGL edit decision list - a digital video cutter and splicer */
@@ -236,6 +235,7 @@ GeglEDL *gedl_new           (void)
   system ("mkdir .gedl 2>/dev/null");  /* XXX: create cache dir */
   edl->gegl = gegl_node_new ();
   edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
+  edl->cache_flags = 0;
 
   edl->cache_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:"  CACHE_FORMAT  "-load", NULL);
   for (s = 0; s < 2; s++)
