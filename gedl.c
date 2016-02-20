@@ -228,7 +228,7 @@ static void gedl_create_chain (GeglEDL *edl, GeglNode *op_start, GeglNode *op_en
 
 #include <stdlib.h>
 
-FrameSource *source_new (GeglNode *gegl)
+FrameSource *framesource_new (GeglNode *gegl)
 {
   FrameSource *source = g_new0 (FrameSource, 1);
   source->loader = gegl_node_new_child (gegl, "operation", "gegl:ff-load", NULL);
@@ -239,6 +239,7 @@ FrameSource *source_new (GeglNode *gegl)
 
 GeglEDL *gedl_new           (void)
 {
+  int i;
   GeglEDL *edl = g_malloc0(sizeof (GeglEDL));
   system ("mkdir .gedl 2>/dev/null");  /* XXX: create cache dir */
   edl->gegl = gegl_node_new ();
@@ -247,8 +248,8 @@ GeglEDL *gedl_new           (void)
 
   edl->cache_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:"  CACHE_FORMAT  "-load", NULL);
 
-  edl->source[0] = source_new (edl->gegl);
-  edl->source[1] = source_new (edl->gegl);
+  for (i = 0; i < 2; i++)
+    edl->source[i] = framesource_new (edl->gegl);
 
   return edl;
 }
@@ -260,7 +261,7 @@ void gedl_set_size (GeglEDL *edl, int width, int height)
   edl->height = height;
 }
 
-void source_free (FrameSource *source)
+void framesource_free (FrameSource *source)
 {
   if (source->buffer)
     g_object_unref (source->buffer);
@@ -273,7 +274,7 @@ void     gedl_free          (GeglEDL *edl)
   int s;
   for (s = 0; s < 2; s++)
     {
-      source_free (edl->source[s]);
+      framesource_free (edl->source[s]);
       edl->source[s] = NULL;
     }
 
@@ -337,18 +338,20 @@ static void rig_filters (GeglEDL *edl, Clip *clip, Clip *clip2, int frame_no)
          {
            if (edl->source[1]->cached_filter_graph &&
                !strcmp(edl->source[1]->cached_filter_graph,
-               edl->source[1]->filter_graph))
+                       edl->source[1]->filter_graph))
              {
-               /* reuse previous filter graph (should probably set frame for tweening?  */
+               /* reuse previous filter graph (when proeprty tweening arrives, should compute frame
+                                               for tweening) */
              }
            else
             {
               remove_in_betweens (nop_raw2, nop_transformed2);
-              gedl_create_chain (edl,
-                               nop_raw2, nop_transformed2,
-                               edl->source[1]->filter_graph,
-                               edl->source[1]->clip_frame_no - clip2->end,
-                               clip2->end - clip2->start);
+              //source_create_chain (edl, nop_raw2, nop_transformed2, edl->source[1], 
+              gedl_create_chain (edl, nop_raw2, nop_transformed2,
+                                 edl->source[1]->filter_graph,
+                                 edl->source[1]->clip_frame_no - clip2->end,
+                                 clip2->end - clip2->start);
+
               if (edl->source[1]->cached_filter_graph)
                 g_free (edl->source[1]->cached_filter_graph);
               edl->source[1]->cached_filter_graph = g_strdup (edl->source[1]->filter_graph);
