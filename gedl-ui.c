@@ -338,23 +338,18 @@ void gedl_ui (Mrg *mrg, void *data)
       mrg_queue_draw (mrg, NULL);
     }
   {
-  long t = babl_ticks();
-  complexity = gedl_get_render_complexity (edl, frame_no);
-  fprintf (stderr, "cpx: %fms\t", (babl_ticks()-t) / 1000.0);
+    long t = babl_ticks();
+    complexity = gedl_get_render_complexity (edl, frame_no);
+    fprintf (stderr, "cpx: %fms\t", (babl_ticks()-t) / 1000.0);
   }
-  //fprintf (stderr, "{e:%i f:%i c:%i}\n", edl->frame, frame_no, complexity);
   if (complexity <= 2)
   {
     long t;
     t = babl_ticks ();
     rig_frame (frame_no);
     fprintf (stderr, "rig: %fms\t", (babl_ticks()-t) / 1000.0);
-    //t = babl_ticks ();
     mrg_gegl_blit (mrg, 1, 0, mrg_width (mrg), mrg_height (mrg),
                    result, 0,0,1.0, 1.0);
-
-    //fprintf (stderr, "\n%s\n", gegl_node_to_xml (result, NULL));
-
     fprintf (stderr, "rig+blit: %fms\t", (babl_ticks()-t) / 1000.0);
   }
   else
@@ -369,7 +364,6 @@ void gedl_ui (Mrg *mrg, void *data)
     char thumb_path[PATH_MAX];
     sprintf (thumb_path, "%s.png", clip->path);
 
-    //mrg_printf (mrg, "%s %i %i\n", clip->path, clip->start, clip->end);
     cairo_rectangle (cr, t, y, clip_get_frames (clip), 40);
     cairo_set_source_rgba (cr, 0.1, 0.1, 0.1, 0.5);
 
@@ -441,7 +435,6 @@ GThread *thread;
 
 gpointer renderer_main (gpointer data)
 {
-  //GeglEDL *redl = gedl_new ();
   GeglEDL *edl = data;
   while (1)
   {

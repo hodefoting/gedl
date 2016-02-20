@@ -71,6 +71,20 @@ typedef struct RawClip  /* Clip is castable to this.. */
   int    end;           /*last frame, inclusive fro single frame, make equal to start */
 } RawClip;
 
+
+
+/* a frame source, contains the meta-data neccesary for rendering of a clip */
+/* thus a frame source might contain up to 3 gegl:ff-loads if cross fading,
+ * to keep the frame decoding information for 3 videos available
+ */
+
+/* ... or ... */
+
+/*
+ * .. a frame source, contains the state needed for rendering frames from a clip,
+   it contains either an image or a video loader.
+ */
+
 typedef struct FrameSource {
   int                clip_frame_no;
   const char        *clip_path;
@@ -81,6 +95,7 @@ typedef struct FrameSource {
   GeglNode          *store_buf;
   char              *cached_filter_graph;
 } FrameSource;
+
 
 #if 0
 void frame_source_get_buffer (FrameSource *fsource, int frame_no,
@@ -99,7 +114,8 @@ struct _GeglEDL
   double      mix;
   GeglNode   *cache_loader;
   int         cache_flags;
-  FrameSource source[2];
+
+  FrameSource *source[2];
 } _GeglEDL;
 
 Clip *clip_new            (void);
