@@ -1,6 +1,23 @@
 #define _BSD_SOURCE
 #define _DEFAULT_SOURCE
 
+/*
+
+drag in corners pans strip
+
+tap and hold sets cursor position
+followed by drag to select
+
+having done drag select,.. the corresponding region should auto-play
+
+an action available on playback deck shouldbe copy,. this would permit
+creating a reference to another framesource file.
+
+
+ 
+ */
+
+
 #include <stdio.h>
 #include <mrg.h>
 #include <gegl.h>
@@ -20,7 +37,7 @@ static void mrg_gegl_blit (Mrg *mrg,
                           GeglNode *node,
                           float u, float v,
                           float scale,
-                           float preview_multiplier)
+                          float preview_multiplier)
 {
   float fake_factor = preview_multiplier;
   GeglRectangle bounds;
@@ -340,23 +357,23 @@ void gedl_ui (Mrg *mrg, void *data)
   {
     long t = babl_ticks();
     complexity = gedl_get_render_complexity (edl, frame_no);
-    fprintf (stderr, "cpx: %fms\t", (babl_ticks()-t) / 1000.0);
+    //fprintf (stderr, "cpx: %fms\t", (babl_ticks()-t) / 1000.0);
   }
   if (complexity <= 2)
   {
     long t;
     t = babl_ticks ();
     rig_frame (frame_no);
-    fprintf (stderr, "rig: %fms\t", (babl_ticks()-t) / 1000.0);
+    //fprintf (stderr, "rig: %fms\t", (babl_ticks()-t) / 1000.0);
     mrg_gegl_blit (mrg, 1, 0, mrg_width (mrg), mrg_height (mrg),
                    result, 0,0,1.0, 1.0);
-    fprintf (stderr, "rig+blit: %fms\t", (babl_ticks()-t) / 1000.0);
+    //fprintf (stderr, "rig+blit: %fms\t", (babl_ticks()-t) / 1000.0);
   }
   else
   {
     mrg_printf (mrg, "SKIP  %i\n", complexity);
   }
-  fprintf (stderr, "\n");
+  //fprintf (stderr, "\n");
 
   for (l = edl->clips; l; l = l->next)
   {
@@ -400,9 +417,9 @@ void gedl_ui (Mrg *mrg, void *data)
   }
 
 
-    mrg_printf (mrg, "frame: %i\n", frame_no);
+    //mrg_printf (mrg, "frame: %i\n", frame_no);
 
-    if (active_clip)
+    if (active_clip && 0)
       {
         mrg_printf (mrg, "%s %i %i%s", active_clip->path, active_clip->start, active_clip->end, active_clip->fade_out?" [fade]":"");
 
@@ -430,7 +447,7 @@ void gedl_ui (Mrg *mrg, void *data)
 
 }
 
-GThread *thread;
+//static GThread *thread;
 
 
 gpointer renderer_main (gpointer data)
@@ -460,9 +477,8 @@ int gedl_ui_main (GeglEDL *edl)
   o.mrg = mrg;
   o.edl = edl;
   active_clip = edl->clips->data;
-//  edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
+  //edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
   renderer_set_range (0, 50);
-  if(0)thread = g_thread_new ("renderer", renderer_main, edl);
   mrg_set_ui (mrg, gedl_ui, &o);
   mrg_main (mrg);
   gegl_exit ();

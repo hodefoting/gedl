@@ -114,9 +114,18 @@ int clip_get_frames (Clip *clip)
   if (frames < 0) frames = 0;
   return frames;
 }
+
+void clip_prepare_for_playback (Clip *clip)
+{
+  gegl_node_set (clip->loader, "frame", clip->start, NULL);
+  gegl_node_process (clip->loader);
+}
+
 void clip_set_start (Clip *clip, int start)
 {
   clip->start = start;
+
+  //clip_prepare_for_playback (clip);
 }
 void clip_set_end (Clip *clip, int end)
 {
@@ -311,6 +320,7 @@ void frob_fade (Clip *clip);
 /* also take stat-ing of cache status into account */
 int gedl_get_render_complexity (GeglEDL *edl, int frame)
 {
+  return 1;
   if (edl->frame == frame)
     return 0;
   if (edl->frame + 1 == frame)
@@ -1021,8 +1031,31 @@ int gegl_make_thumb_video (const char *path, const char *thumb_path)
   return 0;
 }
 
+static GThread *thread;
 
 int gedl_ui_main (GeglEDL *edl);
+
+static gpointer preloader (gpointer data)
+{
+  GeglEDL *edl = data;
+  GList *l;
+  while (1)
+  {
+    for (l= edl->clips->next; l; l= l->next)
+    {
+      Clip *clip = l->data;
+      Clip *clip2 = l->next?l->next->data:NULL;
+
+      if (clip != edl->clip && clip!= edl->clip2)// && clip2 != edl->clip && clip2 != edl->clip2)
+      /* XXX: should add a mutex to clip to avoid doing it in parallell,.. */
+        clip_prepare_for_playback (clip);
+      fprintf (stderr, ".");
+    }
+    g_usleep (5000);
+  }
+  return NULL;
+}
+
 int main (int argc, char **argv)
 {
   int tot_frames;
@@ -1042,12 +1075,15 @@ int main (int argc, char **argv)
   edl = gedl_new_from_path (edl_path);
   setup ();
 
+  thread = g_thread_new ("renderer", preloader, edl);
+
   for (int i = 1; argv[i]; i++)
     if (!strcmp (argv[i], "-c"))
        skip_encode = 1;
     else
     if (!strcmp (argv[i], "-ui"))
       return gedl_ui_main (edl);
+
 
   tot_frames  = gedl_get_frames (edl);
   if (frame_end == 0)
