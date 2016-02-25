@@ -61,7 +61,6 @@ typedef struct Clip
   char  *filter_graph; /* chain of gegl filters */
   int    abs_start;
 
-
   const char        *clip_path;
   GeglNode          *gegl;
   int                clip_frame_no;
@@ -70,6 +69,8 @@ typedef struct Clip
   GeglNode          *loader;
   GeglNode          *store_buf;
   char              *cached_filter_graph;
+
+  GMutex             mutex;
 } Clip;
 
 struct _GeglEDL

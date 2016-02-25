@@ -72,6 +72,8 @@ Clip *clip_new (void)
   clip->loader = gegl_node_new_child (clip->gegl, "operation", "gegl:ff-load", NULL);
   clip->store_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:buffer-sink", "buffer", &clip->buffer, NULL);
   gegl_node_link_many (clip->loader, clip->store_buf, NULL);
+  g_mutex_init (&clip->mutex);
+
   return clip;
 }
 void clip_free (Clip *clip)
@@ -87,6 +89,7 @@ void clip_free (Clip *clip)
   if (clip->gegl)
     g_object_unref (clip->gegl);
   clip->gegl = NULL;
+  g_mutex_clear (&clip->mutex);
   g_free (clip);
 }
 const char *clip_get_path (Clip *clip)
@@ -117,8 +120,12 @@ int clip_get_frames (Clip *clip)
 
 void clip_prepare_for_playback (Clip *clip)
 {
-  gegl_node_set (clip->loader, "frame", clip->start, NULL);
-  gegl_node_process (clip->loader);
+  if (g_mutex_trylock (&clip->mutex))
+  {
+    gegl_node_set (clip->loader, "frame", clip->start, NULL);
+    gegl_node_process (clip->loader);
+    g_mutex_unlock (&clip->mutex);
+  }
 }
 
 void clip_set_start (Clip *clip, int start)
@@ -524,6 +531,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
           }
         else
           {
+            g_mutex_lock (&clip->mutex);
             gegl_node_process (clip->store_buf);
             if (edl->mix != 0.0 && clip2)
               {
@@ -594,6 +602,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
               g_free (cache_path);
               g_free (cache_path_final);
             }
+            g_mutex_unlock (&clip->mutex);
           }
 
       g_checksum_free (hash);
@@ -1044,12 +1053,10 @@ static gpointer preloader (gpointer data)
     for (l= edl->clips->next; l; l= l->next)
     {
       Clip *clip = l->data;
-      Clip *clip2 = l->next?l->next->data:NULL;
 
-      if (clip != edl->clip && clip!= edl->clip2)// && clip2 != edl->clip && clip2 != edl->clip2)
+      if (clip != edl->clip && clip!= edl->clip2)
       /* XXX: should add a mutex to clip to avoid doing it in parallell,.. */
         clip_prepare_for_playback (clip);
-      fprintf (stderr, ".");
     }
     g_usleep (5000);
   }

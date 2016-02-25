@@ -13,8 +13,9 @@ having done drag select,.. the corresponding region should auto-play
 an action available on playback deck shouldbe copy,. this would permit
 creating a reference to another framesource file.
 
+a too small drag is still just an insertion point selection, permitting
+a single click from previous select drag (or tap to select existing seleciton/all),. permitting insertion.
 
- 
  */
 
 
@@ -355,14 +356,14 @@ void gedl_ui (Mrg *mrg, void *data)
       mrg_queue_draw (mrg, NULL);
     }
   {
-    long t = babl_ticks();
+    //long t = babl_ticks();
     complexity = gedl_get_render_complexity (edl, frame_no);
     //fprintf (stderr, "cpx: %fms\t", (babl_ticks()-t) / 1000.0);
   }
   if (complexity <= 2)
   {
-    long t;
-    t = babl_ticks ();
+    //long t;
+    //t = babl_ticks ();
     rig_frame (frame_no);
     //fprintf (stderr, "rig: %fms\t", (babl_ticks()-t) / 1000.0);
     mrg_gegl_blit (mrg, 1, 0, mrg_width (mrg), mrg_height (mrg),
