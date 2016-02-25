@@ -460,7 +460,7 @@ int gedl_ui_main (GeglEDL *edl)
   o.mrg = mrg;
   o.edl = edl;
   active_clip = edl->clips->data;
-  edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
+//  edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
   renderer_set_range (0, 50);
   if(0)thread = g_thread_new ("renderer", renderer_main, edl);
   mrg_set_ui (mrg, gedl_ui, &o);

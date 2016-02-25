@@ -228,9 +228,9 @@ static void gedl_create_chain (GeglEDL *edl, GeglNode *op_start, GeglNode *op_en
 
 #include <stdlib.h>
 
-FrameSource *framesource_new (GeglNode *gegl)
+Clip *framesource_new (GeglNode *gegl)
 {
-  FrameSource *source = g_new0 (FrameSource, 1);
+  Clip *source = g_new0 (Clip, 1);
   source->loader = gegl_node_new_child (gegl, "operation", "gegl:ff-load", NULL);
   source->store_buf = gegl_node_new_child (gegl, "operation", "gegl:buffer-sink", "buffer", &source->buffer, NULL);
   gegl_node_link_many (source->loader, source->store_buf, NULL);
@@ -261,7 +261,7 @@ void gedl_set_size (GeglEDL *edl, int width, int height)
   edl->height = height;
 }
 
-void framesource_free (FrameSource *source)
+void framesource_free (Clip *source)
 {
   if (source->buffer)
     g_object_unref (source->buffer);
@@ -749,7 +749,7 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
 
   sscanf (line, "%s %i %i", path, &start, &end);
   if (strlen (path) > 3)
-   {
+    {
       Clip *clip = NULL;
       int ff_probe = 0;
 
@@ -797,29 +797,30 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
 
      if (ff_probe && !clip->is_image)
        {
-	 GeglNode *gegl = gegl_node_new ();
-	 GeglNode *probe = gegl_node_new_child (gegl, "operation",
+	     GeglNode *gegl = gegl_node_new ();
+	     GeglNode *probe = gegl_node_new_child (gegl, "operation",
                           "gegl:ff-load", "path", clip->path, NULL);
-	 gegl_node_process (probe);
+	     gegl_node_process (probe);
 
-	 gegl_node_get (probe, "frames", &clip->duration, NULL);
-	 gegl_node_get (probe, "frame-rate", &clip->fps, NULL);
-	 g_object_unref (gegl);
+	     gegl_node_get (probe, "frames", &clip->duration, NULL);
+	     gegl_node_get (probe, "frame-rate", &clip->fps, NULL);
+         g_object_unref (gegl);
          frob_fade (clip);
+
          if (edl->fps == 0.0)
          {
            gedl_set_fps (edl, clip->fps);
          }
        }
 
-      if (rest)
-      {
-        clip->filter_graph = g_strdup (rest);
-        while (clip->filter_graph[strlen(clip->filter_graph)-1]==' ' ||
-               clip->filter_graph[strlen(clip->filter_graph)-1]=='\n')
-               clip->filter_graph[strlen(clip->filter_graph)-1]='\0';
-      }
-   }
+     if (rest)
+       {
+         clip->filter_graph = g_strdup (rest);
+         while (clip->filter_graph[strlen(clip->filter_graph)-1]==' ' ||
+                clip->filter_graph[strlen(clip->filter_graph)-1]=='\n')
+                clip->filter_graph[strlen(clip->filter_graph)-1]='\0';
+       }
+    }
   /* todo: probe video file for length if any of arguments are nont present as 
            integers.. alloving full clips and clips with mm:ss.nn timestamps,
    */
