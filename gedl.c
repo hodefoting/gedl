@@ -68,6 +68,10 @@ int         frame_end        = DEFAULT_frame_end;
 Clip *clip_new (void)
 {
   Clip *clip = g_malloc0 (sizeof (Clip));
+  clip->gegl = gegl_node_new ();
+  clip->loader = gegl_node_new_child (clip->gegl, "operation", "gegl:ff-load", NULL);
+  clip->store_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:buffer-sink", "buffer", &clip->buffer, NULL);
+  gegl_node_link_many (clip->loader, clip->store_buf, NULL);
   return clip;
 }
 void clip_free (Clip *clip)
@@ -75,6 +79,14 @@ void clip_free (Clip *clip)
   if (clip->path)
     g_free (clip->path);
   clip->path = NULL;
+
+  if (clip->buffer)
+    g_object_unref (clip->buffer);
+  clip->buffer = NULL;
+
+  if (clip->gegl)
+    g_object_unref (clip->gegl);
+  clip->gegl = NULL;
   g_free (clip);
 }
 const char *clip_get_path (Clip *clip)
@@ -228,15 +240,6 @@ static void gedl_create_chain (GeglEDL *edl, GeglNode *op_start, GeglNode *op_en
 
 #include <stdlib.h>
 
-Clip *framesource_new (GeglNode *gegl)
-{
-  Clip *source = g_new0 (Clip, 1);
-  source->loader = gegl_node_new_child (gegl, "operation", "gegl:ff-load", NULL);
-  source->store_buf = gegl_node_new_child (gegl, "operation", "gegl:buffer-sink", "buffer", &source->buffer, NULL);
-  gegl_node_link_many (source->loader, source->store_buf, NULL);
-  return source;
-}
-
 GeglEDL *gedl_new           (void)
 {
   int i;
@@ -249,7 +252,7 @@ GeglEDL *gedl_new           (void)
   edl->cache_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:"  CACHE_FORMAT  "-load", NULL);
 
   for (i = 0; i < 2; i++)
-    edl->source[i] = framesource_new (edl->gegl);
+    edl->source[i] = clip_new ();
 
   return edl;
 }
@@ -263,9 +266,6 @@ void gedl_set_size (GeglEDL *edl, int width, int height)
 
 void framesource_free (Clip *source)
 {
-  if (source->buffer)
-    g_object_unref (source->buffer);
-  source->buffer = NULL;
   g_free (source);
 }
 
@@ -274,7 +274,7 @@ void     gedl_free          (GeglEDL *edl)
   int s;
   for (s = 0; s < 2; s++)
     {
-      framesource_free (edl->source[s]);
+      clip_free (edl->source[s]);
       edl->source[s] = NULL;
     }
 

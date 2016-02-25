@@ -46,6 +46,7 @@ int         gedl_get_render_complexity (GeglEDL *edl, int frame);
 /*********/
 typedef struct Clip
 {
+
   char  *path;  /*path to media file */
   double fps;
   int    duration;
@@ -62,7 +63,7 @@ typedef struct Clip
 
 
   const char        *clip_path;
-
+  GeglNode          *gegl;
   int                clip_frame_no;
   GeglBuffer        *buffer;
   GeglAudioFragment *audio;
