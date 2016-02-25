@@ -98,6 +98,7 @@ void clip_set_path (Clip *clip, const char *path)
   if (clip->path)
     g_free (clip->path);
   clip->path = g_strdup (path);
+  gegl_node_set (clip->loader, "path", path, NULL);
 }
 int clip_get_start (Clip *clip)
 {
@@ -242,7 +243,6 @@ static void gedl_create_chain (GeglEDL *edl, GeglNode *op_start, GeglNode *op_en
 
 GeglEDL *gedl_new           (void)
 {
-  int i;
   GeglEDL *edl = g_malloc0(sizeof (GeglEDL));
   system ("mkdir .gedl 2>/dev/null");  /* XXX: create cache dir */
   edl->gegl = gegl_node_new ();
@@ -250,9 +250,6 @@ GeglEDL *gedl_new           (void)
   edl->cache_flags = 0;
 
   edl->cache_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:"  CACHE_FORMAT  "-load", NULL);
-
-  for (i = 0; i < 2; i++)
-    edl->source[i] = clip_new ();
 
   return edl;
 }
@@ -271,13 +268,6 @@ void framesource_free (Clip *source)
 
 void     gedl_free          (GeglEDL *edl)
 {
-  int s;
-  for (s = 0; s < 2; s++)
-    {
-      clip_free (edl->source[s]);
-      edl->source[s] = NULL;
-    }
-
   while (edl->clips)
   {
     clip_free (edl->clips->data);
@@ -333,12 +323,13 @@ int gedl_get_render_complexity (GeglEDL *edl, int frame)
 
 static void rig_filters (GeglEDL *edl, Clip *clip, Clip *clip2, int frame_no)
 {
+#if 0
        /* create filter graph if a secondary clip is in use */
-       if (edl->mix != 0.0 && edl->source[1]->filter_graph)
+       if (edl->mix != 0.0 && clip2 && clip2->filter_graph)
          {
-           if (edl->source[1]->cached_filter_graph &&
-               !strcmp(edl->source[1]->cached_filter_graph,
-                       edl->source[1]->filter_graph))
+           if (clip2->cached_filter_graph &&
+               !strcmp(clip2->cached_filter_graph,
+                       clip2->filter_graph))
              {
                /* reuse previous filter graph (when proeprty tweening arrives, should compute frame
                                                for tweening) */
@@ -348,24 +339,27 @@ static void rig_filters (GeglEDL *edl, Clip *clip, Clip *clip2, int frame_no)
               remove_in_betweens (nop_raw2, nop_transformed2);
               //source_create_chain (edl, nop_raw2, nop_transformed2, edl->source[1], 
               gedl_create_chain (edl, nop_raw2, nop_transformed2,
-                                 edl->source[1]->filter_graph,
-                                 edl->source[1]->clip_frame_no - clip2->end,
+                                 clip2->filter_graph,
+                                 clip2->clip_frame_no - clip2->end,
                                  clip2->end - clip2->start);
 
-              if (edl->source[1]->cached_filter_graph)
-                g_free (edl->source[1]->cached_filter_graph);
-              edl->source[1]->cached_filter_graph = g_strdup (edl->source[1]->filter_graph);
+              if (clip2->cached_filter_graph)
+                g_free (clip2->cached_filter_graph);
+              clip2->cached_filter_graph = g_strdup (clip2->filter_graph);
             }
          }
         else
          {
            remove_in_betweens (nop_raw2, nop_transformed2);
-           if (edl->source[1]->cached_filter_graph)
-             g_free (edl->source[1]->cached_filter_graph);
-           edl->source[1]->cached_filter_graph = NULL;
+           if (clip2)
+           {
+             if (clip2->cached_filter_graph)
+               g_free (clip2->cached_filter_graph);
+             clip2->cached_filter_graph = NULL;
+           }
            gegl_node_link_many (nop_raw2, nop_transformed2, NULL);
          }
-
+#endif
 }
 
 void gedl_set_frame         (GeglEDL *edl, int    frame)
@@ -378,13 +372,14 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
     return;
   }
   edl->frame = frame;
-
+#if 0
   edl->source[1]->clip_path     = "unknown";
   edl->source[1]->clip_frame_no = 0;
   edl->source[1]->filter_graph  = NULL;
   edl->source[0]->clip_path     = "unknown";
   edl->source[0]->filter_graph  = NULL;
   edl->source[0]->clip_frame_no = 0;
+#endif
   edl->mix = 0.0;
 
   for (l = edl->clips; l; l = l->next)
@@ -392,75 +387,67 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
     Clip *clip = l->data;
     int clip_frames = clip_get_frames (clip);
 
+    clip->clip_frame_no = 0;
+
     clip->abs_start = clip_start;
     if (frame - clip_start < clip_frames)
     {
       /* found right clip */
-      const char *clip_path = clip_get_path (clip);
+      //const char *clip_path = clip_get_path (clip);
       Clip *clip2 = NULL; 
       gchar *frame_recipe;
       GChecksum *hash;
       gchar *cache_path;
       int was_cached =0 ;
      
-      edl->source[0]->filter_graph = clip->filter_graph;
+      edl->clip = clip;
 
-      if (edl->source[0]->clip_path == NULL || strcmp (clip_path, edl->source[0]->clip_path))
-        {
-          edl->source[0]->clip_path = clip_get_path (clip);
-
-          gegl_node_set (edl->source[0]->loader, "operation", clip->is_image?"gegl:load":"gegl:ff-load", "path", clip_get_path (clip), NULL);
-        }
-
-      edl->source[0]->clip_frame_no = (frame - clip_start) + clip_get_start (clip);
+      clip->clip_frame_no = (frame - clip_start) + clip_get_start (clip);
   
       if (!clip->is_image)
         {
-          gegl_node_set (edl->source[0]->loader, "frame", edl->source[0]->clip_frame_no, NULL);
+          gegl_node_set (clip->loader, "frame", clip->clip_frame_no, NULL);
         }
 
-      for (int s = 0; s < 2; s ++)
-      {
-        if (edl->source[s]->buffer) {
-          g_object_unref (edl->source[s]->buffer);
-          edl->source[s]->buffer = NULL;
-        }
-      }
       frob_fade (clip);
       
-      if (clip->fade_out && (edl->source[0]->clip_frame_no > (clip->end - clip->fade_pad_end)) && l->next)
+      if (clip->fade_out && (clip->clip_frame_no > (clip->end - clip->fade_pad_end)) && l->next)
         {
           clip2 = l->next->data;
-          edl->mix = (clip->end - edl->source[0]->clip_frame_no) * 1.0 / clip->fade_pad_end;
+          clip2->clip_frame_no = 0;
+
+          edl->clip2 = clip2;
+          edl->mix = (clip->end - clip->clip_frame_no) * 1.0 / clip->fade_pad_end;
           edl->mix = (1.0 - edl->mix) / 2.0;
-          edl->source[1]->filter_graph = clip2->filter_graph;
-          if (edl->source[1]->clip_path == NULL || strcmp (clip_get_path (clip2), edl->source[1]->clip_path))
+
+#if 1
+      //  if (edl->source[1]->clip_path == NULL || strcmp (clip_get_path (clip2), edl->source[1]->clip_path))
            {
-             edl->source[1]->clip_path = clip_get_path (clip2);
-             gegl_node_set (edl->source[1]->loader, "operation", clip2->is_image?"gegl:load":"gegl:ff-load", "path", edl->source[1]->clip_path, NULL);
-	     edl->source[1]->clip_frame_no = clip2->start - ( clip->end - edl->source[0]->clip_frame_no);
+             gegl_node_set (clip2->loader, "operation", clip2->is_image?"gegl:load":"gegl:ff-load", "path", clip2->clip_path, NULL);
+	     clip2->clip_frame_no = clip2->start - ( clip->end - clip->clip_frame_no);
            }
+#endif
 	     if (!clip2->is_image)
            {
-	         gegl_node_set (edl->source[1]->loader, "frame", edl->source[1]->clip_frame_no, NULL);
+	         gegl_node_set (clip2->loader, "frame", clip2->clip_frame_no, NULL);
            }
         }
-      else if (clip->fade_in && (edl->source[0]->clip_frame_no - clip->start < clip->fade_pad_start))
+      else if (clip->fade_in && (clip->clip_frame_no - clip->start < clip->fade_pad_start))
         {
           clip2 = l->prev->data;
-          edl->mix = (clip->fade_pad_start - (edl->source[0]->clip_frame_no - clip->start) ) * 1.0 / clip->fade_pad_start;
+          edl->mix = (clip->fade_pad_start - (clip->clip_frame_no - clip->start) ) * 1.0 / clip->fade_pad_start;
            edl->mix /= 2.0;
-           edl->source[1]->filter_graph = clip2->filter_graph;
 
-           if (edl->source[1]->clip_path == NULL || strcmp (clip_get_path (clip2), edl->source[1]->clip_path))
+#if 1
+      //     if (edl->source[1]->clip_path == NULL || strcmp (clip_get_path (clip2), edl->source[1]->clip_path))
              {
-               edl->source[1]->clip_path = clip_get_path (clip2);
-               gegl_node_set (edl->source[1]->loader, "operation", clip2->is_image?"gegl:load":"gegl:ff-load", "path", edl->source[1]->clip_path, NULL);
-	           edl->source[1]->clip_frame_no = clip2->end + (edl->source[0]->clip_frame_no - clip->start);
+               gegl_node_set (clip2->loader, "operation", clip2->is_image?"gegl:load":"gegl:ff-load", "path", clip2->clip_path, NULL);
+	           clip2->clip_frame_no = clip2->end + (clip->clip_frame_no - clip->start);
 
              }
+#endif
 	       if (!clip2->is_image) 
-	         gegl_node_set (edl->source[1]->loader, "frame", edl->source[1]->clip_frame_no, NULL);
+	         gegl_node_set (clip2->loader, "frame", clip2->clip_frame_no, NULL);
         }
       else
         {
@@ -472,29 +459,29 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
        * to happen on he fly.. along with audio mix
        */
 
-      if (edl->source[0]->filter_graph)
+      if (clip->filter_graph)
         {
-          if (edl->source[0]->cached_filter_graph &&
-                !strcmp(edl->source[0]->cached_filter_graph,
-                        edl->source[0]->filter_graph))
+          if (clip->cached_filter_graph &&
+                !strcmp(clip->cached_filter_graph,
+                        clip->filter_graph))
             {
               /* reuse previous filter graph (should probably set frame for tweening?  */
             }
           else
             {
               remove_in_betweens (nop_raw, nop_transformed);
-              gedl_create_chain (edl, nop_raw, nop_transformed, edl->source[0]->filter_graph, edl->source[0]->clip_frame_no - clip->end, clip->end - clip->start);
-                if (edl->source[0]->cached_filter_graph)
-                  g_free (edl->source[0]->cached_filter_graph);
-                edl->source[0]->cached_filter_graph = g_strdup (edl->source[0]->filter_graph);
+              gedl_create_chain (edl, nop_raw, nop_transformed, clip->filter_graph, clip->clip_frame_no - clip->end, clip->end - clip->start);
+                if (clip->cached_filter_graph)
+                  g_free (clip->cached_filter_graph);
+                clip->cached_filter_graph = g_strdup (clip->filter_graph);
             }
          }
        else
          {
            remove_in_betweens (nop_raw, nop_transformed);
-           if (edl->source[0]->cached_filter_graph)
-             g_free (edl->source[0]->cached_filter_graph);
-           edl->source[0]->cached_filter_graph = NULL;
+           if (clip->cached_filter_graph)
+             g_free (clip->cached_filter_graph);
+           clip->cached_filter_graph = NULL;
            gegl_node_link_many (nop_raw, nop_transformed, NULL);
          }
 
@@ -503,8 +490,9 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
         /**********************************************************************/
 
         frame_recipe = g_strdup_printf ("%s: %s %i %s %s %i %s %ix%i %f",
-          "gedl-pre-3", gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl), edl->source[0]->filter_graph,
-                        gedl_get_clip2_path (edl), gedl_get_clip2_frame_no (edl), edl->source[1]->filter_graph,
+          "gedl-pre-3", gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl), clip->filter_graph,
+                        //gedl_get_clip2_path (edl), gedl_get_clip2_frame_no (edl), clip2->filter_graph,
+                        "aaa", 3, "bbb",
                         video_width, video_height, 
                         edl->mix);
 
@@ -520,51 +508,51 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
             gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
             gegl_node_link_many (edl->cache_loader, result, NULL);
 
-            if (!edl->source[0]->audio)
-              edl->source[0]->audio = gegl_audio_fragment_new (44100, 2, 0, 4000);
-            gegl_meta_get_audio (cache_path, edl->source[0]->audio);
+            if (!clip->audio)
+              clip->audio = gegl_audio_fragment_new (44100, 2, 0, 4000);
+            gegl_meta_get_audio (cache_path, clip->audio);
           }
         else
           {
-            gegl_node_process (edl->source[0]->store_buf);
-            if (edl->mix != 0.0)
+            gegl_node_process (clip->store_buf);
+            if (edl->mix != 0.0 && clip2)
               {
-                gegl_node_process (edl->source[1]->store_buf);
+                gegl_node_process (clip2->store_buf);
               }
-            if (edl->source[0]->audio)
+            if (clip->audio)
               {
-                g_object_unref (edl->source[0]->audio);
-                edl->source[0]->audio = NULL;
+                g_object_unref (clip->audio);
+                clip->audio = NULL;
               }
-             if (edl->source[1]->audio)
+             if (clip2 && clip2->audio)
               {
-                g_object_unref (edl->source[1]->audio);
-                edl->source[1]->audio = NULL;
+                g_object_unref (clip2->audio);
+                clip2->audio = NULL;
               }
 
             if (clip->is_image)
-              edl->source[0]->audio = NULL;
+              clip->audio = NULL;
             else
-              gegl_node_get (edl->source[0]->loader, "audio", &edl->source[0]->audio, NULL);
-            if (edl->mix != 0.0)
+              gegl_node_get (clip->loader, "audio", &clip->audio, NULL);
+            if (edl->mix != 0.0 && clip2)
               {
                /* directly mix the audio from the secondary into the primary, with proportional weighting of samples
                 */
                 if (clip2->is_image)
                   {
-                    edl->source[1]->audio = NULL;
+                    clip2->audio = NULL;
                   }
                 else
                   {
                     int i, c;
-                    gegl_node_get (edl->source[1]->loader, "audio", &edl->source[1]->audio, NULL);
+                    gegl_node_get (clip2->loader, "audio", &clip2->audio, NULL);
 
-                    for (c = 0; c < gegl_audio_fragment_get_channels (edl->source[0]->audio); c++)
-                      for (i = 0; i < MIN(gegl_audio_fragment_get_sample_count (edl->source[0]->audio),
-                              gegl_audio_fragment_get_sample_count (edl->source[1]->audio)); i++)
-                        edl->source[0]->audio->data[c][i] =
-                          edl->source[0]->audio->data[c][i] * (1.0-edl->mix) +
-                          edl->source[1]->audio->data[c][i] * edl->mix;
+                    for (c = 0; c < gegl_audio_fragment_get_channels (clip->audio); c++)
+                      for (i = 0; i < MIN(gegl_audio_fragment_get_sample_count (clip->audio),
+                              gegl_audio_fragment_get_sample_count (clip2->audio)); i++)
+                        clip->audio->data[c][i] =
+                          clip->audio->data[c][i] * (1.0-edl->mix) +
+                          clip2->audio->data[c][i] * edl->mix;
                    }
                }
 
@@ -588,8 +576,8 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
                   }
                   gegl_node_link_many (result, save, NULL);
                   gegl_node_process (save);
-                  if (edl->source[0]->audio)
-                    gegl_meta_set_audio (cache_path, edl->source[0]->audio);
+                  if (clip->audio)
+                    gegl_meta_set_audio (cache_path, clip->audio);
                   rename (cache_path, cache_path_final);
                   g_object_unref (save_graph);
                 }
@@ -619,8 +607,8 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
     clip_start += clip_frames;
   }
   gegl_node_connect_to (crop, "output", result, "input");
-  edl->source[0]->clip_path = "unknown";
-  edl->source[0]->clip_frame_no = 0;
+  //edl->source[0]->clip_path = "unknown";
+  //edl->source[0]->clip_frame_no = 0;
 }
 
 void gedl_set_time (GeglEDL *edl, double seconds)
@@ -646,15 +634,15 @@ double gedl_get_time (GeglEDL *edl)
 }
 GeglAudioFragment *gedl_get_audio  (GeglEDL *edl)
 {
-  return edl->source[0]->audio;
+  return edl->clip->audio;
 }
 GeglBuffer *gedl_get_buffer (GeglEDL *edl)
 {
-  return edl->source[0]->buffer;
+  return edl->clip->buffer;
 }
 GeglBuffer *gedl_get_buffer2 (GeglEDL *edl)
 {
-  return edl->source[1]->buffer?edl->source[1]->buffer:edl->source[0]->buffer;
+  return edl->clip2->buffer?edl->clip2->buffer:edl->clip->buffer;
 }
 double gedl_get_mix (GeglEDL *edl)
 {
@@ -924,19 +912,19 @@ GeglEDL *gedl_new_from_path (const char *path)
 }
 const char *gedl_get_clip_path (GeglEDL *edl)
 {
-  return edl->source[0]->clip_path;
+  return edl->clip->clip_path;
 }
 int gedl_get_clip_frame_no    (GeglEDL *edl)
 {
-  return edl->source[0]->clip_frame_no;
+  return edl->clip->clip_frame_no;
 }
 const char *gedl_get_clip2_path          (GeglEDL *edl)
 {
-  return edl->source[1]->clip_path;
+  return edl->clip2->clip_path;
 }
 int gedl_get_clip2_frame_no      (GeglEDL *edl)
 {
-  return edl->source[1]->clip_frame_no;
+  return edl->clip2->clip_frame_no;
 }
 static void setup (void)
 {
@@ -1013,7 +1001,7 @@ static void process_frames (void)
       gegl_node_process (encode);
     fprintf (stderr, "\r%1.2f%% %04d / %04d %s#%04d  [%s][%s]  ",
      100.0 * (frame_no-frame_start) * 1.0 / (frame_end - frame_start),
-     frame_no, frame_end, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl), edl->source[0]->filter_graph, edl->source[1]->filter_graph); 
+     frame_no, frame_end, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl), edl->clip->filter_graph, edl->clip2->filter_graph); 
   }
 }
 

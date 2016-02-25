@@ -86,7 +86,11 @@ struct _GeglEDL
   GeglNode   *cache_loader;
   int         cache_flags;
 
-  Clip       *source[2];
+  //Clip       *source[2];
+
+
+  Clip *clip;
+  Clip *clip2;
 } _GeglEDL;
 
 Clip *clip_new            (void);
