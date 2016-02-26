@@ -1,8 +1,34 @@
 #define _BSD_SOURCE
 #define _DEFAULT_SOURCE
 
-/*
+state:
+  list of open filtes
+  list of view setting per item
+  currently edited on separate layer
 
+  .-----.  .-----.
+  |     |  |     |
+  |     |  |     |
+  `-----'  '-----'
+  ================   clips live filtered by search
+  ================   
+  ================   
+  ................
+  ================ <- regardless of scroll,.
+
+--------------------------------------------------
+
+each clip show filename, followed by editable clip list for search
+
+/*
+   
+   show all .edl .mp4 .ogv and .mpg files in a folder,
+   show images of folder in a row..  permit editing stop-motion
+   by zooming in enough to use individual frames decoded..
+   
+   toggle for generating cache or not
+   implement instant reload on crash
+     
 drag in corners pans strip
 
 tap and hold sets cursor position
@@ -478,7 +504,7 @@ int gedl_ui_main (GeglEDL *edl)
   o.mrg = mrg;
   o.edl = edl;
   active_clip = edl->clips->data;
-  //edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
+  edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
   renderer_set_range (0, 50);
   mrg_set_ui (mrg, gedl_ui, &o);
   mrg_main (mrg);

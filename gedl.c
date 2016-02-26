@@ -122,7 +122,10 @@ void clip_prepare_for_playback (Clip *clip)
 {
   if (g_mutex_trylock (&clip->mutex))
   {
-    gegl_node_set (clip->loader, "frame", clip->start, NULL);
+    int start = clip->start - clip->fade_pad_start;
+    if (start < 0) start = 0;
+
+    gegl_node_set (clip->loader, "frame", start, NULL);
     gegl_node_process (clip->loader);
     g_mutex_unlock (&clip->mutex);
   }
@@ -1050,11 +1053,11 @@ static gpointer preloader (gpointer data)
   GList *l;
   while (1)
   {
-    for (l= edl->clips->next; l; l= l->next)
+    for (l= edl->clips; l; l= l->next)
     {
       Clip *clip = l->data;
 
-      if (clip != edl->clip && clip!= edl->clip2)
+      if (clip != edl->clip) // && clip!= edl->clip2)
       /* XXX: should add a mutex to clip to avoid doing it in parallell,.. */
         clip_prepare_for_playback (clip);
     }
