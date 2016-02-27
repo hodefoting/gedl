@@ -1,6 +1,7 @@
 #define _BSD_SOURCE
 #define _DEFAULT_SOURCE
 
+#if 0
 state:
   list of open filtes
   list of view setting per item
@@ -19,6 +20,7 @@ state:
 --------------------------------------------------
 
 each clip show filename, followed by editable clip list for search
+#endif
 
 /*
    
@@ -460,8 +462,8 @@ void gedl_ui (Mrg *mrg, void *data)
   mrg_add_binding (mrg, "x", NULL, NULL, remove_clip, edl);
   mrg_add_binding (mrg, "d", NULL, NULL, duplicate_clip, edl);
   mrg_add_binding (mrg, "space", NULL, NULL, toggle_playing, edl);
-  mrg_add_binding (mrg, "left", NULL, NULL, nav_left, edl);
-  mrg_add_binding (mrg, "right", NULL, NULL, nav_right, edl);
+  mrg_add_binding (mrg, "j", NULL, NULL, nav_left, edl);
+  mrg_add_binding (mrg, "k", NULL, NULL, nav_right, edl);
   mrg_add_binding (mrg, ".", NULL, NULL, clip_end_inc, edl);
   mrg_add_binding (mrg, "f", NULL, NULL, toggle_fade, edl);
   mrg_add_binding (mrg, "s", NULL, NULL, save, edl);
@@ -469,8 +471,8 @@ void gedl_ui (Mrg *mrg, void *data)
   mrg_add_binding (mrg, "k", NULL, NULL, clip_start_inc, edl);
   mrg_add_binding (mrg, "l", NULL, NULL, clip_start_dec, edl);
   mrg_add_binding (mrg, "q", NULL, NULL, (void*)do_quit, mrg);
-  mrg_add_binding (mrg, "/", NULL, NULL, step_frame, edl);
-  mrg_add_binding (mrg, "?", NULL, NULL, step_frame_back, edl);
+  mrg_add_binding (mrg, "right", NULL, NULL, step_frame, edl);
+  mrg_add_binding (mrg, "left", NULL, NULL, step_frame_back, edl);
 
 }
 
