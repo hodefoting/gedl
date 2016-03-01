@@ -179,61 +179,57 @@ static void gedl_create_chain (GeglEDL *edl, GeglNode *op_start, GeglNode *op_en
          if (strchr (op_name->str, '='))
          {
            GType target_type = G_TYPE_INT;
-           GValue gvalue={0,};
-           GValue gvalue_transformed={0,};
-           char *key = g_strdup (op_name->str);
+           GValue gvalue = {0,};
+           char *key   = g_strdup (op_name->str);
            char *value = strchr (key, '=') + 1;
-           value[-1]='\0';
-           {
-             unsigned int n_props;
-             GParamSpec **pspecs = gegl_operation_list_properties (cur_op, &n_props);
-             int i;
-             for (i = 0; i < n_props; i++)
-             {
-               if (!strcmp (pspecs[i]->name, key))
-                 target_type = pspecs[i]->value_type;
-             }
-           }
-	   if (target_type == G_TYPE_DOUBLE ||
-               target_type == G_TYPE_FLOAT)
-           {
-             double val = g_strtod (value, NULL);
-             gegl_node_set (iter, key, val, NULL);
-           }
-	   else if (target_type == G_TYPE_BOOLEAN)
-           {
+           unsigned int n_props;
+           GParamSpec **pspecs = gegl_operation_list_properties (cur_op, &n_props);
+           value[-1]   = '\0';
+           int i;
+           for (i = 0; i < n_props; i++)
+             if (!strcmp (pspecs[i]->name, key))
+               target_type = pspecs[i]->value_type;
 
-          if (!strcmp (value, "true") ||
-              !strcmp (value, "TRUE") ||
-              !strcmp (value, "YES") ||
-              !strcmp (value, "yes") ||
-              !strcmp (value, "y") ||
-              !strcmp (value, "Y") ||
-              !strcmp (value, "1") ||
-              !strcmp (value, "on"))
-            {
-              gegl_node_set (iter, key, TRUE, NULL);
-            }
-          else
-            {
-              gegl_node_set (iter, key, FALSE, NULL);
-            }
-           }
-	   else if (target_type == G_TYPE_INT)
-           {
-             int val = g_strtod (value, NULL);
-             gegl_node_set (iter, key, val, NULL);
-           }
+           if (target_type == G_TYPE_DOUBLE ||
+               target_type == G_TYPE_FLOAT)
+             {
+               double val = g_strtod (value, NULL);
+               gegl_node_set (iter, key, val, NULL);
+             }
+	       else if (target_type == G_TYPE_BOOLEAN)
+             {
+               if (!strcmp (value, "true") ||
+                   !strcmp (value, "TRUE") ||
+                   !strcmp (value, "YES") ||
+                   !strcmp (value, "yes") ||
+                   !strcmp (value, "y") ||
+                   !strcmp (value, "Y") ||
+                   !strcmp (value, "1") ||
+                   !strcmp (value, "on"))
+                 {
+                   gegl_node_set (iter, key, TRUE, NULL);
+                 }
+               else
+                 {
+                   gegl_node_set (iter, key, FALSE, NULL);
+                 }
+             }
+	       else if (target_type == G_TYPE_INT)
+             {
+               int val = g_strtod (value, NULL);
+               gegl_node_set (iter, key, val, NULL);
+             }
            else
-           {
-             g_value_init (&gvalue, G_TYPE_STRING);
-             g_value_set_string (&gvalue, value);
-             g_value_init (&gvalue_transformed, target_type);
-             g_value_transform (&gvalue, &gvalue_transformed);
-             gegl_node_set_property (iter, key, &gvalue_transformed);
-             g_value_unset (&gvalue);
-             g_value_unset (&gvalue_transformed);
-           }
+             {
+               GValue gvalue_transformed = {0,};
+               g_value_init (&gvalue, G_TYPE_STRING);
+               g_value_set_string (&gvalue, value);
+               g_value_init (&gvalue_transformed, target_type);
+               g_value_transform (&gvalue, &gvalue_transformed);
+               gegl_node_set_property (iter, key, &gvalue_transformed);
+               g_value_unset (&gvalue);
+               g_value_unset (&gvalue_transformed);
+             }
            g_free (key);
          }
          else if (strchr (op_name->str, ':'))

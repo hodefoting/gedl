@@ -10,7 +10,7 @@ state:
   .-----.  .-----.
   |     |  |     |
   |     |  |     |
-  `-----'  '-----'
+  '-----'  '-----'
   ================   clips live filtered by search
   ================   
   ================   
@@ -23,7 +23,6 @@ each clip show filename, followed by editable clip list for search
 #endif
 
 /*
-   
    show all .edl .mp4 .ogv and .mpg files in a folder,
    show images of folder in a row..  permit editing stop-motion
    by zooming in enough to use individual frames decoded..
