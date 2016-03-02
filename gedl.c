@@ -1005,9 +1005,9 @@ static void process_frames (void)
     rig_frame (frame_no);
     if (!skip_encode)
       gegl_node_process (encode);
-    fprintf (stderr, "\r%1.2f%% %04d / %04d %s#%04d  [%s][%s]  ",
+    fprintf (stderr, "\r%1.2f%% %04d / %04d    ",
      100.0 * (frame_no-frame_start) * 1.0 / (frame_end - frame_start),
-     frame_no, frame_end, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl), edl->clip->filter_graph, edl->clip2->filter_graph); 
+     frame_no, frame_end);
   }
 }
 
