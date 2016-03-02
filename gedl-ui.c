@@ -205,14 +205,56 @@ static void toggle_playing (MrgEvent *event, void *data1, void *data2)
 
 static void extend_right (MrgEvent *event, void *data1, void *data2)
 {
-  fprintf (stderr, "extend right\n");
+  GeglEDL *edl = data1;
+  int sel_start, sel_end;
+
+  gedl_get_selection (edl, &sel_start, &sel_end);
+  if (frame_no == sel_end)
+  {
+    sel_end ++;
+    frame_no ++;
+  }
+  else if (frame_no == sel_start)
+  {
+    sel_start ++;
+    frame_no ++;
+  }
+  else
+  {
+    sel_start = sel_end = frame_no;
+    sel_end ++;
+    frame_no ++;
+  }
+  gedl_set_selection (edl, sel_start, sel_end);
+
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
 
 static void extend_left (MrgEvent *event, void *data1, void *data2)
 {
-  fprintf (stderr, "extend left\n");
+  GeglEDL *edl = data1;
+  int sel_start, sel_end;
+
+  gedl_get_selection (edl, &sel_start, &sel_end);
+  if (frame_no == sel_end)
+  {
+    sel_end --;
+    frame_no --;
+  }
+  else if (frame_no == sel_start)
+  {
+    sel_start --;
+    frame_no --;
+  }
+  else
+  {
+    sel_start = sel_end = frame_no;
+    sel_end --;
+    frame_no --;
+  }
+  gedl_set_selection (edl, sel_start, sel_end);
+
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -443,6 +485,14 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y)
 
     t += clip_get_frames (clip);
   }
+  int sel_start = 0, sel_end = 0;
+  gedl_get_selection (edl, &sel_start, &sel_end);
+
+  cairo_rectangle (cr, sel_start + pan_x0, y - 4, sel_end - sel_start, 40 + 4 * 2);
+  cairo_set_source_rgba (cr, 0, 0, 0.11, 0.5);
+  cairo_fill_preserve (cr);
+  cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
+  cairo_stroke (cr);
 }
 
 void gedl_ui (Mrg *mrg, void *data)
