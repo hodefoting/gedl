@@ -373,7 +373,6 @@ void gedl_ui (Mrg *mrg, void *data)
   float y = 500;
   int t = pan_x0;
     cairo_t *cr = mrg_cr (mrg);
-  int complexity = 0;
 
   if (playing)
     {
@@ -382,26 +381,9 @@ void gedl_ui (Mrg *mrg, void *data)
         frame_no = 0;
       mrg_queue_draw (mrg, NULL);
     }
-  {
-    //long t = babl_ticks();
-    complexity = gedl_get_render_complexity (edl, frame_no);
-    //fprintf (stderr, "cpx: %fms\t", (babl_ticks()-t) / 1000.0);
-  }
-  if (complexity <= 2)
-  {
-    //long t;
-    //t = babl_ticks ();
-    rig_frame (frame_no);
-    //fprintf (stderr, "rig: %fms\t", (babl_ticks()-t) / 1000.0);
-    mrg_gegl_blit (mrg, 1, 0, mrg_width (mrg), mrg_height (mrg),
-                   result, 0,0,1.0, 1.0);
-    //fprintf (stderr, "rig+blit: %fms\t", (babl_ticks()-t) / 1000.0);
-  }
-  else
-  {
-    mrg_printf (mrg, "SKIP  %i\n", complexity);
-  }
-  //fprintf (stderr, "\n");
+  rig_frame (frame_no);
+  mrg_gegl_blit (mrg, 1, 0, mrg_width (mrg), mrg_height (mrg),
+                 result, 0,0,1.0, 1.0);
 
   for (l = edl->clips; l; l = l->next)
   {

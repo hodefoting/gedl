@@ -323,20 +323,6 @@ GeglNode *gegl, *load_buf, *result, *encode, *crop, *scale_size, *opacity,
                 *load_buf2, *crop2, *scale_size2, *over;
 void frob_fade (Clip *clip);
 
-/* also take stat-ing of cache status into account */
-int gedl_get_render_complexity (GeglEDL *edl, int frame)
-{
-  return 1;
-  if (edl->frame == frame)
-    return 0;
-  if (edl->frame + 1 == frame)
-    return 1;
-  if (edl->frame <= frame &&
-      (frame - edl->frame) < 16)
-    return 2;
-  return 3;
-}
-
 static void rig_filters (GeglEDL *edl, Clip *clip, Clip *clip2, int frame_no)
 {
 #if 0
@@ -1072,6 +1058,9 @@ int main (int argc, char **argv)
     return -1;
   }
 
+  setenv ("GEGL_USE_OPENCL", "no", 1);
+  setenv ("GEGL_MIPMAP_RENDERING", "1", 1);
+
   if (argv[1] && argv[2] && argv[3] && !strcmp (argv[1], "--make-proxy"))
      return gegl_make_thumb_video (argv[2], argv[3]);
 
@@ -1089,7 +1078,6 @@ int main (int argc, char **argv)
     else
     if (!strcmp (argv[i], "-ui"))
       return gedl_ui_main (edl);
-
 
   tot_frames  = gedl_get_frames (edl);
   if (frame_end == 0)
