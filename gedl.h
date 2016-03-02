@@ -40,6 +40,11 @@ const char *gedl_get_clip_path      (GeglEDL    *edl);
 int         gedl_get_clip_frame_no  (GeglEDL    *edl);
 char       *gedl_serialise          (GeglEDL    *edl);
 
+void        gedl_set_selection      (GeglEDL    *edl, int start_frame, int end_frame);
+void        gedl_get_selection      (GeglEDL    *edl,
+                                     int        *start_frame,
+                                     int        *end_frame);
+
 /*********/
 typedef struct Clip
 {
@@ -83,12 +88,11 @@ struct _GeglEDL
   double      mix;
   GeglNode   *cache_loader;
   int         cache_flags;
-
-  //Clip       *source[2];
-
-
-  Clip *clip;
-  Clip *clip2;
+  Clip       *clip;
+  Clip       *clip2;
+  
+  int         selection_start;
+  int         selection_end;
 } _GeglEDL;
 
 Clip *clip_new            (void);

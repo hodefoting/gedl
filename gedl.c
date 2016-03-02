@@ -263,6 +263,8 @@ GeglEDL *gedl_new           (void)
   edl->gegl = gegl_node_new ();
   edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
   edl->cache_flags = 0;
+  edl->selection_start = 0;
+  edl->selection_end = 0;
 
   edl->cache_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:"  CACHE_FORMAT  "-load", NULL);
 
@@ -1234,4 +1236,20 @@ gegl_meta_get_audio (const char        *path,
   else
     g_warning ("%s", error->message);
   gexiv2_metadata_free (e2m);
+}
+
+void        gedl_set_selection      (GeglEDL    *edl, int start_frame, int end_frame)
+{
+  edl->selection_start = start_frame;
+  edl->selection_end   = end_frame;
+}
+
+void        gedl_get_selection      (GeglEDL    *edl,
+                                     int        *start_frame,
+                                     int        *end_frame)
+{
+  if (start_frame)
+    *start_frame = edl->selection_start;
+  if (end_frame)
+    *end_frame = edl->selection_end;
 }

@@ -159,7 +159,7 @@ struct _State {
 Clip *active_clip = NULL;
 
 static int frame_no = 0;
-static int playing = 1;
+static int playing  = 0;
 
 float pan_x0 = 8;
 
@@ -180,10 +180,39 @@ static void released_clip (MrgEvent *e, void *data1, void *data2)
   mrg_queue_draw (e->mrg, NULL);
 }
 
+static void stop_playing (MrgEvent *event, void *data1, void *data2)
+{
+  playing = 0;
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+}
+
+#if 0
+static void start_playing (MrgEvent *event, void *data1, void *data2)
+{
+  playing = 0;
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+}
+#endif
+
 static void toggle_playing (MrgEvent *event, void *data1, void *data2)
 {
   playing =  !playing;
-  //mrg_set_fullscreen (event->mrg, !mrg_is_fullscreen (event->mrg));
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+}
+
+static void extend_right (MrgEvent *event, void *data1, void *data2)
+{
+  fprintf (stderr, "extend right\n");
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+}
+
+static void extend_left (MrgEvent *event, void *data1, void *data2)
+{
+  fprintf (stderr, "extend left\n");
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -287,6 +316,7 @@ static void save (MrgEvent *event, void *data1, void *data2)
 
 static void step_frame_back (MrgEvent *event, void *data1, void *data2)
 {
+  stop_playing (event, data1, data2);
   frame_no --;
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -294,6 +324,7 @@ static void step_frame_back (MrgEvent *event, void *data1, void *data2)
 
 static void step_frame (MrgEvent *event, void *data1, void *data2)
 {
+  stop_playing (event, data1, data2);
   frame_no ++;
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -452,6 +483,8 @@ void gedl_ui (Mrg *mrg, void *data)
   mrg_add_binding (mrg, "k", NULL, NULL, clip_start_inc, edl);
   mrg_add_binding (mrg, "l", NULL, NULL, clip_start_dec, edl);
   mrg_add_binding (mrg, "q", NULL, NULL, (void*)do_quit, mrg);
+  mrg_add_binding (mrg, "shift-right", NULL, NULL, extend_right, edl);
+  mrg_add_binding (mrg, "shift-left", NULL, NULL, extend_left, edl);
   mrg_add_binding (mrg, "right", NULL, NULL, step_frame, edl);
   mrg_add_binding (mrg, "left", NULL, NULL, step_frame_back, edl);
 
