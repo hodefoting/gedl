@@ -263,8 +263,8 @@ GeglEDL *gedl_new           (void)
   edl->gegl = gegl_node_new ();
   edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
   edl->cache_flags = 0;
-  edl->selection_start = 0;
-  edl->selection_end = 0;
+  edl->selection_start = 23;
+  edl->selection_end = 42;
 
   edl->cache_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:"  CACHE_FORMAT  "-load", NULL);
 

@@ -396,25 +396,12 @@ static int max_frame (GeglEDL *edl)
 }
 
 void gedl_ui (Mrg *mrg, void *data);
-void gedl_ui (Mrg *mrg, void *data)
-{
-  State *o = data;
-  GeglEDL *edl = o->edl;
-  GList *l;
-  float y = 500;
-  int t = pan_x0;
-    cairo_t *cr = mrg_cr (mrg);
 
-  if (playing)
-    {
-      frame_no++;
-      if (frame_no > max_frame (edl))
-        frame_no = 0;
-      mrg_queue_draw (mrg, NULL);
-    }
-  rig_frame (frame_no);
-  mrg_gegl_blit (mrg, 1, 0, mrg_width (mrg), mrg_height (mrg),
-                 result, 0,0,1.0, 1.0);
+void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y)
+{
+  GList *l;
+  cairo_t *cr = mrg_cr (mrg);
+  int t = pan_x0;
 
   for (l = edl->clips; l; l = l->next)
   {
@@ -456,7 +443,27 @@ void gedl_ui (Mrg *mrg, void *data)
 
     t += clip_get_frames (clip);
   }
+}
 
+void gedl_ui (Mrg *mrg, void *data)
+{
+  State *o = data;
+  GeglEDL *edl = o->edl;
+  float y = 500;
+  cairo_t *cr = mrg_cr (mrg);
+
+  if (playing)
+    {
+      frame_no++;
+      if (frame_no > max_frame (edl))
+        frame_no = 0;
+      mrg_queue_draw (mrg, NULL);
+    }
+  rig_frame (frame_no);
+  mrg_gegl_blit (mrg, 1, 0, mrg_width (mrg), mrg_height (mrg),
+                 result, 0,0,1.0, 1.0);
+
+  gedl_draw (mrg, edl, 0.0, y);
 
     //mrg_printf (mrg, "frame: %i\n", frame_no);
 
