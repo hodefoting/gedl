@@ -278,11 +278,6 @@ void gedl_set_size (GeglEDL *edl, int width, int height)
   edl->height = height;
 }
 
-void framesource_free (Clip *source)
-{
-  g_free (source);
-}
-
 void     gedl_free          (GeglEDL *edl)
 {
   while (edl->clips)
