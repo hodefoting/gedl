@@ -1111,7 +1111,7 @@ int main (int argc, char **argv)
 	gegl_node_get (probe, "frame-rate", &fps, NULL);
     g_object_unref (gegl);
 
-    sprintf (str, "%s 0 250\n", edl_path);
+    sprintf (str, "%s 0 %i\n", edl_path, duration);
     edl = gedl_new_from_string (str);
   }
   else

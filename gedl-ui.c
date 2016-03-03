@@ -175,7 +175,6 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
 }
 static void drag_clip (MrgEvent *e, void *data1, void *data2)
 {
-  Clip *clip = data1;
   GeglEDL *edl = data2;
   edl->selection_end = e->x - pan_x0;
   //active_clip = clip;
@@ -363,7 +362,8 @@ static void toggle_fade (MrgEvent *event, void *data1, void *data2)
 static void save (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  gedl_save_path (edl, edl->path);
+  if (edl->path)
+    gedl_save_path (edl, edl->path);
   mrg_queue_draw (event->mrg, NULL);
 }
 
