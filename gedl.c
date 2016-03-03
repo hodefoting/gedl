@@ -908,7 +908,7 @@ void gedl_save_path (GeglEDL *edl, const char *path)
 
 void gedl_update_video_size (GeglEDL *edl)
 {
-  if (video_width == 0 || video_height == 0)
+  if ((video_width == 0 || video_height == 0) && edl->clips)
     {
       Clip *clip = edl->clips->data;
       GeglNode *gegl = gegl_node_new ();
