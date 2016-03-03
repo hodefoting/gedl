@@ -53,24 +53,23 @@ gegl_meta_get_audio (const char        *path,
 #define DEFAULT_range_start       0
 #define DEFAULT_range_end         0
 
-
-const char *output_path      = DEFAULT_output_path;
-const char *video_codec      = DEFAULT_video_codec;
-const char *audio_codec      = DEFAULT_audio_codec;
-int         video_width      = DEFAULT_video_width;
-int         video_height     = DEFAULT_video_height;
-int         video_size_default = 1;
-int         video_bufsize    = DEFAULT_video_bufsize;
-int         video_bitrate    = DEFAULT_video_bitrate;
-int         video_tolerance  = DEFAULT_video_tolerance;;
-int         audio_bitrate    = DEFAULT_audio_bitrate;
-int         audio_samplerate = DEFAULT_audio_samplerate;
-int         fade_duration    = DEFAULT_fade_duration;
+//const char *output_path      = DEFAULT_output_path;
+//const char *video_codec      = DEFAULT_video_codec;
+//const char *audio_codec      = DEFAULT_audio_codec;
+//int         video_width      = DEFAULT_video_width;
+//int         video_height     = DEFAULT_video_height;
+//int         video_size_default = 1;
+//int         video_bufsize    = DEFAULT_video_bufsize;
+//int         video_bitrate    = DEFAULT_video_bitrate;
+//int         video_tolerance  = DEFAULT_video_tolerance;;
+//int         audio_bitrate    = DEFAULT_audio_bitrate;
+//int         audio_samplerate = DEFAULT_audio_samplerate;
+//int         fade_duration    = DEFAULT_fade_duration;
 //int         selection_start      = DEFAULT_selection_start;
 //int         selection_end        = DEFAULT_selection_end;
 //int         range_start      = DEFAULT_range_start;
 //int         range_end        = DEFAULT_range_end;
-extern int frame_no;
+//int         frame_no;
 
 Clip *clip_new (void)
 {
@@ -276,7 +275,22 @@ GeglEDL *gedl_new           (void)
   edl->selection_start = 23;
   edl->selection_end = 42;
 
+
   edl->cache_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:"  CACHE_FORMAT  "-load", NULL);
+
+  edl->output_path      = DEFAULT_output_path;
+  edl->video_codec      = DEFAULT_video_codec;
+  edl->audio_codec      = DEFAULT_audio_codec;
+  edl->video_width      = DEFAULT_video_width;
+  edl->video_height     = DEFAULT_video_height;
+  edl->video_size_default = 1;
+  edl->video_bufsize    = DEFAULT_video_bufsize;
+  edl->video_bitrate    = DEFAULT_video_bitrate;
+  edl->video_tolerance  = DEFAULT_video_tolerance;;
+  edl->audio_bitrate    = DEFAULT_audio_bitrate;
+  edl->audio_samplerate = DEFAULT_audio_samplerate;
+  edl->fade_duration    = DEFAULT_fade_duration;
+  edl->frame_no = 0;
 
   return edl;
 }
@@ -501,7 +515,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
           "gedl-pre-3", clip_path, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl), clip->filter_graph,
                         //gedl_get_clip2_path (edl), gedl_get_clip2_frame_no (edl), clip2->filter_graph,
                         "aaa", 3, "bbb",
-                        video_width, video_height, 
+                        edl->video_width, edl->video_height, 
                         edl->mix);
 
         hash = g_checksum_new (G_CHECKSUM_MD5);
@@ -680,7 +694,7 @@ void frob_fade (Clip *clip)
 
     if (clip->fade_out)
     {
-       clip->fade_pad_end = fade_duration/2;
+       clip->fade_pad_end = edl->fade_duration/2;
        if (clip->end + clip->fade_pad_end > clip->duration)
          {
            int delta = clip->end + clip->fade_pad_end - clip->duration;
@@ -692,7 +706,7 @@ void frob_fade (Clip *clip)
     }
     if (clip->fade_in)
     {
-       clip->fade_pad_start = fade_duration/2;
+       clip->fade_pad_start = edl->fade_duration/2;
        if (clip->start - clip->fade_pad_start < 0)
          {
            int delta = clip->fade_pad_start - clip->start;
@@ -725,24 +739,24 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
      while (value[strlen(value)-1]==' ' ||
             value[strlen(value)-1]=='\n')
             value[strlen(value)-1]='\0';
-     if (!strcmp (key, "fade-duration")) fade_duration = g_strtod (value, NULL);
+     if (!strcmp (key, "fade-duration")) edl->fade_duration = g_strtod (value, NULL);
      if (!strcmp (key, "fps"))         gedl_set_fps (edl, g_strtod (value, NULL));
-     if (!strcmp (key, "output-path")) output_path = g_strdup (value);
-     if (!strcmp (key, "video-codec")) video_codec = g_strdup (value);
-     if (!strcmp (key, "audio-codec")) audio_codec = g_strdup (value);
-     if (!strcmp (key, "audio-sample-rate")) audio_samplerate = g_strtod (value, NULL);
-     if (!strcmp (key, "video-bufsize")) video_bufsize = g_strtod (value, NULL);
-     if (!strcmp (key, "video-bitrate")) video_bitrate = g_strtod (value, NULL);
-     if (!strcmp (key, "audio-bitrate")) video_bitrate = g_strtod (value, NULL);
-     if (!strcmp (key, "video-width")) video_width = g_strtod (value, NULL);
-     if (!strcmp (key, "video-height")) video_height = g_strtod (value, NULL);
+     if (!strcmp (key, "output-path")) edl->output_path = g_strdup (value);
+     if (!strcmp (key, "video-codec")) edl->video_codec = g_strdup (value);
+     if (!strcmp (key, "audio-codec")) edl->audio_codec = g_strdup (value);
+     if (!strcmp (key, "audio-sample-rate")) edl->audio_samplerate = g_strtod (value, NULL);
+     if (!strcmp (key, "video-bufsize")) edl->video_bufsize = g_strtod (value, NULL);
+     if (!strcmp (key, "video-bitrate")) edl->video_bitrate = g_strtod (value, NULL);
+     if (!strcmp (key, "audio-bitrate")) edl->audio_bitrate = g_strtod (value, NULL);
+     if (!strcmp (key, "video-width")) edl->video_width = g_strtod (value, NULL);
+     if (!strcmp (key, "video-height")) edl->video_height = g_strtod (value, NULL);
      if (!strcmp (key, "frame-start")) edl->range_start = g_strtod (value, NULL);
      if (!strcmp (key, "frame-end")) edl->range_end = g_strtod (value, NULL);
      if (!strcmp (key, "selection-start")) edl->selection_start = g_strtod (value, NULL);
      if (!strcmp (key, "selection-end")) edl->selection_end = g_strtod (value, NULL);
      if (!strcmp (key, "range-start")) edl->range_start = g_strtod (value, NULL);
      if (!strcmp (key, "range-end")) edl->range_end = g_strtod (value, NULL);
-     if (!strcmp (key, "frame-no")) frame_no = g_strtod (value, NULL);
+     if (!strcmp (key, "frame-no")) edl->frame_no = g_strtod (value, NULL);
 
      g_free (key);
      return;
@@ -849,7 +863,7 @@ GeglEDL *gedl_new_from_string (const char *string)
   }
   g_string_free (line, TRUE);
 
-  if ((video_width == 0 || video_height == 0) && edl->clips)
+  if ((edl->video_width == 0 || edl->video_height == 0) && edl->clips)
     {
       Clip *clip = edl->clips->data;
       GeglNode *gegl = gegl_node_new ();
@@ -857,11 +871,11 @@ GeglEDL *gedl_new_from_string (const char *string)
       GeglNode *probe = gegl_node_new_child (gegl, "operation", "gegl:ff-load", "path", clip->path, NULL);
       gegl_node_process (probe);
       rect = gegl_node_get_bounding_box (probe);
-      video_width = rect.width;
-      video_height = rect.height;
+      edl->video_width = rect.width;
+      edl->video_height = rect.height;
       g_object_unref (gegl);
     }
-  gedl_set_size (edl, video_width, video_height);
+  gedl_set_size (edl, edl->video_width, edl->video_height);
 
   return edl;
 }
@@ -871,8 +885,8 @@ void gedl_load_path (GeglEDL *edl, const char *path)
   if (edl->path)
     g_free (edl->path);
   edl->path = g_strdup (path);
-  video_width = DEFAULT_video_width;
-  video_height = DEFAULT_video_height;
+  edl->video_width = DEFAULT_video_width;
+  edl->video_height = DEFAULT_video_height;
 
   FILE *file = fopen (path, "r");
   if (file)
@@ -906,7 +920,7 @@ void gedl_save_path (GeglEDL *edl, const char *path)
 
 void gedl_update_video_size (GeglEDL *edl)
 {
-  if ((video_width == 0 || video_height == 0) && edl->clips)
+  if ((edl->video_width == 0 || edl->video_height == 0) && edl->clips)
     {
       Clip *clip = edl->clips->data;
       GeglNode *gegl = gegl_node_new ();
@@ -914,8 +928,8 @@ void gedl_update_video_size (GeglEDL *edl)
       GeglNode *probe = gegl_node_new_child (gegl, "operation", "gegl:ff-load", "path", clip->path, NULL);
       gegl_node_process (probe);
       rect = gegl_node_get_bounding_box (probe);
-      video_width = rect.width;
-      video_height = rect.height;
+      edl->video_width = rect.width;
+      edl->video_height = rect.height;
       g_object_unref (gegl);
     }
 }
@@ -926,7 +940,7 @@ GeglEDL *gedl_new_from_path (const char *path)
 
   gedl_load_path (edl, path);
   gedl_update_video_size (edl);
-  gedl_set_size (edl, video_width, video_height);
+  gedl_set_size (edl, edl->video_width, edl->video_height);
 
   return edl;
 }
@@ -969,13 +983,13 @@ static void setup (void)
                                     "x", 1.0 * edl->width,
                                     "y", 1.0 * edl->height, NULL);
   encode = gegl_node_new_child (gegl, "operation", "gegl:ff-save",
-                                      "path",           output_path,
+                                      "path",           edl->output_path,
                                       "frame-rate",     gedl_get_fps (edl),
-                                      "video-bit-rate", video_bitrate,
-                                      "video-bufsize",  video_bufsize,
-                                      "audio-bit-rate", audio_bitrate,
-                                      "audio-codec",    audio_codec,
-                                      "video-codec",    video_codec,
+                                      "video-bit-rate", edl->video_bitrate,
+                                      "video-bufsize",  edl->video_bufsize,
+                                      "audio-bit-rate", edl->audio_bitrate,
+                                      "audio-codec",    edl->audio_codec,
+                                      "video-codec",    edl->video_codec,
                                       NULL);
   gegl_node_link_many (result, encode, NULL); 
   gegl_node_link_many (load_buf, scale_size, nop_raw, nop_transformed, crop, NULL); 
@@ -987,8 +1001,7 @@ static void setup (void)
   gegl_node_connect_to (crop, "output", over, "input");
   gegl_node_connect_to (over, "output", result, "input");
 }
-void rig_frame (int frame_no);
-void rig_frame (int frame_no)
+void rig_frame (GeglEDL *edl, int frame_no)
 {
   if (edl->frame == frame_no)
     return;
@@ -1016,7 +1029,7 @@ static void process_frames (GeglEDL *edl)
   int frame_no;
   for (frame_no = edl->range_start; frame_no <= edl->range_end; frame_no++)
   {
-    rig_frame (frame_no);
+    rig_frame (edl, edl->frame_no);
     if (!skip_encode)
       gegl_node_process (encode);
     fprintf (stderr, "\r%1.2f%% %04d / %04d    ",
@@ -1081,9 +1094,9 @@ int main (int argc, char **argv)
      return gegl_make_thumb_video (argv[2], argv[3]);
 
   edl_path = argv[1];
-  if (argv[2])
-    output_path = argv[2];
   edl = gedl_new_from_path (edl_path);
+  if (argv[2])
+    edl->output_path = argv[2];
   setup ();
 
 
@@ -1111,28 +1124,28 @@ char *gedl_serialise (GeglEDL *edl)
   char *ret;
   GString *ser = g_string_new ("");
 
-  if (strcmp(output_path, DEFAULT_output_path))
-    g_string_append_printf (ser, "output-path=%s\n", output_path);
-  if (strcmp(video_codec, DEFAULT_video_codec))
-    g_string_append_printf (ser, "video-codec=%s\n", video_codec);
-  if (strcmp(audio_codec, DEFAULT_audio_codec))
-    g_string_append_printf (ser, "audio-codec=%s\n", audio_codec);
-  if (video_width != DEFAULT_video_width)
-    g_string_append_printf (ser, "video-width=%i\n",  video_width);
-  if (video_height != DEFAULT_video_height)
-    g_string_append_printf (ser, "video-height=%i\n",  video_height);
-  if (video_bufsize != DEFAULT_video_bufsize)
-    g_string_append_printf (ser, "video-bufsize=%i\n",  video_bufsize);
-  if (video_bitrate != DEFAULT_video_bitrate)
-    g_string_append_printf (ser, "video-bitrate=%i\n",  video_bitrate);
-  if (video_tolerance != DEFAULT_video_tolerance)
-    g_string_append_printf (ser, "video-tolerance=%i\n",  video_tolerance);
-  if (audio_bitrate != DEFAULT_audio_bitrate)
-    g_string_append_printf (ser, "audio-bitrate=%i\n",  audio_bitrate);
-  if (audio_samplerate != DEFAULT_audio_samplerate)
-    g_string_append_printf (ser, "audio-samplerate=%i\n",  audio_samplerate);
-  if (fade_duration != DEFAULT_fade_duration)
-    g_string_append_printf (ser, "fade-duration=%i\n",  fade_duration);
+  if (strcmp(edl->output_path, DEFAULT_output_path))
+    g_string_append_printf (ser, "output-path=%s\n", edl->output_path);
+  if (strcmp(edl->video_codec, DEFAULT_video_codec))
+    g_string_append_printf (ser, "video-codec=%s\n", edl->video_codec);
+  if (strcmp(edl->audio_codec, DEFAULT_audio_codec))
+    g_string_append_printf (ser, "audio-codec=%s\n", edl->audio_codec);
+  if (edl->video_width != DEFAULT_video_width)
+    g_string_append_printf (ser, "video-width=%i\n",  edl->video_width);
+  if (edl->video_height != DEFAULT_video_height)
+    g_string_append_printf (ser, "video-height=%i\n", edl->video_height);
+  if (edl->video_bufsize != DEFAULT_video_bufsize)
+    g_string_append_printf (ser, "video-bufsize=%i\n", edl->video_bufsize);
+  if (edl->video_bitrate != DEFAULT_video_bitrate)
+    g_string_append_printf (ser, "video-bitrate=%i\n",  edl->video_bitrate);
+  if (edl->video_tolerance != DEFAULT_video_tolerance)
+    g_string_append_printf (ser, "video-tolerance=%i\n", edl->video_tolerance);
+  if (edl->audio_bitrate != DEFAULT_audio_bitrate)
+    g_string_append_printf (ser, "audio-bitrate=%i\n",  edl->audio_bitrate);
+  if (edl->audio_samplerate != DEFAULT_audio_samplerate)
+    g_string_append_printf (ser, "audio-samplerate=%i\n",  edl->audio_samplerate);
+  if (edl->fade_duration != DEFAULT_fade_duration)
+    g_string_append_printf (ser, "fade-duration=%i\n",  edl->fade_duration);
   if (edl->selection_start != DEFAULT_selection_start)
     g_string_append_printf (ser, "selection-start=%i\n",  edl->selection_start);
   if (edl->selection_end != DEFAULT_selection_end)
@@ -1141,7 +1154,7 @@ char *gedl_serialise (GeglEDL *edl)
     g_string_append_printf (ser, "range-start=%i\n",  edl->range_start);
   if (edl->range_end != DEFAULT_range_end)
     g_string_append_printf (ser, "range-end=%i\n", edl->range_end);
-  g_string_append_printf (ser, "frame-no=%i\n", frame_no);
+  g_string_append_printf (ser, "frame-no=%i\n", edl->frame_no);
   
   for (l = edl->clips; l; l = l->next)
   {

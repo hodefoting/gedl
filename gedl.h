@@ -49,6 +49,7 @@ void        gedl_set_selection      (GeglEDL    *edl, int start_frame, int end_f
 void        gedl_get_selection      (GeglEDL    *edl,
                                      int        *start_frame,
                                      int        *end_frame);
+void rig_frame (GeglEDL *edl, int frame_no);
 
 /*********/
 typedef struct Clip
@@ -101,6 +102,22 @@ struct _GeglEDL
 
   int         range_start;
   int         range_end;
+
+const char *output_path;
+const char *video_codec;
+const char *audio_codec;
+int         video_width;
+int         video_height;
+int         video_size_default;
+int         video_bufsize;
+int         video_bitrate;
+int         video_tolerance;
+int         audio_bitrate;
+int         audio_samplerate;
+int         fade_duration;
+int         frame_no;
+
+
 } _GeglEDL;
 
 Clip *clip_new            (void);

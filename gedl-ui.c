@@ -158,16 +158,16 @@ struct _State {
 
 Clip *active_clip = NULL;
 
-int frame_no = 0;
 static int playing  = 0;
 
 float pan_x0 = 8;
 
-void rig_frame (int frame_no);
+//void rig_frame (int frame_no);
 static void clicked_clip (MrgEvent *e, void *data1, void *data2)
 {
   Clip *clip = data1;
-  frame_no = e->x - pan_x0;
+  GeglEDL *edl = data2;
+  edl->frame_no = e->x - pan_x0;
   active_clip = clip;
   mrg_queue_draw (e->mrg, NULL);
 }
@@ -175,7 +175,8 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
 static void released_clip (MrgEvent *e, void *data1, void *data2)
 {
   Clip *clip = data1;
-  frame_no = e->x - pan_x0;
+  GeglEDL *edl = data2;
+  edl->frame_no = e->x - pan_x0;
   active_clip = clip;
   mrg_queue_draw (e->mrg, NULL);
 }
@@ -209,21 +210,21 @@ static void extend_right (MrgEvent *event, void *data1, void *data2)
   int sel_start, sel_end;
 
   gedl_get_selection (edl, &sel_start, &sel_end);
-  if (frame_no == sel_end)
+  if (edl->frame_no == sel_end)
   {
     sel_end ++;
-    frame_no ++;
+    edl->frame_no ++;
   }
-  else if (frame_no == sel_start)
+  else if (edl->frame_no == sel_start)
   {
     sel_start ++;
-    frame_no ++;
+    edl->frame_no ++;
   }
   else
   {
-    sel_start = sel_end = frame_no;
+    sel_start = sel_end = edl->frame_no;
     sel_end ++;
-    frame_no ++;
+    edl->frame_no ++;
   }
   gedl_set_selection (edl, sel_start, sel_end);
 
@@ -237,21 +238,21 @@ static void extend_left (MrgEvent *event, void *data1, void *data2)
   int sel_start, sel_end;
 
   gedl_get_selection (edl, &sel_start, &sel_end);
-  if (frame_no == sel_end)
+  if (edl->frame_no == sel_end)
   {
     sel_end --;
-    frame_no --;
+    edl->frame_no --;
   }
-  else if (frame_no == sel_start)
+  else if (edl->frame_no == sel_start)
   {
     sel_start --;
-    frame_no --;
+    edl->frame_no --;
   }
   else
   {
-    sel_start = sel_end = frame_no;
+    sel_start = sel_end = edl->frame_no;
     sel_end --;
-    frame_no --;
+    edl->frame_no --;
   }
   gedl_set_selection (edl, sel_start, sel_end);
 
@@ -268,7 +269,7 @@ static void nav_right (MrgEvent *event, void *data1, void *data2)
     GList *iter = g_list_find (edl->clips, active_clip);
     if (iter) iter = iter->next;
     if (iter) active_clip = iter->data;
-    frame_no = active_clip->abs_start;
+    edl->frame_no = active_clip->abs_start;
   }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -320,7 +321,7 @@ static void nav_left (MrgEvent *event, void *data1, void *data2)
     GList *iter = g_list_find (edl->clips, active_clip);
     if (iter) iter = iter->prev;
     if (iter) active_clip = iter->data;
-    frame_no = active_clip->abs_start;
+    edl->frame_no = active_clip->abs_start;
   }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -368,16 +369,18 @@ static void set_range (MrgEvent *event, void *data1, void *data2)
 
 static void step_frame_back (MrgEvent *event, void *data1, void *data2)
 {
+  GeglEDL *edl = data1;
   stop_playing (event, data1, data2);
-  frame_no --;
+  edl->frame_no --;
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
 
 static void step_frame (MrgEvent *event, void *data1, void *data2)
 {
+  GeglEDL *edl = data1;
   stop_playing (event, data1, data2);
-  frame_no ++;
+  edl->frame_no ++;
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -469,9 +472,9 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y)
     cairo_rectangle (cr, t, y, clip_get_frames (clip), 40);
     cairo_set_source_rgba (cr, 0.1, 0.1, 0.1, 0.5);
 
-    mrg_listen (mrg, MRG_PRESS, clicked_clip, clip, NULL);
-    mrg_listen (mrg, MRG_DRAG, clicked_clip, clip, NULL);
-    mrg_listen (mrg, MRG_RELEASE, released_clip, clip, NULL);
+    mrg_listen (mrg, MRG_PRESS, clicked_clip, clip, edl);
+    mrg_listen (mrg, MRG_DRAG, clicked_clip, clip, edl);
+    mrg_listen (mrg, MRG_RELEASE, released_clip, clip, edl);
 
     int width, height;
     MrgImage *img = mrg_query_image (mrg, thumb_path, &width, &height);
@@ -528,16 +531,16 @@ void gedl_ui (Mrg *mrg, void *data)
 
      gedl_get_range (edl, &start, &end);
 
-      frame_no++;
-      if (frame_no > max_frame (edl))
+      edl->frame_no++;
+      if (edl->frame_no > max_frame (edl))
       {
-         frame_no = 0;
+         edl->frame_no = 0;
          if (end)
-           frame_no = start;
+           edl->frame_no = start;
       }
       mrg_queue_draw (mrg, NULL);
     }
-  rig_frame (frame_no);
+  rig_frame (edl, edl->frame_no);
   mrg_gegl_blit (mrg, 1, 0, mrg_width (mrg), mrg_height (mrg),
                  result, 0,0,1.0, 1.0);
 
@@ -553,7 +556,7 @@ void gedl_ui (Mrg *mrg, void *data)
         mrg_printf (mrg, " %s", active_clip->filter_graph);
     }
 
-  cairo_rectangle (cr, frame_no + pan_x0, y-10, 1, 60);
+  cairo_rectangle (cr, edl->frame_no + pan_x0, y-10, 1, 60);
   cairo_set_source_rgba (cr,1,0,0,1);
   cairo_fill (cr);
 
