@@ -1094,7 +1094,30 @@ int main (int argc, char **argv)
      return gegl_make_thumb_video (argv[2], argv[3]);
 
   edl_path = argv[1];
-  edl = gedl_new_from_path (edl_path);
+
+  if (g_str_has_suffix (edl_path, ".mp4") ||
+      g_str_has_suffix (edl_path, ".ogv") ||
+      g_str_has_suffix (edl_path, ".avi"))
+  {
+    char str[1024];
+    int duration;
+    double fps;
+	GeglNode *gegl = gegl_node_new ();
+	GeglNode *probe = gegl_node_new_child (gegl, "operation",
+                  "gegl:ff-load", "path", edl_path, NULL);
+	gegl_node_process (probe);
+
+	gegl_node_get (probe, "frames", &duration, NULL);
+	gegl_node_get (probe, "frame-rate", &fps, NULL);
+    g_object_unref (gegl);
+
+    sprintf (str, "%s 0 250\n", edl_path);
+    edl = gedl_new_from_string (str);
+  }
+  else
+  {
+    edl = gedl_new_from_path (edl_path);
+  }
   if (argv[2])
     edl->output_path = argv[2];
   setup ();
