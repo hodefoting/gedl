@@ -176,7 +176,15 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
 static void drag_clip (MrgEvent *e, void *data1, void *data2)
 {
   GeglEDL *edl = data2;
-  edl->selection_end = e->x - pan_x0;
+  float x = e->x - pan_x0;
+  if (x > edl->selection_start)
+  {
+    edl->selection_end = e->x - pan_x0;
+  }
+  else
+  {
+    edl->selection_start = e->x - pan_x0;
+  }
   //active_clip = clip;
   mrg_queue_draw (e->mrg, NULL);
 }
@@ -473,6 +481,11 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y)
   cairo_t *cr = mrg_cr (mrg);
   int t = pan_x0;
 
+  cairo_set_source_rgba (cr, 1, 1,1, 1);
+  cairo_set_font_size (cr, 10.0);
+  cairo_move_to (cr, x, y - 5);
+  cairo_show_text (cr, edl->path);
+
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
@@ -526,6 +539,10 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y)
   cairo_fill_preserve (cr);
   cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
   cairo_stroke (cr);
+
+  cairo_rectangle (cr, edl->frame_no + pan_x0, y-10, 1, 60);
+  cairo_set_source_rgba (cr,1,0,0,1);
+  cairo_fill (cr);
 }
 
 void gedl_ui (Mrg *mrg, void *data)
@@ -533,7 +550,6 @@ void gedl_ui (Mrg *mrg, void *data)
   State *o = data;
   GeglEDL *edl = o->edl;
   float y = 500;
-  cairo_t *cr = mrg_cr (mrg);
 
   if (playing)
     {
@@ -566,9 +582,6 @@ void gedl_ui (Mrg *mrg, void *data)
         mrg_printf (mrg, " %s", active_clip->filter_graph);
     }
 
-  cairo_rectangle (cr, edl->frame_no + pan_x0, y-10, 1, 60);
-  cairo_set_source_rgba (cr,1,0,0,1);
-  cairo_fill (cr);
 
   mrg_add_binding (mrg, "x", NULL, NULL, remove_clip, edl);
   mrg_add_binding (mrg, "d", NULL, NULL, duplicate_clip, edl);

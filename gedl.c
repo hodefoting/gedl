@@ -341,7 +341,7 @@ const char *edl_path = "input.edl";
 GeglEDL *edl;
 GeglNode *gegl, *load_buf, *result, *encode, *crop, *scale_size, *opacity,
                 *load_buf2, *crop2, *scale_size2, *over;
-void frob_fade (Clip *clip);
+void frob_fade (GeglEDL *edl, Clip *clip);
 
 static void rig_filters (GeglEDL *edl, Clip *clip, Clip *clip2, int frame_no)
 {
@@ -431,7 +431,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
           gegl_node_set (clip->loader, "frame", clip->clip_frame_no, NULL);
         }
 
-      frob_fade (clip);
+      frob_fade (edl, clip);
       
       if (clip->fade_out && (clip->clip_frame_no > (clip->end - clip->fade_pad_end)) && l->next)
         {
@@ -685,7 +685,7 @@ int    gedl_get_frames (GeglEDL *edl)
 }
 #include <string.h>
 
-void frob_fade (Clip *clip)
+void frob_fade (GeglEDL *edl, Clip *clip)
 {
   if (!clip->is_image)
   {
@@ -822,7 +822,7 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
 	     gegl_node_get (probe, "frames", &clip->duration, NULL);
 	     gegl_node_get (probe, "frame-rate", &clip->fps, NULL);
          g_object_unref (gegl);
-         frob_fade (clip);
+         frob_fade (edl, clip);
 
          if (edl->fps == 0.0)
          {
@@ -900,21 +900,26 @@ void gedl_load_path (GeglEDL *edl, const char *path)
 
 void gedl_save_path (GeglEDL *edl, const char *path)
 {
-  //GList *l;
+  char *serialized;
+  if (g_str_has_suffix (path, ".mp4") ||
+      g_str_has_suffix (path, ".MP4") ||
+      g_str_has_suffix (path, ".mkv") ||
+      g_str_has_suffix (path, ".MKV") ||
+      g_str_has_suffix (path, ".OGV") ||
+      g_str_has_suffix (path, ".AVI") ||
+      g_str_has_suffix (path, ".ogv") ||
+      g_str_has_suffix (path, ".avi"))
+    return;
   FILE *file = fopen (path, "w");
   if (!file)
     return;
 
-  fprintf (file, "%s\n", gedl_serialise (edl));
-  /*video-width=%i\n", video_width);
-  fprintf (file, "video-height=%i\n", video_height);
-
-  for (l = edl->clips; l; l = l->next)
+  serialized = gedl_serialise (edl);
+  if (serialized)
   {
-    Clip *clip = l->data;
-    fprintf (file, "%s %i %i%s\n", clip->path, clip->start, clip->end,
-                   clip->fade_out?" [fade]":"");
-  }*/
+    fprintf (file, "%s\n", serialized);
+    g_free (serialized);
+  }
   fclose (file);
 }
 
@@ -1097,7 +1102,12 @@ int main (int argc, char **argv)
 
   if (g_str_has_suffix (edl_path, ".mp4") ||
       g_str_has_suffix (edl_path, ".ogv") ||
-      g_str_has_suffix (edl_path, ".avi"))
+      g_str_has_suffix (edl_path, ".mkv") ||
+      g_str_has_suffix (edl_path, ".MKV") ||
+      g_str_has_suffix (edl_path, ".avi") ||
+      g_str_has_suffix (edl_path, ".MP4") ||
+      g_str_has_suffix (edl_path, ".OGV") ||
+      g_str_has_suffix (edl_path, ".AVI"))
   {
     char str[1024];
     int duration;
@@ -1113,6 +1123,7 @@ int main (int argc, char **argv)
 
     sprintf (str, "%s 0 %i\n", edl_path, duration);
     edl = gedl_new_from_string (str);
+    edl->path = g_strdup (edl_path);
   }
   else
   {
