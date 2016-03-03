@@ -483,8 +483,6 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y)
       cairo_set_source_surface (cr, surface, t - clip->start, y);
       cairo_paint (cr);
       cairo_restore (cr);
-      //mrg_image (mrg, t, y, clip_get_frames (clip), 40, thumb_path);
-      //mrg_printf (mrg, "%s\n", thumb_path);
     }
     else
     {
@@ -545,18 +543,19 @@ void gedl_ui (Mrg *mrg, void *data)
 
   gedl_draw (mrg, edl, 0.0, y);
 
-    //mrg_printf (mrg, "frame: %i\n", frame_no);
+  if (active_clip && 0)
+    {
+      mrg_printf (mrg, "%s %i %i%s", active_clip->path,
+                                     active_clip->start, active_clip->end,
+                                     active_clip->fade_out?" [fade]":"");
 
-    if (active_clip && 0)
-      {
-        mrg_printf (mrg, "%s %i %i%s", active_clip->path, active_clip->start, active_clip->end, active_clip->fade_out?" [fade]":"");
+      if (active_clip->filter_graph)
+        mrg_printf (mrg, " %s", active_clip->filter_graph);
+    }
 
-        if (active_clip->filter_graph)
-          mrg_printf (mrg, " %s", active_clip->filter_graph);
-      }
-    cairo_rectangle (cr, frame_no + pan_x0, y-10, 1, 60);
-    cairo_set_source_rgba (cr,1,0,0,1);
-    cairo_fill (cr);
+  cairo_rectangle (cr, frame_no + pan_x0, y-10, 1, 60);
+  cairo_set_source_rgba (cr,1,0,0,1);
+  cairo_fill (cr);
 
   mrg_add_binding (mrg, "x", NULL, NULL, remove_clip, edl);
   mrg_add_binding (mrg, "d", NULL, NULL, duplicate_clip, edl);
@@ -575,11 +574,9 @@ void gedl_ui (Mrg *mrg, void *data)
   mrg_add_binding (mrg, "shift-left", NULL, NULL, extend_left, edl);
   mrg_add_binding (mrg, "right", NULL, NULL, step_frame, edl);
   mrg_add_binding (mrg, "left", NULL, NULL, step_frame_back, edl);
-
 }
 
 //static GThread *thread;
-
 
 gpointer renderer_main (gpointer data)
 {
@@ -600,7 +597,6 @@ gpointer renderer_main (gpointer data)
   return NULL;
 }
 
-
 int gedl_ui_main (GeglEDL *edl);
 int gedl_ui_main (GeglEDL *edl)
 {
@@ -613,7 +609,7 @@ int gedl_ui_main (GeglEDL *edl)
   renderer_set_range (0, 50);
   mrg_set_ui (mrg, gedl_ui, &o);
 
-  mrg_restarter_add_path (mrg, "gedl");
+  //mrg_restarter_add_path (mrg, "gedl");
 
   mrg_main (mrg);
   gegl_exit ();
