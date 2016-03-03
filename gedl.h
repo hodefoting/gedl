@@ -40,6 +40,11 @@ const char *gedl_get_clip_path      (GeglEDL    *edl);
 int         gedl_get_clip_frame_no  (GeglEDL    *edl);
 char       *gedl_serialise          (GeglEDL    *edl);
 
+void        gedl_set_range          (GeglEDL    *edl, int start_frame, int end_frame);
+void        gedl_get_range          (GeglEDL    *edl,
+                                     int        *start_frame,
+                                     int        *end_frame);
+
 void        gedl_set_selection      (GeglEDL    *edl, int start_frame, int end_frame);
 void        gedl_get_selection      (GeglEDL    *edl,
                                      int        *start_frame,
@@ -93,6 +98,9 @@ struct _GeglEDL
   
   int         selection_start;
   int         selection_end;
+
+  int         range_start;
+  int         range_end;
 } _GeglEDL;
 
 Clip *clip_new            (void);

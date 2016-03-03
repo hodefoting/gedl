@@ -249,6 +249,8 @@ static void gedl_create_chain (GeglEDL *edl, GeglNode *op_start, GeglNode *op_en
   gegl_node_link_many (iter, op_end, NULL);
   g_string_free (op_name, TRUE);
   g_string_free (op_attr, TRUE);
+
+  fprintf (stderr, "<<%s>>\n", gegl_node_to_xml (op_end, NULL));
 }
 
 
@@ -263,6 +265,7 @@ GeglEDL *gedl_new           (void)
   edl->gegl = gegl_node_new ();
   edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
   edl->cache_flags = 0;
+  edl->cache_flags = CACHE_TRY_ALL;
   edl->selection_start = 23;
   edl->selection_end = 42;
 
@@ -291,7 +294,6 @@ void     gedl_free          (GeglEDL *edl)
   g_object_unref (edl->gegl);
   g_free (edl);
 }
-
 
 void remove_in_betweens (GeglNode *nop_raw, GeglNode *nop_transformed);
 void remove_in_betweens (GeglNode *nop_raw, GeglNode *nop_transformed)
@@ -392,7 +394,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
     if (frame - clip_start < clip_frames)
     {
       /* found right clip */
-      //const char *clip_path = clip_get_path (clip);
+      const char *clip_path = clip_get_path (clip);
       Clip *clip2 = NULL; 
       gchar *frame_recipe;
       GChecksum *hash;
@@ -488,8 +490,8 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
 
         /**********************************************************************/
 
-        frame_recipe = g_strdup_printf ("%s: %s %i %s %s %i %s %ix%i %f",
-          "gedl-pre-3", gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl), clip->filter_graph,
+        frame_recipe = g_strdup_printf ("%s: %s %s %i %s %s %i %s %ix%i %f",
+          "gedl-pre-3", clip_path, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl), clip->filter_graph,
                         //gedl_get_clip2_path (edl), gedl_get_clip2_frame_no (edl), clip2->filter_graph,
                         "aaa", 3, "bbb",
                         video_width, video_height, 
@@ -1067,14 +1069,16 @@ int main (int argc, char **argv)
   edl = gedl_new_from_path (edl_path);
   setup ();
 
-  thread = g_thread_new ("renderer", preloader, edl);
 
   for (int i = 1; argv[i]; i++)
     if (!strcmp (argv[i], "-c"))
        skip_encode = 1;
     else
     if (!strcmp (argv[i], "-ui"))
+    {
+      thread = g_thread_new ("renderer", preloader, edl);
       return gedl_ui_main (edl);
+    }
 
   tot_frames  = gedl_get_frames (edl);
   if (frame_end == 0)
@@ -1247,4 +1251,20 @@ void        gedl_get_selection      (GeglEDL    *edl,
     *start_frame = edl->selection_start;
   if (end_frame)
     *end_frame = edl->selection_end;
+}
+
+void        gedl_set_range      (GeglEDL    *edl, int start_frame, int end_frame)
+{
+  edl->range_start = start_frame;
+  edl->range_end   = end_frame;
+}
+
+void        gedl_get_range      (GeglEDL    *edl,
+                                 int        *start_frame,
+                                 int        *end_frame)
+{
+  if (start_frame)
+    *start_frame = edl->range_start;
+  if (end_frame)
+    *end_frame = edl->range_end;
 }

@@ -356,6 +356,16 @@ static void save (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
+static void set_range (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  int start, end;
+
+  gedl_get_selection (edl, &start, &end);
+  gedl_set_range (edl, start, end);
+  mrg_queue_draw (event->mrg, NULL);
+}
+
 static void step_frame_back (MrgEvent *event, void *data1, void *data2)
 {
   stop_playing (event, data1, data2);
@@ -427,6 +437,11 @@ static int max_frame (GeglEDL *edl)
 {
   GList *l;
   int t = 0;
+  int start, end;
+
+  gedl_get_range (edl, &start, &end);
+  if (end)
+    return end;
 
   for (l = edl->clips; l; l = l->next)
   {
@@ -485,11 +500,19 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y)
 
     t += clip_get_frames (clip);
   }
-  int sel_start = 0, sel_end = 0;
-  gedl_get_selection (edl, &sel_start, &sel_end);
 
-  cairo_rectangle (cr, sel_start + pan_x0, y - 4, sel_end - sel_start, 40 + 4 * 2);
+  int start = 0, end = 0;
+  gedl_get_selection (edl, &start, &end);
+  cairo_rectangle (cr, start + pan_x0, y - 4, end - start, 40 + 4 * 2);
   cairo_set_source_rgba (cr, 0, 0, 0.11, 0.5);
+  cairo_fill_preserve (cr);
+  cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
+  cairo_stroke (cr);
+
+
+  gedl_get_range (edl, &start, &end);
+  cairo_rectangle (cr, start + pan_x0, y - 20, end - start, 10);
+  cairo_set_source_rgba (cr, 0, 0.11, 0.0, 0.5);
   cairo_fill_preserve (cr);
   cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
   cairo_stroke (cr);
@@ -504,9 +527,17 @@ void gedl_ui (Mrg *mrg, void *data)
 
   if (playing)
     {
+     int start, end;
+
+     gedl_get_range (edl, &start, &end);
+
       frame_no++;
       if (frame_no > max_frame (edl))
-        frame_no = 0;
+      {
+         frame_no = 0;
+         if (end)
+           frame_no = start;
+      }
       mrg_queue_draw (mrg, NULL);
     }
   rig_frame (frame_no);
@@ -536,6 +567,7 @@ void gedl_ui (Mrg *mrg, void *data)
   mrg_add_binding (mrg, ".", NULL, NULL, clip_end_inc, edl);
   mrg_add_binding (mrg, "f", NULL, NULL, toggle_fade, edl);
   mrg_add_binding (mrg, "s", NULL, NULL, save, edl);
+  mrg_add_binding (mrg, "r", NULL, NULL, set_range, edl);
   mrg_add_binding (mrg, ",", NULL, NULL, clip_end_dec, edl);
   mrg_add_binding (mrg, "k", NULL, NULL, clip_start_inc, edl);
   mrg_add_binding (mrg, "l", NULL, NULL, clip_start_dec, edl);
