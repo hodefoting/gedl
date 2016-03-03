@@ -158,7 +158,7 @@ struct _State {
 
 Clip *active_clip = NULL;
 
-static int frame_no = 0;
+int frame_no = 0;
 static int playing  = 0;
 
 float pan_x0 = 8;
@@ -509,7 +509,6 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y)
   cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
   cairo_stroke (cr);
 
-
   gedl_get_range (edl, &start, &end);
   cairo_rectangle (cr, start + pan_x0, y - 20, end - start, 10);
   cairo_set_source_rgba (cr, 0, 0.11, 0.0, 0.5);
@@ -601,6 +600,7 @@ gpointer renderer_main (gpointer data)
   return NULL;
 }
 
+
 int gedl_ui_main (GeglEDL *edl);
 int gedl_ui_main (GeglEDL *edl)
 {
@@ -612,6 +612,9 @@ int gedl_ui_main (GeglEDL *edl)
   edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
   renderer_set_range (0, 50);
   mrg_set_ui (mrg, gedl_ui, &o);
+
+  mrg_restarter_add_path (mrg, "gedl");
+
   mrg_main (mrg);
   gegl_exit ();
 

@@ -48,6 +48,10 @@ gegl_meta_get_audio (const char        *path,
 #define DEFAULT_fade_duration     20
 #define DEFAULT_frame_start       0
 #define DEFAULT_frame_end         0
+#define DEFAULT_selection_start   0
+#define DEFAULT_selection_end     0
+#define DEFAULT_range_start       0
+#define DEFAULT_range_end         0
 
 
 const char *output_path      = DEFAULT_output_path;
@@ -64,6 +68,11 @@ int         audio_samplerate = DEFAULT_audio_samplerate;
 int         fade_duration    = DEFAULT_fade_duration;
 int         frame_start      = DEFAULT_frame_start;
 int         frame_end        = DEFAULT_frame_end;
+//int         selection_start      = DEFAULT_selection_start;
+//int         selection_end        = DEFAULT_selection_end;
+//int         range_start      = DEFAULT_range_start;
+//int         range_end        = DEFAULT_range_end;
+extern int frame_no;
 
 Clip *clip_new (void)
 {
@@ -731,6 +740,11 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
      if (!strcmp (key, "video-height")) video_height = g_strtod (value, NULL);
      if (!strcmp (key, "frame-start")) frame_start = g_strtod (value, NULL);
      if (!strcmp (key, "frame-end")) frame_end = g_strtod (value, NULL);
+     if (!strcmp (key, "selection-start")) edl->selection_start = g_strtod (value, NULL);
+     if (!strcmp (key, "selection-end")) edl->selection_end = g_strtod (value, NULL);
+     if (!strcmp (key, "range-start")) edl->range_start = g_strtod (value, NULL);
+     if (!strcmp (key, "range-end")) edl->range_end = g_strtod (value, NULL);
+     if (!strcmp (key, "frame-no")) frame_no = g_strtod (value, NULL);
 
      g_free (key);
      return;
@@ -874,16 +888,21 @@ void gedl_load_path (GeglEDL *edl, const char *path)
 
 void gedl_save_path (GeglEDL *edl, const char *path)
 {
-  GList *l;
+  //GList *l;
   FILE *file = fopen (path, "w");
   if (!file)
     return;
+
+  fprintf (file, "%s\n", gedl_serialise (edl));
+  /*video-width=%i\n", video_width);
+  fprintf (file, "video-height=%i\n", video_height);
+
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
     fprintf (file, "%s %i %i%s\n", clip->path, clip->start, clip->end,
-                      clip->fade_out?" [fade]":"");
-  }
+                   clip->fade_out?" [fade]":"");
+  }*/
   fclose (file);
 }
 
@@ -1120,6 +1139,15 @@ char *gedl_serialise (GeglEDL *edl)
     g_string_append_printf (ser, "frame-start=%i\n",  frame_start);
   if (frame_end != DEFAULT_frame_end)
     g_string_append_printf (ser, "frame-end=%i\n",  frame_end);
+  if (edl->selection_start != DEFAULT_selection_start)
+    g_string_append_printf (ser, "selection-start=%i\n",  edl->selection_start);
+  if (edl->selection_end != DEFAULT_selection_end)
+    g_string_append_printf (ser, "selection-end=%i\n",  edl->selection_end);
+  if (edl->range_start != DEFAULT_range_start)
+    g_string_append_printf (ser, "range-start=%i\n",  edl->range_start);
+  if (edl->range_end != DEFAULT_range_end)
+    g_string_append_printf (ser, "range-end=%i\n", edl->range_end);
+  g_string_append_printf (ser, "frame-no=%i\n", frame_no);
   
   for (l = edl->clips; l; l = l->next)
   {
