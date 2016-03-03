@@ -168,7 +168,17 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
   Clip *clip = data1;
   GeglEDL *edl = data2;
   edl->frame_no = e->x - pan_x0;
+  edl->selection_start = edl->frame_no;
+  edl->selection_end = edl->frame_no;
   active_clip = clip;
+  mrg_queue_draw (e->mrg, NULL);
+}
+static void drag_clip (MrgEvent *e, void *data1, void *data2)
+{
+  Clip *clip = data1;
+  GeglEDL *edl = data2;
+  edl->selection_end = e->x - pan_x0;
+  //active_clip = clip;
   mrg_queue_draw (e->mrg, NULL);
 }
 
@@ -473,7 +483,7 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y)
     cairo_set_source_rgba (cr, 0.1, 0.1, 0.1, 0.5);
 
     mrg_listen (mrg, MRG_PRESS, clicked_clip, clip, edl);
-    mrg_listen (mrg, MRG_DRAG, clicked_clip, clip, edl);
+    mrg_listen (mrg, MRG_DRAG, drag_clip, clip, edl);
     mrg_listen (mrg, MRG_RELEASE, released_clip, clip, edl);
 
     int width, height;
