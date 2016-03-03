@@ -66,8 +66,6 @@ int         video_tolerance  = DEFAULT_video_tolerance;;
 int         audio_bitrate    = DEFAULT_audio_bitrate;
 int         audio_samplerate = DEFAULT_audio_samplerate;
 int         fade_duration    = DEFAULT_fade_duration;
-int         frame_start      = DEFAULT_frame_start;
-int         frame_end        = DEFAULT_frame_end;
 //int         selection_start      = DEFAULT_selection_start;
 //int         selection_end        = DEFAULT_selection_end;
 //int         range_start      = DEFAULT_range_start;
@@ -738,8 +736,8 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
      if (!strcmp (key, "audio-bitrate")) video_bitrate = g_strtod (value, NULL);
      if (!strcmp (key, "video-width")) video_width = g_strtod (value, NULL);
      if (!strcmp (key, "video-height")) video_height = g_strtod (value, NULL);
-     if (!strcmp (key, "frame-start")) frame_start = g_strtod (value, NULL);
-     if (!strcmp (key, "frame-end")) frame_end = g_strtod (value, NULL);
+     if (!strcmp (key, "frame-start")) edl->range_start = g_strtod (value, NULL);
+     if (!strcmp (key, "frame-end")) edl->range_end = g_strtod (value, NULL);
      if (!strcmp (key, "selection-start")) edl->selection_start = g_strtod (value, NULL);
      if (!strcmp (key, "selection-end")) edl->selection_end = g_strtod (value, NULL);
      if (!strcmp (key, "range-start")) edl->range_start = g_strtod (value, NULL);
@@ -1013,17 +1011,17 @@ static void init (int argc, char **argv)
                 NULL);
 }
 
-static void process_frames (void)
+static void process_frames (GeglEDL *edl)
 {
   int frame_no;
-  for (frame_no = frame_start; frame_no <= frame_end; frame_no++)
+  for (frame_no = edl->range_start; frame_no <= edl->range_end; frame_no++)
   {
     rig_frame (frame_no);
     if (!skip_encode)
       gegl_node_process (encode);
     fprintf (stderr, "\r%1.2f%% %04d / %04d    ",
-     100.0 * (frame_no-frame_start) * 1.0 / (frame_end - frame_start),
-     frame_no, frame_end);
+     100.0 * (frame_no-edl->range_start) * 1.0 / (edl->range_end - edl->range_start),
+     frame_no, edl->range_end);
   }
 }
 
@@ -1035,9 +1033,9 @@ int gegl_make_thumb_video (const char *path, const char *thumb_path)
   edl = gedl_new_from_string (str->str);
   setup ();
   tot_frames = gedl_get_frames (edl);
-  if (frame_end == 0)
-    frame_end = tot_frames-1;
-  process_frames ();
+  if (edl->range_end == 0)
+    edl->range_end = tot_frames-1;
+  process_frames (edl);
   teardown ();
   g_string_free (str, TRUE);
   return 0;
@@ -1100,9 +1098,9 @@ int main (int argc, char **argv)
     }
 
   tot_frames  = gedl_get_frames (edl);
-  if (frame_end == 0)
-    frame_end = tot_frames-1;
-  process_frames ();
+  if (edl->range_end == 0)
+    edl->range_end = tot_frames-1;
+  process_frames (edl);
   teardown ();
   return 0;
 }
@@ -1135,10 +1133,6 @@ char *gedl_serialise (GeglEDL *edl)
     g_string_append_printf (ser, "audio-samplerate=%i\n",  audio_samplerate);
   if (fade_duration != DEFAULT_fade_duration)
     g_string_append_printf (ser, "fade-duration=%i\n",  fade_duration);
-  if (frame_start != DEFAULT_frame_start)
-    g_string_append_printf (ser, "frame-start=%i\n",  frame_start);
-  if (frame_end != DEFAULT_frame_end)
-    g_string_append_printf (ser, "frame-end=%i\n",  frame_end);
   if (edl->selection_start != DEFAULT_selection_start)
     g_string_append_printf (ser, "selection-start=%i\n",  edl->selection_start);
   if (edl->selection_end != DEFAULT_selection_end)
