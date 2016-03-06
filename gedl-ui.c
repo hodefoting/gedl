@@ -483,7 +483,7 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y)
 
   cairo_set_source_rgba (cr, 1, 1,1, 1);
   cairo_set_font_size (cr, 10.0);
-  cairo_move_to (cr, x, y - 5);
+  cairo_move_to (cr, x + 5, y - 5);
   cairo_show_text (cr, edl->path);
 
   for (l = edl->clips; l; l = l->next)
