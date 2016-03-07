@@ -259,6 +259,8 @@ void remove_in_betweens (GeglNode *nop_raw, GeglNode *nop_transformed)
  }
 }
 
+/* XXX: oops global state */
+
 const char *edl_path = "input.edl";
 GeglEDL *edl;
 GeglNode *gegl, *load_buf, *result, *encode, *crop, *scale_size, *opacity,
@@ -1059,7 +1061,7 @@ int main (int argc, char **argv)
     else
     if (!strcmp (argv[i], "-ui"))
     {
-      //thread = g_thread_new ("renderer", preloader, edl);
+      thread = g_thread_new ("renderer", preloader, edl);
       return gedl_ui_main (edl);
     }
 

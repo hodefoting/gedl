@@ -317,7 +317,8 @@ static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
     Clip *clip = clip_new_full (active_clip->path, active_clip->start, active_clip->end);
     edl->clips = g_list_insert_before (edl->clips, iter, clip);
     frob_fade (active_clip);
-    if (active_clip->filter_graph) clip->filter_graph = g_strdup (active_clip->filter_graph);
+    if (active_clip->filter_graph)
+      clip->filter_graph = g_strdup (active_clip->filter_graph);
     active_clip = clip;
     frob_fade (active_clip);
   }
@@ -472,18 +473,21 @@ static int max_frame (GeglEDL *edl)
 
 void gedl_ui (Mrg *mrg, void *data);
 
-void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y)
+void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y, double fpx, double t0)
 {
 #define VID_HEIGHT 40
 #define PAD_DIM     5
 
   GList *l;
   cairo_t *cr = mrg_cr (mrg);
-  int t = pan_x0;
+  double t;
+ 
+  t = x;
 
   cairo_set_source_rgba (cr, 1, 1,1, 1);
   cairo_set_font_size (cr, 10.0);
-  cairo_move_to (cr, x + PAD_DIM, y + VID_HEIGHT + PAD_DIM * 2);
+  y += PAD_DIM * 2;
+  cairo_move_to (cr, x + PAD_DIM, y + VID_HEIGHT + PAD_DIM * 3);
   cairo_show_text (cr, edl->path);
 
   for (l = edl->clips; l; l = l->next)
@@ -527,20 +531,20 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y)
 
   int start = 0, end = 0;
   gedl_get_selection (edl, &start, &end);
-  cairo_rectangle (cr, start + pan_x0, y - PAD_DIM, end - start, VID_HEIGHT + PAD_DIM * 2);
+  cairo_rectangle (cr, start + x, y - PAD_DIM, end - start, VID_HEIGHT + PAD_DIM * 2);
   cairo_set_source_rgba (cr, 0, 0, 0.11, 0.5);
   cairo_fill_preserve (cr);
   cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
   cairo_stroke (cr);
 
   gedl_get_range (edl, &start, &end);
-  cairo_rectangle (cr, start + pan_x0, y + VID_HEIGHT + PAD_DIM * 1.5, end - start, PAD_DIM);
+  cairo_rectangle (cr, start + x, y + VID_HEIGHT + PAD_DIM * 1.5, end - start, PAD_DIM);
   cairo_set_source_rgba (cr, 0, 0.11, 0.0, 0.5);
   cairo_fill_preserve (cr);
   cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
   cairo_stroke (cr);
 
-  cairo_rectangle (cr, edl->frame_no + pan_x0, y-PAD_DIM, 1, VID_HEIGHT + PAD_DIM * 2);
+  cairo_rectangle (cr, edl->frame_no + x, y-PAD_DIM, 1, VID_HEIGHT + PAD_DIM * 2);
   cairo_set_source_rgba (cr,1,0,0,1);
   cairo_fill (cr);
 }
@@ -580,17 +584,7 @@ void gedl_ui (Mrg *mrg, void *data)
                       mrg_width (mrg)/2, mrg_height (mrg)/2,
                       result, 0,0);
 
-  gedl_draw (mrg, edl, 0.0, mrg_height (mrg)/2);
-
-  if (active_clip && 0)
-    {
-      mrg_printf (mrg, "%s %i %i%s", active_clip->path,
-                                     active_clip->start, active_clip->end,
-                                     active_clip->fade_out?" [fade]":"");
-
-      if (active_clip->filter_graph)
-        mrg_printf (mrg, " %s", active_clip->filter_graph);
-    }
+  gedl_draw (mrg, edl, pan_x0, mrg_height (mrg)/2, 8, 0.0);
 
 
   {
@@ -604,6 +598,19 @@ void gedl_ui (Mrg *mrg, void *data)
   cairo_stroke (cr);
   }
 
+  mrg_set_xy (mrg, 0, mrg_height (mrg) / 2 + VID_HEIGHT + PAD_DIM * 10);
+
+  mrg_printf (mrg, "%i\n", edl->frame_no);
+
+  if (active_clip)
+    {
+      mrg_printf (mrg, "%s %i %i%s", active_clip->path,
+                                     active_clip->start, active_clip->end,
+                                     active_clip->fade_out?" [fade]":"");
+
+      if (active_clip->filter_graph)
+        mrg_printf (mrg, " %s", active_clip->filter_graph);
+    }
 
   mrg_add_binding (mrg, "x", NULL, NULL, remove_clip, edl);
   mrg_add_binding (mrg, "d", NULL, NULL, duplicate_clip, edl);
