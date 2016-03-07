@@ -134,6 +134,11 @@ int         frame_no;
   int        source_count;
   SourceVid  source[40];
 
+GeglNode *nop_raw;
+GeglNode *nop_transformed;
+GeglNode *nop_raw2;
+GeglNode *nop_transformed2;
+
 } _GeglEDL;
 
 Clip *clip_new            (void);

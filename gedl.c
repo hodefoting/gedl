@@ -24,10 +24,10 @@ for each video have:
 /* GEGL edit decision list - a digital video cutter and splicer */
 #include "gedl.h"
 
-GeglNode *nop_raw;
-GeglNode *nop_transformed;
-GeglNode *nop_raw2;
-GeglNode *nop_transformed2;
+#if 0
+#endif
+
+
 void
 gegl_meta_set_audio (const char        *path,
                      GeglAudioFragment *audio);
@@ -281,8 +281,8 @@ static void rig_filters (GeglEDL *edl, Clip *clip, Clip *clip2, int frame_no)
         }
       else
        {
-         remove_in_betweens (nop_raw2, nop_transformed2);
-         gedl_create_chain (edl, nop_raw2, nop_transformed2,
+         remove_in_betweens (edl->nop_raw2, edl->nop_transformed2);
+         gedl_create_chain (edl, edl->nop_raw2, edl->nop_transformed2,
                             clip2->filter_graph /*,
                             clip2->clip_frame_no - clip2->end,
                             clip2->end - clip2->start*/);
@@ -294,14 +294,14 @@ static void rig_filters (GeglEDL *edl, Clip *clip, Clip *clip2, int frame_no)
     }
    else
     {
-      remove_in_betweens (nop_raw2, nop_transformed2);
+      remove_in_betweens (edl->nop_raw2, edl->nop_transformed2);
       if (clip2)
       {
         if (clip2->cached_filter_graph)
           g_free (clip2->cached_filter_graph);
         clip2->cached_filter_graph = NULL;
       }
-      gegl_node_link_many (nop_raw2, nop_transformed2, NULL);
+      gegl_node_link_many (edl->nop_raw2, edl->nop_transformed2, NULL);
     }
 }
 
@@ -412,8 +412,8 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
             }
           else
             {
-              remove_in_betweens (nop_raw, nop_transformed);
-              gedl_create_chain (edl, nop_raw, nop_transformed, clip->filter_graph /*, clip->clip_frame_no - clip->end, clip->end - clip->start */);
+              remove_in_betweens (edl->nop_raw, edl->nop_transformed);
+              gedl_create_chain (edl, edl->nop_raw, edl->nop_transformed, clip->filter_graph /*, clip->clip_frame_no - clip->end, clip->end - clip->start */);
                 if (clip->cached_filter_graph)
                   g_free (clip->cached_filter_graph);
                 clip->cached_filter_graph = g_strdup (clip->filter_graph);
@@ -421,11 +421,11 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
          }
        else
          {
-           remove_in_betweens (nop_raw, nop_transformed);
+           remove_in_betweens (edl->nop_raw, edl->nop_transformed);
            if (clip->cached_filter_graph)
              g_free (clip->cached_filter_graph);
            clip->cached_filter_graph = NULL;
-           gegl_node_link_many (nop_raw, nop_transformed, NULL);
+           gegl_node_link_many (edl->nop_raw, edl->nop_transformed, NULL);
          }
 
        rig_filters (edl, clip, clip2, frame);
@@ -897,10 +897,10 @@ static void setup (void)
   crop2 = gegl_node_new_child     (gegl, "operation", "gegl:crop", "x", 0.0, "y", 0.0, "width", 1.0 * edl->width,
                                          "height", 1.0 * edl->height, NULL);
   over = gegl_node_new_child      (gegl, "operation", "gegl:over", NULL);
-  nop_raw = gegl_node_new_child   (gegl, "operation", "gegl:nop", NULL);
-  nop_raw2 = gegl_node_new_child  (gegl, "operation", "gegl:nop", NULL);
-  nop_transformed = gegl_node_new_child (gegl, "operation", "gegl:nop", NULL);
-  nop_transformed2 = gegl_node_new_child (gegl, "operation", "gegl:nop", NULL);
+  edl->nop_raw = gegl_node_new_child   (gegl, "operation", "gegl:nop", NULL);
+  edl->nop_raw2 = gegl_node_new_child  (gegl, "operation", "gegl:nop", NULL);
+  edl->nop_transformed = gegl_node_new_child (gegl, "operation", "gegl:nop", NULL);
+  edl->nop_transformed2 = gegl_node_new_child (gegl, "operation", "gegl:nop", NULL);
   opacity = gegl_node_new_child (gegl, "operation", "gegl:opacity", NULL);
   scale_size = gegl_node_new_child (gegl, "operation", "gegl:scale-size",
                                           "x", 1.0 * edl->width,
@@ -918,11 +918,11 @@ static void setup (void)
                                       "video-codec",    edl->video_codec,
                                       NULL);
   gegl_node_link_many (result, encode, NULL); 
-  gegl_node_link_many (load_buf, scale_size, nop_raw, nop_transformed, crop, NULL); 
-  gegl_node_link_many (load_buf2, scale_size2, nop_raw2, nop_transformed2, opacity, crop2,  NULL); 
+  gegl_node_link_many (load_buf, scale_size, edl->nop_raw, edl->nop_transformed, crop, NULL); 
+  gegl_node_link_many (load_buf2, scale_size2, edl->nop_raw2, edl->nop_transformed2, opacity, crop2,  NULL); 
 
-  gegl_node_connect_to (nop_raw, "output", nop_transformed, "input");
-  gegl_node_connect_to (nop_raw2, "output", nop_transformed2, "input");
+  gegl_node_connect_to (edl->nop_raw, "output", edl->nop_transformed, "input");
+  gegl_node_connect_to (edl->nop_raw2, "output", edl->nop_transformed2, "input");
   gegl_node_connect_to (crop2, "output", over, "aux");
   gegl_node_connect_to (crop, "output", over, "input");
   gegl_node_connect_to (over, "output", result, "input");
