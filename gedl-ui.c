@@ -159,12 +159,16 @@ static int playing  = 0;
 
 float pan_x0 = 8;
 
+float fpx = 2;
+
 //void rig_frame (int frame_no);
 static void clicked_clip (MrgEvent *e, void *data1, void *data2)
 {
   Clip *clip = data1;
   GeglEDL *edl = data2;
-  edl->frame_no = e->x - pan_x0;
+  float x = e->x - pan_x0;
+  
+  edl->frame_no = x;
   edl->selection_start = edl->frame_no;
   edl->selection_end = edl->frame_no;
   active_clip = clip;
@@ -473,7 +477,8 @@ static int max_frame (GeglEDL *edl)
 
 void gedl_ui (Mrg *mrg, void *data);
 
-void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y, double fpx, double t0)
+
+void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double t0)
 {
 #define VID_HEIGHT 40
 #define PAD_DIM     5
@@ -482,21 +487,27 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y, double fpx, double t
   cairo_t *cr = mrg_cr (mrg);
   double t;
  
-  t = x;
+  t = 0;
 
   cairo_set_source_rgba (cr, 1, 1,1, 1);
   cairo_set_font_size (cr, 10.0);
   y += PAD_DIM * 2;
-  cairo_move_to (cr, x + PAD_DIM, y + VID_HEIGHT + PAD_DIM * 3);
+  cairo_move_to (cr, x0 + PAD_DIM, y + VID_HEIGHT + PAD_DIM * 3);
   cairo_show_text (cr, edl->path);
+  cairo_save (cr);
+  cairo_translate (cr,  x0, 0);
+  cairo_scale (cr, 1.0/fpx, 1);
+  cairo_translate (cr, -t0, 0);
 
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
+    float x=t;
     char thumb_path[PATH_MAX];
     sprintf (thumb_path, "%s.png", clip->path);
+    
+    cairo_rectangle (cr, x, y, clip_get_frames (clip), VID_HEIGHT);
 
-    cairo_rectangle (cr, t, y, clip_get_frames (clip), VID_HEIGHT);
     cairo_set_source_rgba (cr, 0.1, 0.1, 0.1, 0.5);
 
     mrg_listen (mrg, MRG_PRESS, clicked_clip, clip, edl);
@@ -508,9 +519,14 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y, double fpx, double t
     if (img && width > 0)
     {
       cairo_surface_t *surface = mrg_image_get_surface (img);
+      cairo_matrix_t   matrix;
+      cairo_pattern_t *pattern = cairo_pattern_create_for_surface (surface);
+      cairo_matrix_init_translate (&matrix, -(t - clip->start), -y);
+      cairo_pattern_set_matrix (pattern, &matrix);
+      cairo_set_source (cr, pattern);
+
       cairo_save (cr);
       cairo_clip_preserve (cr);
-      cairo_set_source_surface (cr, surface, t - clip->start, y);
       cairo_paint (cr);
       cairo_restore (cr);
     }
@@ -524,29 +540,33 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x, double y, double fpx, double t
     else
       cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
     cairo_stroke (cr);
-
-
     t += clip_get_frames (clip);
   }
 
   int start = 0, end = 0;
   gedl_get_selection (edl, &start, &end);
-  cairo_rectangle (cr, start + x, y - PAD_DIM, end - start, VID_HEIGHT + PAD_DIM * 2);
+
+  cairo_rectangle (cr, start, y - PAD_DIM, end - start, VID_HEIGHT + PAD_DIM * 2);
   cairo_set_source_rgba (cr, 0, 0, 0.11, 0.5);
   cairo_fill_preserve (cr);
   cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
   cairo_stroke (cr);
 
   gedl_get_range (edl, &start, &end);
-  cairo_rectangle (cr, start + x, y + VID_HEIGHT + PAD_DIM * 1.5, end - start, PAD_DIM);
+
+  cairo_rectangle (cr, start, y + VID_HEIGHT + PAD_DIM * 1.5, end - start, PAD_DIM);
   cairo_set_source_rgba (cr, 0, 0.11, 0.0, 0.5);
   cairo_fill_preserve (cr);
   cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
   cairo_stroke (cr);
 
-  cairo_rectangle (cr, edl->frame_no + x, y-PAD_DIM, 1, VID_HEIGHT + PAD_DIM * 2);
+  double frame = edl->frame_no;
+  
+  cairo_rectangle (cr, frame, y-PAD_DIM, 1, VID_HEIGHT + PAD_DIM * 2);
   cairo_set_source_rgba (cr,1,0,0,1);
   cairo_fill (cr);
+
+  cairo_restore (cr);
 }
 
 static const char *css =
@@ -584,8 +604,9 @@ void gedl_ui (Mrg *mrg, void *data)
                       mrg_width (mrg)/2, mrg_height (mrg)/2,
                       result, 0,0);
 
-  gedl_draw (mrg, edl, pan_x0, mrg_height (mrg)/2, 8, 0.0);
-
+  gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2, 10.0, edl->frame_no);
+  gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2 + 80, 1.0, edl->frame_no);
+  gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2 + 160, 0.1, edl->frame_no);
 
   {
   cairo_t *cr = mrg_cr (mrg);
@@ -630,8 +651,6 @@ void gedl_ui (Mrg *mrg, void *data)
   mrg_add_binding (mrg, "right", NULL, NULL, step_frame, edl);
   mrg_add_binding (mrg, "left", NULL, NULL, step_frame_back, edl);
 }
-
-//static GThread *thread;
 
 gpointer renderer_main (gpointer data)
 {
