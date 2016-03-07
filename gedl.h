@@ -139,6 +139,9 @@ GeglNode *nop_transformed;
 GeglNode *nop_raw2;
 GeglNode *nop_transformed2;
 
+GeglNode *load_buf, *result, *encode, *crop, *scale_size, *opacity,
+                *load_buf2, *crop2, *scale_size2, *over;
+
 } _GeglEDL;
 
 Clip *clip_new            (void);

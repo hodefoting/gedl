@@ -54,8 +54,6 @@ void frob_fade (void*);
 static unsigned char *copy_buf = NULL;
 static int copy_buf_len = 0;
 
-extern GeglNode *result;
-
 static void mrg_gegl_blit (Mrg *mrg,
                           float x0, float y0,
                           float width, float height,
@@ -602,7 +600,7 @@ void gedl_ui (Mrg *mrg, void *data)
 
   mrg_gegl_blit (mrg, mrg_width (mrg)/2, 0,
                       mrg_width (mrg)/2, mrg_height (mrg)/2,
-                      result, 0,0);
+                      edl->result, 0,0);
 
   gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2, 10.0, edl->frame_no);
   gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2 + 80, 1.0, edl->frame_no);
