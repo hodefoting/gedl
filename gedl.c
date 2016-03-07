@@ -267,43 +267,40 @@ void frob_fade (GeglEDL *edl, Clip *clip);
 
 static void rig_filters (GeglEDL *edl, Clip *clip, Clip *clip2, int frame_no)
 {
-#if 0
-       /* create filter graph if a secondary clip is in use */
-       if (edl->mix != 0.0 && clip2 && clip2->filter_graph)
-         {
-           if (clip2->cached_filter_graph &&
-               !strcmp(clip2->cached_filter_graph,
-                       clip2->filter_graph))
-             {
-               /* reuse previous filter graph (when proeprty tweening arrives, should compute frame
-                                               for tweening) */
-             }
-           else
-            {
-              remove_in_betweens (nop_raw2, nop_transformed2);
-              //source_create_chain (edl, nop_raw2, nop_transformed2, edl->source[1], 
-              gedl_create_chain (edl, nop_raw2, nop_transformed2,
-                                 clip2->filter_graph,
-                                 clip2->clip_frame_no - clip2->end,
-                                 clip2->end - clip2->start);
+  /* create filter graph if a secondary clip is in use */
+  if (edl->mix != 0.0 && clip2 && clip2->filter_graph)
+    {
+      if (clip2->cached_filter_graph &&
+          !strcmp(clip2->cached_filter_graph,
+                  clip2->filter_graph))
+        {
+          /* reuse previous filter graph (when proeprty tweening arrives, should compute frame
+                                          for tweening) */
+        }
+      else
+       {
+         remove_in_betweens (nop_raw2, nop_transformed2);
+         gedl_create_chain (edl, nop_raw2, nop_transformed2,
+                            clip2->filter_graph /*,
+                            clip2->clip_frame_no - clip2->end,
+                            clip2->end - clip2->start*/);
 
-              if (clip2->cached_filter_graph)
-                g_free (clip2->cached_filter_graph);
-              clip2->cached_filter_graph = g_strdup (clip2->filter_graph);
-            }
-         }
-        else
-         {
-           remove_in_betweens (nop_raw2, nop_transformed2);
-           if (clip2)
-           {
-             if (clip2->cached_filter_graph)
-               g_free (clip2->cached_filter_graph);
-             clip2->cached_filter_graph = NULL;
-           }
-           gegl_node_link_many (nop_raw2, nop_transformed2, NULL);
-         }
-#endif
+         if (clip2->cached_filter_graph)
+           g_free (clip2->cached_filter_graph);
+         clip2->cached_filter_graph = g_strdup (clip2->filter_graph);
+       }
+    }
+   else
+    {
+      remove_in_betweens (nop_raw2, nop_transformed2);
+      if (clip2)
+      {
+        if (clip2->cached_filter_graph)
+          g_free (clip2->cached_filter_graph);
+        clip2->cached_filter_graph = NULL;
+      }
+      gegl_node_link_many (nop_raw2, nop_transformed2, NULL);
+    }
 }
 
 void gedl_set_frame         (GeglEDL *edl, int    frame)
@@ -1062,7 +1059,7 @@ int main (int argc, char **argv)
     else
     if (!strcmp (argv[i], "-ui"))
     {
-      thread = g_thread_new ("renderer", preloader, edl);
+      //thread = g_thread_new ("renderer", preloader, edl);
       return gedl_ui_main (edl);
     }
 

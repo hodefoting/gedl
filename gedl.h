@@ -81,6 +81,20 @@ typedef struct Clip
   GMutex             mutex;
 } Clip;
 
+typedef struct SourceClip
+{
+  int    start;
+  int    end;
+  char *title;
+} SourceClip;
+
+typedef struct SourceVid
+{
+  char *path;
+  int   clip_count;
+  SourceClip clips[30];
+} SourceVid;
+
 struct _GeglEDL
 {
   char       *path;
@@ -117,6 +131,8 @@ int         audio_samplerate;
 int         fade_duration;
 int         frame_no;
 
+  int        source_count;
+  SourceVid  source[40];
 
 } _GeglEDL;
 
