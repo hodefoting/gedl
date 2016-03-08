@@ -751,13 +751,19 @@ GeglEDL *gedl_new_from_string (const char *string)
 {
   GString *line = g_string_new ("");
   GeglEDL *edl = gedl_new ();
+  int clips_done = 0;
+
   for (const char *p = string; p==string || *(p-1); p++)
   {
     switch (*p)
     {
       case 0:
       case '\n':
-       gedl_parse_line (edl, line->str);
+       if (!clips_done &&
+            line->str[0] == '-' && line->str[1] == '-')
+         clips_done = 1;
+       else
+         gedl_parse_line (edl, line->str);
        g_string_assign (line, "");
        break;
       default: g_string_append_c (line, *p);
@@ -783,8 +789,11 @@ GeglEDL *gedl_new_from_string (const char *string)
   return edl;
 }
 
+#if 0
 void gedl_load_path (GeglEDL *edl, const char *path)
 {
+  gchar *string = NULL;
+
   if (edl->path)
     g_free (edl->path);
   edl->path = g_strdup (path);
@@ -800,6 +809,7 @@ void gedl_load_path (GeglEDL *edl, const char *path)
        fclose (file);
     }
 }
+#endif
 
 void gedl_save_path (GeglEDL *edl, const char *path)
 {
@@ -844,11 +854,17 @@ void gedl_update_video_size (GeglEDL *edl)
 
 GeglEDL *gedl_new_from_path (const char *path)
 {
-  GeglEDL *edl = gedl_new ();
+  GeglEDL *edl = NULL;
+  gchar *string = NULL;
 
-  gedl_load_path (edl, path);
-  gedl_update_video_size (edl);
-  gedl_set_size (edl, edl->video_width, edl->video_height);
+  g_file_get_contents (path, &string, NULL, NULL);
+  if (string)
+  {
+    edl = gedl_new_from_string (string);
+    g_free (string);
+    gedl_update_video_size (edl);
+    gedl_set_size (edl, edl->video_width, edl->video_height);
+  }
 
   return edl;
 }
@@ -1046,7 +1062,8 @@ int main (int argc, char **argv)
     else
     if (!strcmp (argv[i], "-ui"))
     {
-      thread = g_thread_new ("renderer", preloader, edl);
+      if (0)
+        thread = g_thread_new ("renderer", preloader, edl);
       return gedl_ui_main (edl, edl2);
     }
 

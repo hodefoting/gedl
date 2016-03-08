@@ -1,3 +1,4 @@
+
 #define _BSD_SOURCE
 #define _DEFAULT_SOURCE
 
@@ -602,12 +603,13 @@ void gedl_ui (Mrg *mrg, void *data)
   mrg_gegl_blit (mrg, mrg_width (mrg)/2, 0,
                       mrg_width (mrg)/2, mrg_height (mrg)/2,
                       o->edl->result, 0,0);
-  o->edl2->frame_no = o->edl->frame_no + 2;
+#if 0
+  o->edl2->frame_no = o->edl->frame_no + 20;
   rig_frame (o->edl2, o->edl2->frame_no);
   mrg_gegl_blit (mrg, 0, 0,
                       mrg_width (mrg)/2, mrg_height (mrg)/2,
                       o->edl2->result, 0,0);
-
+#endif
   gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2, 10.0, edl->frame_no);
   gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2 + 80, 1.0, edl->frame_no);
   gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2 + 160, 0.1, edl->frame_no);
