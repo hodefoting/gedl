@@ -1,3 +1,4 @@
+/* one of these days, one might even want to clean windows here :)*/
 
 #define _BSD_SOURCE
 #define _DEFAULT_SOURCE

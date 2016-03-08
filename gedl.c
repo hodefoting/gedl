@@ -623,6 +623,34 @@ void frob_fade (GeglEDL *edl, Clip *clip)
   }
 }
 
+
+void gedl_parse_clip (GeglEDL *edl, const char *line)
+{
+  int start = 0; int end = 0;
+  const char *rest = NULL;
+  char path[1024];
+  if (line[0] == '#' ||
+      line[1] == '#' ||
+      strlen (line) < 4)
+    return;
+
+  if (strstr (line, "--"))
+    rest = strstr (line, "--") + 2;
+
+  if (rest) while (*rest == ' ')rest++;
+
+  sscanf (line, "%s %i %i", path, &start, &end);
+  if (strlen (path) > 3)
+    {
+      fprintf (stderr, " %s %i-%i  %s%s%s\n", path, start, end,
+                      rest?"[":"", rest?rest:"", rest?"]":""
+                      );
+    }
+  /* todo: probe video file for length if any of arguments are nont present as 
+           integers.. alloving full clips and clips with mm:ss.nn timestamps,
+   */
+}
+
 void gedl_parse_line (GeglEDL *edl, const char *line)
 {
   int start = 0; int end = 0;
@@ -665,7 +693,8 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
      return;
    }
   if (strstr (line, "--"))
-    rest = strstr (line, "--") + 3;
+    rest = strstr (line, "--") + 2;
+  if (rest) while (*rest == ' ')rest++;
 
   sscanf (line, "%s %i %i", path, &start, &end);
   if (strlen (path) > 3)
@@ -759,11 +788,20 @@ GeglEDL *gedl_new_from_string (const char *string)
     {
       case 0:
       case '\n':
-       if (!clips_done &&
-            line->str[0] == '-' && line->str[1] == '-')
-         clips_done = 1;
+       if (clips_done)
+       {
+         if (line->len > 2)
+           gedl_parse_clip (edl, line->str);
+       }
        else
-         gedl_parse_line (edl, line->str);
+       {
+         if (line->str[0] == '-' &&
+             line->str[1] == '-' &&
+             line->str[2] == '-')
+           clips_done = 1;
+         else
+           gedl_parse_line (edl, line->str);
+       }
        g_string_assign (line, "");
        break;
       default: g_string_append_c (line, *p);
