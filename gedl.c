@@ -240,7 +240,13 @@ void remove_in_betweens (GeglNode *nop_raw, GeglNode *nop_transformed)
 /* XXX: oops global state */
 
 const char *edl_path = "input.edl";
+
+#if 1
 GeglEDL *edl;
+GeglEDL *edl2;
+#endif
+
+
 void frob_fade (GeglEDL *edl, Clip *clip);
 
 static void rig_filters (GeglEDL *edl, Clip *clip, Clip *clip2, int frame_no)
@@ -862,7 +868,7 @@ int gedl_get_clip2_frame_no      (GeglEDL *edl)
 {
   return edl->clip2->clip_frame_no;
 }
-static void setup (void)
+static void setup (GeglEDL *edl)
 {
   edl->gegl = gegl_node_new ();
   edl->result = gegl_node_new_child    (edl->gegl, "operation", "gegl:nop", NULL);
@@ -945,7 +951,7 @@ int gegl_make_thumb_video (const char *path, const char *thumb_path)
   GString *str = g_string_new ("");
   g_string_append_printf (str, "video-bitrate=100\n\noutput-path=%s\nvideo-width=320\nvideo-height=240\n\n%s\n", thumb_path, path);
   edl = gedl_new_from_string (str->str);
-  setup ();
+  setup (edl);
   tot_frames = gedl_get_frames (edl);
   if (edl->range_end == 0)
     edl->range_end = tot_frames-1;
@@ -957,7 +963,7 @@ int gegl_make_thumb_video (const char *path, const char *thumb_path)
 
 static GThread *thread;
 
-int gedl_ui_main (GeglEDL *edl);
+int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2);
 
 static gpointer preloader (gpointer data)
 {
@@ -1020,14 +1026,18 @@ int main (int argc, char **argv)
     sprintf (str, "%s 0 %i\n", edl_path, duration);
     edl = gedl_new_from_string (str);
     edl->path = g_strdup (edl_path);
+    edl2 = gedl_new_from_string (str);
+    edl2->path = g_strdup (edl_path);
   }
   else
   {
     edl = gedl_new_from_path (edl_path);
+    edl2 = gedl_new_from_path (edl_path);
   }
   if (argv[2])
     edl->output_path = argv[2];
-  setup ();
+  setup (edl);
+  setup (edl2);
 
 
   for (int i = 1; argv[i]; i++)
@@ -1037,7 +1047,7 @@ int main (int argc, char **argv)
     if (!strcmp (argv[i], "-ui"))
     {
       thread = g_thread_new ("renderer", preloader, edl);
-      return gedl_ui_main (edl);
+      return gedl_ui_main (edl, edl2);
     }
 
   tot_frames  = gedl_get_frames (edl);

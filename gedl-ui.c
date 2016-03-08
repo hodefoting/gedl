@@ -145,6 +145,7 @@ struct _State {
   void      (*ui) (Mrg *mrg, void *state);
   Mrg        *mrg;
   GeglEDL    *edl;
+  GeglEDL    *edl2;
 
   char       *path;
   char       *save_path;
@@ -600,7 +601,12 @@ void gedl_ui (Mrg *mrg, void *data)
 
   mrg_gegl_blit (mrg, mrg_width (mrg)/2, 0,
                       mrg_width (mrg)/2, mrg_height (mrg)/2,
-                      edl->result, 0,0);
+                      o->edl->result, 0,0);
+  o->edl2->frame_no = o->edl->frame_no + 2;
+  rig_frame (o->edl2, o->edl2->frame_no);
+  mrg_gegl_blit (mrg, 0, 0,
+                      mrg_width (mrg)/2, mrg_height (mrg)/2,
+                      o->edl2->result, 0,0);
 
   gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2, 10.0, edl->frame_no);
   gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2 + 80, 1.0, edl->frame_no);
@@ -669,13 +675,14 @@ gpointer renderer_main (gpointer data)
   return NULL;
 }
 
-int gedl_ui_main (GeglEDL *edl);
-int gedl_ui_main (GeglEDL *edl)
+int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2);
+int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2)
 {
   Mrg *mrg = mrg_new (800, 600, NULL);
   State o = {NULL,};
   o.mrg = mrg;
   o.edl = edl;
+  o.edl2 = edl2;
   active_clip = edl->clips->data;
   edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
   renderer_set_range (0, 50);
