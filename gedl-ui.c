@@ -207,15 +207,6 @@ static void stop_playing (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
-#if 0
-static void start_playing (MrgEvent *event, void *data1, void *data2)
-{
-  playing = 0;
-  mrg_event_stop_propagate (event);
-  mrg_queue_draw (event->mrg, NULL);
-}
-#endif
-
 static void toggle_playing (MrgEvent *event, void *data1, void *data2)
 {
   playing =  !playing;
@@ -524,6 +515,7 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double 
       cairo_pattern_t *pattern = cairo_pattern_create_for_surface (surface);
       cairo_matrix_init_translate (&matrix, -(t - clip->start), -y);
       cairo_pattern_set_matrix (pattern, &matrix);
+      cairo_pattern_set_filter (pattern, CAIRO_FILTER_NEAREST);
       cairo_set_source (cr, pattern);
 
       cairo_save (cr);
