@@ -154,7 +154,6 @@ struct _State {
 };
 
 
-Clip *active_clip = NULL;
 
 static int playing  = 0;
 
@@ -172,7 +171,8 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
   edl->frame_no = x;
   edl->selection_start = edl->frame_no;
   edl->selection_end = edl->frame_no;
-  active_clip = clip;
+  edl->active_clip = clip;
+  edl->active_source = NULL;
   mrg_queue_draw (e->mrg, NULL);
 }
 static void drag_clip (MrgEvent *e, void *data1, void *data2)
@@ -187,7 +187,6 @@ static void drag_clip (MrgEvent *e, void *data1, void *data2)
   {
     edl->selection_start = e->x - pan_x0;
   }
-  //active_clip = clip;
   mrg_queue_draw (e->mrg, NULL);
 }
 
@@ -196,7 +195,8 @@ static void released_clip (MrgEvent *e, void *data1, void *data2)
   Clip *clip = data1;
   GeglEDL *edl = data2;
   edl->frame_no = e->x - pan_x0;
-  active_clip = clip;
+  edl->active_clip = clip;
+  edl->active_source = NULL;
   mrg_queue_draw (e->mrg, NULL);
 }
 
@@ -280,16 +280,18 @@ static void extend_left (MrgEvent *event, void *data1, void *data2)
 static void remove_clip (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  if (!active_clip)
+  if (!edl->active_clip)
     return;
   {
-    GList *iter = g_list_find (edl->clips, active_clip);
+    GList *iter = g_list_find (edl->clips, edl->active_clip);
     if (iter) iter = iter->next;
     if (!iter)
       return;
-    edl->clips = g_list_remove (edl->clips, active_clip);
-    if (iter) active_clip = iter->data;
-    frob_fade (active_clip);
+    edl->clips = g_list_remove (edl->clips, edl->active_clip);
+    if (iter) edl->active_clip = iter->data;
+    else
+        edl->active_clip = NULL;
+    frob_fade (edl->active_clip);
   }
   edl->frame=-1;
   mrg_event_stop_propagate (event);
@@ -298,17 +300,17 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
 static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  if (!active_clip)
+  if (!edl->active_clip)
     return;
   {
-    GList *iter = g_list_find (edl->clips, active_clip);
-    Clip *clip = clip_new_full (active_clip->path, active_clip->start, active_clip->end);
+    GList *iter = g_list_find (edl->clips, edl->active_clip);
+    Clip *clip = clip_new_full (edl->active_clip->path, edl->active_clip->start, edl->active_clip->end);
     edl->clips = g_list_insert_before (edl->clips, iter, clip);
-    frob_fade (active_clip);
-    if (active_clip->filter_graph)
-      clip->filter_graph = g_strdup (active_clip->filter_graph);
-    active_clip = clip;
-    frob_fade (active_clip);
+    frob_fade (edl->active_clip);
+    if (edl->active_clip->filter_graph)
+      clip->filter_graph = g_strdup (edl->active_clip->filter_graph);
+    edl->active_clip = clip;
+    frob_fade (edl->active_clip);
   }
   edl->frame=-1;
   mrg_event_stop_propagate (event);
@@ -318,13 +320,13 @@ static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
 static void nav_left (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  if (!active_clip)
+  if (!edl->active_clip)
     return;
   {
-    GList *iter = g_list_find (edl->clips, active_clip);
+    GList *iter = g_list_find (edl->clips, edl->active_clip);
     if (iter) iter = iter->prev;
-    if (iter) active_clip = iter->data;
-    edl->frame_no = active_clip->abs_start + 1;
+    if (iter) edl->active_clip = iter->data;
+    edl->frame_no = edl->active_clip->abs_start + 1;
   }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -333,13 +335,13 @@ static void nav_left (MrgEvent *event, void *data1, void *data2)
 static void nav_right (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  if (!active_clip)
+  if (!edl->active_clip)
     return;
   {
-    GList *iter = g_list_find (edl->clips, active_clip);
+    GList *iter = g_list_find (edl->clips, edl->active_clip);
     if (iter) iter = iter->next;
-    if (iter) active_clip = iter->data;
-    edl->frame_no = active_clip->abs_start + 1;
+    if (iter) edl->active_clip = iter->data;
+    edl->frame_no = edl->active_clip->abs_start + 1;
   }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -350,21 +352,21 @@ static void nav_right (MrgEvent *event, void *data1, void *data2)
 static void toggle_fade (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  if (!active_clip)
+  if (!edl->active_clip)
     return;
-  active_clip->fade_out = !active_clip->fade_out;
-  frob_fade (active_clip);
+  edl->active_clip->fade_out = !edl->active_clip->fade_out;
+  frob_fade (edl->active_clip);
   {
-    GList *iter = g_list_find (edl->clips, active_clip);
+    GList *iter = g_list_find (edl->clips, edl->active_clip);
     if (iter) iter = iter->next;
     if (iter) {
       Clip *clip2 = iter->data;
-      clip2->fade_in = active_clip->fade_out;
+      clip2->fade_in = edl->active_clip->fade_out;
       frob_fade (clip2);
     }
   }
-  if (!active_clip->fade_out)
-    active_clip->fade_pad_end = 0;
+  if (!edl->active_clip->fade_out)
+    edl->active_clip->fade_pad_end = 0;
   edl->frame = -1;
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -410,9 +412,9 @@ static void step_frame (MrgEvent *event, void *data1, void *data2)
 static void clip_end_inc (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  if (active_clip)
+  if (edl->active_clip)
     {
-      active_clip->end++;
+      edl->active_clip->end++;
       edl->frame=-1;
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
@@ -422,9 +424,9 @@ static void clip_end_inc (MrgEvent *event, void *data1, void *data2)
 static void clip_end_dec (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  if (active_clip)
+  if (edl->active_clip)
     {
-      active_clip->end--;
+      edl->active_clip->end--;
       edl->frame=-1;
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
@@ -434,9 +436,9 @@ static void clip_end_dec (MrgEvent *event, void *data1, void *data2)
 static void clip_start_inc (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  if (active_clip)
+  if (edl->active_clip)
     {
-      active_clip->start++;
+      edl->active_clip->start++;
       edl->frame=-1; // hack - to dirty it
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
@@ -446,9 +448,9 @@ static void clip_start_inc (MrgEvent *event, void *data1, void *data2)
 static void clip_start_dec (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  if (active_clip)
+  if (edl->active_clip)
     {
-      active_clip->start--;
+      edl->active_clip->start--;
       edl->frame=-1;
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
@@ -563,7 +565,7 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double 
   {
     Clip *clip = l->data;
     render_clip (mrg, clip->path, clip->start, clip_get_frames (clip), t, y);
-    if (clip == active_clip)
+    if (clip == edl->active_clip)
       cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
     else
       cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
@@ -601,8 +603,10 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double 
   cairo_restore (cr);
 
   cairo_rectangle (cr, 0, y - PAD_DIM, mrg_width (mrg), VID_HEIGHT + PAD_DIM * 4);
+#if 0
   cairo_set_source_rgba (cr, 1,0,0,1);
   cairo_stroke_preserve (cr);
+#endif
   mrg_listen (mrg, MRG_SCROLL, zoom_timeline, edl, NULL);
   cairo_new_path (cr);
 }
@@ -615,11 +619,12 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
 {
   GList *l;
   cairo_t *cr = mrg_cr (mrg);
-
+#if 0
   cairo_set_source_rgba (cr, 1,0,0,1);
   cairo_set_line_width (cr, 1);
   cairo_rectangle (cr, x, y, w, h);
   cairo_stroke (cr);
+#endif
   //mrg_start (mrg, NULL, NULL);
   //mrg_set_style (mrg, "font-size: 10;");
   //mrg_set_xy (mrg, x, y);
@@ -695,14 +700,14 @@ void gedl_ui (Mrg *mrg, void *data)
 
   mrg_printf (mrg, "%i\n", edl->frame_no);
 
-  if (active_clip)
+  if (edl->active_clip)
     {
-      mrg_printf (mrg, "%s %i %i%s", active_clip->path,
-                                     active_clip->start, active_clip->end,
-                                     active_clip->fade_out?" [fade]":"");
+      mrg_printf (mrg, "%s %i %i%s", edl->active_clip->path,
+                                     edl->active_clip->start, edl->active_clip->end,
+                                     edl->active_clip->fade_out?" [fade]":"");
 
-      if (active_clip->filter_graph)
-        mrg_printf (mrg, " %s", active_clip->filter_graph);
+      if (edl->active_clip->filter_graph)
+        mrg_printf (mrg, " %s", edl->active_clip->filter_graph);
     }
 
   mrg_add_binding (mrg, "x", NULL, NULL, remove_clip, edl);
@@ -747,12 +752,12 @@ gpointer renderer_main (gpointer data)
 int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2);
 int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2)
 {
-  Mrg *mrg = mrg_new (800, 600, NULL);
+  //Mrg *mrg = mrg_new (800, 600, NULL);
+  Mrg *mrg = mrg_new (-1, -1, NULL);
   State o = {NULL,};
   o.mrg = mrg;
   o.edl = edl;
   o.edl2 = edl2;
-  active_clip = edl->clips->data;
   edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
   renderer_set_range (0, 50);
   mrg_set_ui (mrg, gedl_ui, &o);

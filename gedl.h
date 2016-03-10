@@ -139,6 +139,8 @@ struct _GeglEDL
              *load_buf2, *crop2, *scale_size2, *over;
   double      scale;
   double      t0;
+  Clip       *active_clip;
+  SourceClip *active_source;
 } _GeglEDL;
 
 Clip *clip_new            (void);

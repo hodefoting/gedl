@@ -253,7 +253,6 @@ void frob_fade (GeglEDL *edl, Clip *clip);
 
 static void rig_filters (GeglEDL *edl, Clip *clip, Clip *clip2, int frame_no)
 {
-  return 0;
   /* create filter graph if a secondary clip is in use */
   if (edl->mix != 0.0 && clip2 && clip2->filter_graph)
     {
@@ -734,6 +733,10 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
          clip->fade_out = TRUE;
          ff_probe = 1; 
        }
+     if (strstr (line, "[active]"))
+       {
+         edl->active_clip = clip;
+       }
      {
         GList *self = g_list_find (edl->clips, clip);
         GList *prev = self?self->prev: NULL;
@@ -1172,7 +1175,10 @@ char *gedl_serialise (GeglEDL *edl)
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
-    g_string_append_printf (ser, "%s %d %d%s%s%s\n", clip->path, clip->start, clip->end, clip->fade_out?" [fade]":"", clip->filter_graph?" -- ":"",clip->filter_graph?clip->filter_graph:"");
+    g_string_append_printf (ser, "%s %d %d%s%s%s%s\n", clip->path, clip->start, clip->end,
+        clip->fade_out?" [fade]":"", 
+        (edl->active_clip == clip)?" [active]":"", 
+        clip->filter_graph?" -- ":"",clip->filter_graph?clip->filter_graph:"");
  
   }
   g_string_append_printf (ser, "-----\n");
