@@ -522,7 +522,8 @@ void render_clip (Mrg *mrg, const char *clip_path, int clip_start, int clip_fram
     cairo_surface_t *surface = mrg_image_get_surface (img);
     cairo_matrix_t   matrix;
     cairo_pattern_t *pattern = cairo_pattern_create_for_surface (surface);
-    cairo_matrix_init_translate (&matrix, -(x - clip_start), -y);
+    cairo_matrix_init_scale (&matrix, 1.0, height * 1.0/ VID_HEIGHT);
+    cairo_matrix_translate (&matrix, -(x - clip_start), -y);
     cairo_pattern_set_matrix (pattern, &matrix);
     cairo_pattern_set_filter (pattern, CAIRO_FILTER_NEAREST);
     cairo_set_source (cr, pattern);

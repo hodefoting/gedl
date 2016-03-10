@@ -83,9 +83,9 @@ typedef struct Clip
 
 typedef struct SourceClip
 {
-  char  *path;
-  int    start;
-  int    end;
+  char *path;
+  int   start;
+  int   end;
   char *title;
 } SourceClip;
 

@@ -253,6 +253,7 @@ void frob_fade (GeglEDL *edl, Clip *clip);
 
 static void rig_filters (GeglEDL *edl, Clip *clip, Clip *clip2, int frame_no)
 {
+  return 0;
   /* create filter graph if a secondary clip is in use */
   if (edl->mix != 0.0 && clip2 && clip2->filter_graph)
     {
