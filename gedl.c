@@ -584,8 +584,8 @@ int    gedl_get_duration (GeglEDL *edl)
   GList *l;
   for (l = edl->clips; l; l = l->next)
   {
-    count += clip_get_frames (l->data);
     ((Clip*)(l->data))->abs_start = count;
+    count += clip_get_frames (l->data);
   }
   return count; 
 }
