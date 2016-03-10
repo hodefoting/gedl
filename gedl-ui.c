@@ -566,10 +566,10 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double 
       cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
     else
       cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
-    cairo_stroke (cr);
     mrg_listen (mrg, MRG_PRESS, clicked_clip, clip, edl);
     mrg_listen (mrg, MRG_DRAG, drag_clip, clip, edl);
     mrg_listen (mrg, MRG_RELEASE, released_clip, clip, edl);
+    cairo_stroke (cr);
 
     t += clip_get_frames (clip);
   }
