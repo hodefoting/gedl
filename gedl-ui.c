@@ -507,7 +507,7 @@ static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
 #define VID_HEIGHT 40
 #define PAD_DIM     5
 
-void render_clip (Mrg *mrg, const char *clip_path, int clip_start, int clip_frames, int is_active, double x, double y, double t)
+void render_clip (Mrg *mrg, const char *clip_path, int clip_start, int clip_frames, double x, double y)
 {
   char thumb_path[PATH_MAX];
   sprintf (thumb_path, "%s.png", clip_path); /* XXX: replace with function */
@@ -522,7 +522,7 @@ void render_clip (Mrg *mrg, const char *clip_path, int clip_start, int clip_fram
     cairo_surface_t *surface = mrg_image_get_surface (img);
     cairo_matrix_t   matrix;
     cairo_pattern_t *pattern = cairo_pattern_create_for_surface (surface);
-    cairo_matrix_init_translate (&matrix, -(t - clip_start), -y);
+    cairo_matrix_init_translate (&matrix, -(x - clip_start), -y);
     cairo_pattern_set_matrix (pattern, &matrix);
     cairo_pattern_set_filter (pattern, CAIRO_FILTER_NEAREST);
     cairo_set_source (cr, pattern);
@@ -537,11 +537,6 @@ void render_clip (Mrg *mrg, const char *clip_path, int clip_start, int clip_fram
     cairo_fill_preserve (cr);
   }
 
-  if (is_active)
-    cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
-  else
-    cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
-  cairo_stroke_preserve (cr);
 }
 
 void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double t0)
@@ -566,50 +561,16 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double 
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
-    render_clip (mrg, clip->path, clip->start, clip_get_frames (clip), clip == active_clip, t, y, t);
-    mrg_listen (mrg, MRG_PRESS, clicked_clip, clip, edl);
-    mrg_listen (mrg, MRG_DRAG, drag_clip, clip, edl);
-    mrg_listen (mrg, MRG_RELEASE, released_clip, clip, edl);
-
-#if 0
-    float x=t;
-    char thumb_path[PATH_MAX];
-    sprintf (thumb_path, "%s.png", clip->path); /* XXX: replace with function */
-    cairo_rectangle (cr, x, y, clip_get_frames (clip), VID_HEIGHT);
-    cairo_set_source_rgba (cr, 0.1, 0.1, 0.1, 0.5);
-    mrg_listen (mrg, MRG_PRESS, clicked_clip, clip, edl);
-    mrg_listen (mrg, MRG_DRAG, drag_clip, clip, edl);
-    mrg_listen (mrg, MRG_RELEASE, released_clip, clip, edl);
-
-    int width, height;
-    MrgImage *img = mrg_query_image (mrg, thumb_path, &width, &height);
-    if (img && width > 0)
-    {
-      cairo_surface_t *surface = mrg_image_get_surface (img);
-      cairo_matrix_t   matrix;
-      cairo_pattern_t *pattern = cairo_pattern_create_for_surface (surface);
-      cairo_matrix_init_translate (&matrix, -(t - clip->start), -y);
-      cairo_pattern_set_matrix (pattern, &matrix);
-      cairo_pattern_set_filter (pattern, CAIRO_FILTER_NEAREST);
-      cairo_set_source (cr, pattern);
-
-      cairo_save (cr);
-      cairo_clip_preserve (cr);
-      cairo_paint (cr);
-      cairo_restore (cr);
-    }
-    else
-    {
-      cairo_fill_preserve (cr);
-    }
-
+    render_clip (mrg, clip->path, clip->start, clip_get_frames (clip), t, y);
     if (clip == active_clip)
       cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
     else
       cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
     cairo_stroke (cr);
-#endif
-    cairo_new_path (cr);
+    mrg_listen (mrg, MRG_PRESS, clicked_clip, clip, edl);
+    mrg_listen (mrg, MRG_DRAG, drag_clip, clip, edl);
+    mrg_listen (mrg, MRG_RELEASE, released_clip, clip, edl);
+
     t += clip_get_frames (clip);
   }
 
@@ -658,18 +619,24 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
   cairo_set_line_width (cr, 1);
   cairo_rectangle (cr, x, y, w, h);
   cairo_stroke (cr);
-  mrg_start (mrg, NULL, NULL);
-  mrg_set_style (mrg, "font-size: 10;");
-  mrg_set_xy (mrg, x, y);
+  //mrg_start (mrg, NULL, NULL);
+  //mrg_set_style (mrg, "font-size: 10;");
+  //mrg_set_xy (mrg, x, y);
 
-  mrg_set_edge_left (mrg, x);
-  mrg_set_edge_right (mrg, x + w);
+  //mrg_set_edge_left (mrg, x);
+  //mrg_set_edge_right (mrg, x + w);
   for (l = edl->clip_db; l; l = l->next)
   {
-    SourceClip *sclip = l->data;
-    mrg_printf (mrg, "%s %i %i %s\n", sclip->path, sclip->start, sclip->end, sclip->title);
+    SourceClip *clip = l->data;
+    //mrg_printf (mrg, "%s %i %i %s\n", sclip->path, sclip->start, sclip->end, sclip->title);
+    cairo_save (cr);
+    //cairo_scale (cr, 8.0, 1);
+    render_clip (mrg, clip->path, clip->start, clip->end - clip->start, 0, y);
+    cairo_new_path (cr);
+    cairo_restore (cr);
+    y += VID_HEIGHT + PAD_DIM * 1;
   }
-  mrg_end (mrg);
+  //mrg_end (mrg);
 }
 
 void gedl_ui (Mrg *mrg, void *data)
