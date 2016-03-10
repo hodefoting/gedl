@@ -52,15 +52,26 @@ void        gedl_get_selection      (GeglEDL    *edl,
 void rig_frame (GeglEDL *edl, int frame_no);
 
 /*********/
+
+typedef struct SourceClip
+{
+  char *path;
+  int   start;
+  int   end;
+  char *title;
+} SourceClip;
+
 typedef struct Clip
 {
 
   char  *path;  /*path to media file */
+  int    start; /*frame number starting with 0 */
+  int    end;   /*last frame, inclusive fro single frame, make equal to start */
+  char  *title;
+
   double fps;
   int    duration;
   char   sha256sum[20]; /*< would also be the filename of thumbtrack */
-  int    start; /*frame number starting with 0 */
-  int    end;   /*last frame, inclusive fro single frame, make equal to start */
   int    fade_out; /* the main control for fading in.. */
   int    fade_in;  /* implied by previous clip fading */
   int    fade_pad_start; 
@@ -81,13 +92,6 @@ typedef struct Clip
   GMutex             mutex;
 } Clip;
 
-typedef struct SourceClip
-{
-  char *path;
-  int   start;
-  int   end;
-  char *title;
-} SourceClip;
 
 /*
 typedef struct SourceVid
