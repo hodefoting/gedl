@@ -768,8 +768,8 @@ gpointer renderer_main (gpointer data)
 int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2);
 int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2)
 {
-  //Mrg *mrg = mrg_new (800, 600, NULL);
-  Mrg *mrg = mrg_new (-1, -1, NULL);
+  Mrg *mrg = mrg_new (800, 600, NULL);
+  //Mrg *mrg = mrg_new (-1, -1, NULL);
   State o = {NULL,};
   o.mrg = mrg;
   o.edl = edl;

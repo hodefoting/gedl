@@ -422,6 +422,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
                         "aaa", 3, "bbb",
                         edl->video_width, edl->video_height, 
                         edl->mix);
+        fprintf (stderr, "[%s]\n", frame_recipe);
 
         hash = g_checksum_new (G_CHECKSUM_MD5);
         g_checksum_update (hash, (void*)frame_recipe, -1);
@@ -681,26 +682,26 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
      while (value[strlen(value)-1]==' ' ||
             value[strlen(value)-1]=='\n')
             value[strlen(value)-1]='\0';
-     if (!strcmp (key, "fade-duration"))   edl->fade_duration = g_strtod (value, NULL);
-     if (!strcmp (key, "fps"))             gedl_set_fps (edl, g_strtod (value, NULL));
-     if (!strcmp (key, "output-path"))     edl->output_path = g_strdup (value);
-     if (!strcmp (key, "video-codec"))     edl->video_codec = g_strdup (value);
-     if (!strcmp (key, "audio-codec"))     edl->audio_codec = g_strdup (value);
+     if (!strcmp (key, "fade-duration"))     edl->fade_duration = g_strtod (value, NULL);
+     if (!strcmp (key, "fps"))               gedl_set_fps (edl, g_strtod (value, NULL));
+     if (!strcmp (key, "output-path"))       edl->output_path = g_strdup (value);
+     if (!strcmp (key, "video-codec"))       edl->video_codec = g_strdup (value);
+     if (!strcmp (key, "audio-codec"))       edl->audio_codec = g_strdup (value);
      if (!strcmp (key, "audio-sample-rate")) edl->audio_samplerate = g_strtod (value, NULL);
-     if (!strcmp (key, "video-bufsize"))   edl->video_bufsize = g_strtod (value, NULL);
-     if (!strcmp (key, "video-bitrate"))   edl->video_bitrate = g_strtod (value, NULL);
-     if (!strcmp (key, "audio-bitrate"))   edl->audio_bitrate = g_strtod (value, NULL);
-     if (!strcmp (key, "video-width"))     edl->video_width = g_strtod (value, NULL);
-     if (!strcmp (key, "video-height"))    edl->video_height = g_strtod (value, NULL);
-     if (!strcmp (key, "frame-start"))     edl->range_start = g_strtod (value, NULL);
-     if (!strcmp (key, "frame-end"))       edl->range_end = g_strtod (value, NULL);
-     if (!strcmp (key, "selection-start")) edl->selection_start = g_strtod (value, NULL);
-     if (!strcmp (key, "selection-end"))   edl->selection_end = g_strtod (value, NULL);
-     if (!strcmp (key, "range-start"))     edl->range_start = g_strtod (value, NULL);
-     if (!strcmp (key, "range-end"))       edl->range_end = g_strtod (value, NULL);
-     if (!strcmp (key, "frame-no"))        edl->frame_no = g_strtod (value, NULL);
-     if (!strcmp (key, "frame-scale"))     edl->scale = g_strtod (value, NULL);
-     if (!strcmp (key, "t0"))     edl->t0 = g_strtod (value, NULL);
+     if (!strcmp (key, "video-bufsize"))     edl->video_bufsize = g_strtod (value, NULL);
+     if (!strcmp (key, "video-bitrate"))     edl->video_bitrate = g_strtod (value, NULL);
+     if (!strcmp (key, "audio-bitrate"))     edl->audio_bitrate = g_strtod (value, NULL);
+     if (!strcmp (key, "video-width"))       edl->video_width = g_strtod (value, NULL);
+     if (!strcmp (key, "video-height"))      edl->video_height = g_strtod (value, NULL);
+     if (!strcmp (key, "frame-start"))       edl->range_start = g_strtod (value, NULL);
+     if (!strcmp (key, "frame-end"))         edl->range_end = g_strtod (value, NULL);
+     if (!strcmp (key, "selection-start"))   edl->selection_start = g_strtod (value, NULL);
+     if (!strcmp (key, "selection-end"))     edl->selection_end = g_strtod (value, NULL);
+     if (!strcmp (key, "range-start"))       edl->range_start = g_strtod (value, NULL);
+     if (!strcmp (key, "range-end"))         edl->range_end = g_strtod (value, NULL);
+     if (!strcmp (key, "frame-no"))          edl->frame_no = g_strtod (value, NULL);
+     if (!strcmp (key, "frame-scale"))       edl->scale = g_strtod (value, NULL);
+     if (!strcmp (key, "t0"))                edl->t0 = g_strtod (value, NULL);
 
      g_free (key);
      return;
@@ -1107,7 +1108,7 @@ int main (int argc, char **argv)
     edl = gedl_new_from_path (edl_path);
     edl2 = gedl_new_from_path (edl_path);
   }
-  if (argv[2])
+  if (argv[2] && argv[2][0]!='-')
     edl->output_path = argv[2];
   setup (edl);
   setup (edl2);
