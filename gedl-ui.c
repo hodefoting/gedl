@@ -277,22 +277,6 @@ static void extend_left (MrgEvent *event, void *data1, void *data2)
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
-
-static void nav_right (MrgEvent *event, void *data1, void *data2)
-{
-  GeglEDL *edl = data1;
-  if (!active_clip)
-    return;
-  {
-    GList *iter = g_list_find (edl->clips, active_clip);
-    if (iter) iter = iter->next;
-    if (iter) active_clip = iter->data;
-    edl->frame_no = active_clip->abs_start;
-  }
-  mrg_event_stop_propagate (event);
-  mrg_queue_draw (event->mrg, NULL);
-}
-
 static void remove_clip (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -340,11 +324,28 @@ static void nav_left (MrgEvent *event, void *data1, void *data2)
     GList *iter = g_list_find (edl->clips, active_clip);
     if (iter) iter = iter->prev;
     if (iter) active_clip = iter->data;
-    edl->frame_no = active_clip->abs_start;
+    edl->frame_no = active_clip->abs_start + 1;
   }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
+
+static void nav_right (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  if (!active_clip)
+    return;
+  {
+    GList *iter = g_list_find (edl->clips, active_clip);
+    if (iter) iter = iter->next;
+    if (iter) active_clip = iter->data;
+    edl->frame_no = active_clip->abs_start + 1;
+  }
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+}
+
+
 
 static void toggle_fade (MrgEvent *event, void *data1, void *data2)
 {
@@ -372,6 +373,7 @@ static void toggle_fade (MrgEvent *event, void *data1, void *data2)
 static void save (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
+  fprintf (stderr, "%s\n", edl->path);
   if (edl->path)
     gedl_save_path (edl, edl->path);
   mrg_queue_draw (event->mrg, NULL);
@@ -744,6 +746,8 @@ int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2)
   mrg_set_ui (mrg, gedl_ui, &o);
 
   //mrg_restarter_add_path (mrg, "gedl");
+
+  gedl_get_duration (edl);
 
   mrg_main (mrg);
   gegl_exit ();

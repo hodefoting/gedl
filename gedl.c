@@ -585,6 +585,7 @@ int    gedl_get_duration (GeglEDL *edl)
   for (l = edl->clips; l; l = l->next)
   {
     count += clip_get_frames (l->data);
+    ((Clip*)(l->data))->abs_start = count;
   }
   return count; 
 }
@@ -694,6 +695,8 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
      if (!strcmp (key, "range-start"))     edl->range_start = g_strtod (value, NULL);
      if (!strcmp (key, "range-end"))       edl->range_end = g_strtod (value, NULL);
      if (!strcmp (key, "frame-no"))        edl->frame_no = g_strtod (value, NULL);
+     if (!strcmp (key, "frame-scale"))     edl->scale = g_strtod (value, NULL);
+     if (!strcmp (key, "t0"))     edl->t0 = g_strtod (value, NULL);
 
      g_free (key);
      return;
@@ -908,6 +911,8 @@ GeglEDL *gedl_new_from_path (const char *path)
     g_free (string);
     gedl_update_video_size (edl);
     gedl_set_size (edl, edl->video_width, edl->video_height);
+    if (!edl->path)
+      edl->path = g_strdup (path);
   }
 
   return edl;
@@ -1151,10 +1156,16 @@ char *gedl_serialise (GeglEDL *edl)
     g_string_append_printf (ser, "selection-start=%i\n",  edl->selection_start);
   if (edl->selection_end != DEFAULT_selection_end)
     g_string_append_printf (ser, "selection-end=%i\n",  edl->selection_end);
+
   if (edl->range_start != DEFAULT_range_start)
     g_string_append_printf (ser, "range-start=%i\n",  edl->range_start);
   if (edl->range_end != DEFAULT_range_end)
     g_string_append_printf (ser, "range-end=%i\n", edl->range_end);
+
+  if (edl->scale != 1.0)//DEFAULT_range_end)
+    g_string_append_printf (ser, "frame-scale=%f\n", edl->scale);
+  if (edl->t0 != 1.0)//DEFAULT_range_end)
+    g_string_append_printf (ser, "t0=%f\n", edl->t0);
   g_string_append_printf (ser, "frame-no=%i\n", edl->frame_no);
   
   for (l = edl->clips; l; l = l->next)
@@ -1162,6 +1173,12 @@ char *gedl_serialise (GeglEDL *edl)
     Clip *clip = l->data;
     g_string_append_printf (ser, "%s %d %d%s%s%s\n", clip->path, clip->start, clip->end, clip->fade_out?" [fade]":"", clip->filter_graph?" -- ":"",clip->filter_graph?clip->filter_graph:"");
  
+  }
+  g_string_append_printf (ser, "-----\n");
+  for (l = edl->clip_db; l; l = l->next)
+  {
+    SourceClip *clip = l->data;
+    g_string_append_printf (ser, "%s %d %d%s%s\n", clip->path, clip->start, clip->end, clip->title?" -- ":"",clip->title?clip->title:"");
   }
   ret=ser->str;
   g_string_free (ser, FALSE);
