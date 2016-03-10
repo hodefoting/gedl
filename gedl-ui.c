@@ -507,12 +507,12 @@ static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
 #define VID_HEIGHT 40
 #define PAD_DIM     5
 
-void render_clip (Mrg *mrg, Clip *clip, double x, double y, double t)
+void render_clip (Mrg *mrg, const char *clip_path, int clip_start, int clip_frames, int is_active, double x, double y, double t)
 {
   char thumb_path[PATH_MAX];
-  sprintf (thumb_path, "%s.png", clip->path); /* XXX: replace with function */
+  sprintf (thumb_path, "%s.png", clip_path); /* XXX: replace with function */
   cairo_t *cr = mrg_cr (mrg);
-  cairo_rectangle (cr, x, y, clip_get_frames (clip), VID_HEIGHT);
+  cairo_rectangle (cr, x, y, clip_frames, VID_HEIGHT);
   cairo_set_source_rgba (cr, 0.1, 0.1, 0.1, 0.5);
 
   int width, height;
@@ -522,7 +522,7 @@ void render_clip (Mrg *mrg, Clip *clip, double x, double y, double t)
     cairo_surface_t *surface = mrg_image_get_surface (img);
     cairo_matrix_t   matrix;
     cairo_pattern_t *pattern = cairo_pattern_create_for_surface (surface);
-    cairo_matrix_init_translate (&matrix, -(t - clip->start), -y);
+    cairo_matrix_init_translate (&matrix, -(t - clip_start), -y);
     cairo_pattern_set_matrix (pattern, &matrix);
     cairo_pattern_set_filter (pattern, CAIRO_FILTER_NEAREST);
     cairo_set_source (cr, pattern);
@@ -537,7 +537,7 @@ void render_clip (Mrg *mrg, Clip *clip, double x, double y, double t)
     cairo_fill_preserve (cr);
   }
 
-  if (clip == active_clip)
+  if (is_active)
     cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
   else
     cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
@@ -566,7 +566,7 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double 
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
-    render_clip (mrg, clip, t, y, t);
+    render_clip (mrg, clip->path, clip->start, clip_get_frames (clip), clip == active_clip, t, y, t);
     mrg_listen (mrg, MRG_PRESS, clicked_clip, clip, edl);
     mrg_listen (mrg, MRG_DRAG, drag_clip, clip, edl);
     mrg_listen (mrg, MRG_RELEASE, released_clip, clip, edl);
