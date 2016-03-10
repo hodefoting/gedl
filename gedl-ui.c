@@ -161,6 +161,16 @@ float pan_x0 = 8;
 
 float fpx = 2;
 
+
+static void clicked_source_clip (MrgEvent *e, void *data1, void *data2)
+{
+  SourceClip *clip = data1;
+  GeglEDL *edl = data2;
+  edl->active_clip = NULL;
+  edl->active_source = clip;
+  mrg_queue_draw (e->mrg, NULL);
+}
+
 //void rig_frame (int frame_no);
 static void clicked_clip (MrgEvent *e, void *data1, void *data2)
 {
@@ -638,6 +648,12 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
     cairo_save (cr);
     //cairo_scale (cr, 8.0, 1);
     render_clip (mrg, clip->path, clip->start, clip->end - clip->start, 0, y);
+    if (clip == edl->active_source)
+      cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
+    else
+      cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
+    cairo_stroke_preserve (cr);
+    mrg_listen (mrg, MRG_PRESS, clicked_source_clip, clip, edl);
     cairo_new_path (cr);
     cairo_restore (cr);
     y += VID_HEIGHT + PAD_DIM * 1;
