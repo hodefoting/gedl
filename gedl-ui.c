@@ -418,6 +418,7 @@ static void clip_end_inc (MrgEvent *event, void *data1, void *data2)
       mrg_queue_draw (event->mrg, NULL);
     }
 }
+
 static void clip_end_dec (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -429,6 +430,7 @@ static void clip_end_dec (MrgEvent *event, void *data1, void *data2)
       mrg_queue_draw (event->mrg, NULL);
     }
 }
+
 static void clip_start_inc (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -440,6 +442,7 @@ static void clip_start_inc (MrgEvent *event, void *data1, void *data2)
       mrg_queue_draw (event->mrg, NULL);
     }
 }
+
 static void clip_start_dec (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -451,6 +454,7 @@ static void clip_start_dec (MrgEvent *event, void *data1, void *data2)
       mrg_queue_draw (event->mrg, NULL);
     }
 }
+
 static void do_quit (MrgEvent *event, void *data1, void *data2)
 {
   mrg_quit (event->mrg);
@@ -500,11 +504,48 @@ static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
+#define VID_HEIGHT 40
+#define PAD_DIM     5
+
+void render_clip (Mrg *mrg, Clip *clip, double x, double y, double t)
+{
+  char thumb_path[PATH_MAX];
+  sprintf (thumb_path, "%s.png", clip->path); /* XXX: replace with function */
+  cairo_t *cr = mrg_cr (mrg);
+  cairo_rectangle (cr, x, y, clip_get_frames (clip), VID_HEIGHT);
+  cairo_set_source_rgba (cr, 0.1, 0.1, 0.1, 0.5);
+
+  int width, height;
+  MrgImage *img = mrg_query_image (mrg, thumb_path, &width, &height);
+  if (img && width > 0)
+  {
+    cairo_surface_t *surface = mrg_image_get_surface (img);
+    cairo_matrix_t   matrix;
+    cairo_pattern_t *pattern = cairo_pattern_create_for_surface (surface);
+    cairo_matrix_init_translate (&matrix, -(t - clip->start), -y);
+    cairo_pattern_set_matrix (pattern, &matrix);
+    cairo_pattern_set_filter (pattern, CAIRO_FILTER_NEAREST);
+    cairo_set_source (cr, pattern);
+
+    cairo_save (cr);
+    cairo_clip_preserve (cr);
+    cairo_paint (cr);
+    cairo_restore (cr);
+  }
+  else
+  {
+    cairo_fill_preserve (cr);
+  }
+
+  if (clip == active_clip)
+    cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
+  else
+    cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
+  cairo_stroke_preserve (cr);
+}
 
 void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double t0)
 {
-#define VID_HEIGHT 40
-#define PAD_DIM     5
 
   GList *l;
   cairo_t *cr = mrg_cr (mrg);
@@ -525,14 +566,17 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double 
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
+    render_clip (mrg, clip, t, y, t);
+    mrg_listen (mrg, MRG_PRESS, clicked_clip, clip, edl);
+    mrg_listen (mrg, MRG_DRAG, drag_clip, clip, edl);
+    mrg_listen (mrg, MRG_RELEASE, released_clip, clip, edl);
+
+#if 0
     float x=t;
     char thumb_path[PATH_MAX];
     sprintf (thumb_path, "%s.png", clip->path); /* XXX: replace with function */
-    
     cairo_rectangle (cr, x, y, clip_get_frames (clip), VID_HEIGHT);
-
     cairo_set_source_rgba (cr, 0.1, 0.1, 0.1, 0.5);
-
     mrg_listen (mrg, MRG_PRESS, clicked_clip, clip, edl);
     mrg_listen (mrg, MRG_DRAG, drag_clip, clip, edl);
     mrg_listen (mrg, MRG_RELEASE, released_clip, clip, edl);
@@ -564,6 +608,8 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double 
     else
       cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
     cairo_stroke (cr);
+#endif
+    cairo_new_path (cr);
     t += clip_get_frames (clip);
   }
 
@@ -667,14 +713,14 @@ void gedl_ui (Mrg *mrg, void *data)
   gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2, edl->scale, edl->t0);
 
   if(0){
-  cairo_t *cr = mrg_cr (mrg);
-  cairo_new_path (cr);
-  cairo_move_to (cr, mrg_width (mrg)/2, 0);
-  cairo_line_to (cr, mrg_width (mrg)/2, mrg_height (mrg)/2);
-  cairo_move_to (cr, 0, mrg_height (mrg)/2);
-  cairo_line_to (cr, mrg_width (mrg), mrg_height (mrg)/2);
-  cairo_set_source_rgba (cr, 1,1,1,0.5);
-  cairo_stroke (cr);
+    cairo_t *cr = mrg_cr (mrg);
+    cairo_new_path (cr);
+    cairo_move_to (cr, mrg_width (mrg)/2, 0);
+    cairo_line_to (cr, mrg_width (mrg)/2, mrg_height (mrg)/2);
+    cairo_move_to (cr, 0, mrg_height (mrg)/2);
+    cairo_line_to (cr, mrg_width (mrg), mrg_height (mrg)/2);
+    cairo_set_source_rgba (cr, 1,1,1,0.5);
+    cairo_stroke (cr);
   }
 
   mrg_set_xy (mrg, 0, mrg_height (mrg) / 2 + VID_HEIGHT + PAD_DIM * 10);
@@ -690,8 +736,6 @@ void gedl_ui (Mrg *mrg, void *data)
       if (active_clip->filter_graph)
         mrg_printf (mrg, " %s", active_clip->filter_graph);
     }
-
-
 
   mrg_add_binding (mrg, "x", NULL, NULL, remove_clip, edl);
   mrg_add_binding (mrg, "d", NULL, NULL, duplicate_clip, edl);
