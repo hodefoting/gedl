@@ -21,7 +21,7 @@ void        gedl_free               (GeglEDL    *edl);
 void        gedl_set_fps            (GeglEDL    *edl,
                                      double      fps);
 double      gedl_get_fps            (GeglEDL    *edl);
-int         gedl_get_frames         (GeglEDL    *edl);
+int         gedl_get_duration       (GeglEDL    *edl);
 double      gedl_get_time           (GeglEDL    *edl);
 void        gedl_parse_line         (GeglEDL    *edl, const char *line);
 GeglEDL    *gedl_new_from_path      (const char *path);
@@ -83,17 +83,20 @@ typedef struct Clip
 
 typedef struct SourceClip
 {
+  char  *path;
   int    start;
   int    end;
   char *title;
 } SourceClip;
 
+/*
 typedef struct SourceVid
 {
   char *path;
   int   clip_count;
   SourceClip clips[30];
 } SourceVid;
+*/
 
 struct _GeglEDL
 {
@@ -110,38 +113,32 @@ struct _GeglEDL
   int         cache_flags;
   Clip       *clip;
   Clip       *clip2;
-  
   int         selection_start;
   int         selection_end;
-
   int         range_start;
   int         range_end;
-
-const char *output_path;
-const char *video_codec;
-const char *audio_codec;
-int         video_width;
-int         video_height;
-int         video_size_default;
-int         video_bufsize;
-int         video_bitrate;
-int         video_tolerance;
-int         audio_bitrate;
-int         audio_samplerate;
-int         fade_duration;
-int         frame_no;
-
-  int        source_count;
-  SourceVid  source[40];
-
-GeglNode *nop_raw;
-GeglNode *nop_transformed;
-GeglNode *nop_raw2;
-GeglNode *nop_transformed2;
-
-GeglNode *load_buf, *result, *encode, *crop, *scale_size, *opacity,
-                *load_buf2, *crop2, *scale_size2, *over;
-
+  const char *output_path;
+  const char *video_codec;
+  const char *audio_codec;
+  int         video_width;
+  int         video_height;
+  int         video_size_default;
+  int         video_bufsize;
+  int         video_bitrate;
+  int         video_tolerance;
+  int         audio_bitrate;
+  int         audio_samplerate;
+  int         fade_duration;
+  int         frame_no;
+  GeglNode   *nop_raw;
+  GeglNode   *nop_transformed;
+  GeglNode   *nop_raw2;
+  GeglNode   *nop_transformed2;
+  GeglNode   *load_buf;
+  GeglNode   *result, *encode, *crop, *scale_size, *opacity,
+             *load_buf2, *crop2, *scale_size2, *over;
+  double      scale;
+  double      t0;
 } _GeglEDL;
 
 Clip *clip_new            (void);

@@ -214,6 +214,14 @@ static void toggle_playing (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
+static void select_all (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  gedl_set_selection (edl, 0, gedl_get_duration (edl));
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+}
+
 static void extend_right (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -469,6 +477,27 @@ static int max_frame (GeglEDL *edl)
 
 void gedl_ui (Mrg *mrg, void *data);
 
+static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  switch (event->scroll_direction)
+  {
+    case MRG_SCROLL_DIRECTION_UP:
+      edl->scale *= 1.02;
+      break;
+    case MRG_SCROLL_DIRECTION_DOWN:
+      edl->scale /= 1.02;
+      break;
+    case MRG_SCROLL_DIRECTION_LEFT:
+      edl->t0 += 2;
+      break;
+    case MRG_SCROLL_DIRECTION_RIGHT:
+      edl->t0 -= 2;
+      break;
+  }
+  mrg_queue_draw (event->mrg, NULL);
+}
+
 
 void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double t0)
 {
@@ -496,7 +525,7 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double 
     Clip *clip = l->data;
     float x=t;
     char thumb_path[PATH_MAX];
-    sprintf (thumb_path, "%s.png", clip->path);
+    sprintf (thumb_path, "%s.png", clip->path); /* XXX: replace with function */
     
     cairo_rectangle (cr, x, y, clip_get_frames (clip), VID_HEIGHT);
 
@@ -560,12 +589,40 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double 
   cairo_fill (cr);
 
   cairo_restore (cr);
+
+  cairo_rectangle (cr, 0, y - PAD_DIM, mrg_width (mrg), VID_HEIGHT + PAD_DIM * 4);
+  cairo_set_source_rgba (cr, 1,0,0,1);
+  cairo_stroke_preserve (cr);
+  mrg_listen (mrg, MRG_SCROLL, zoom_timeline, edl, NULL);
+  cairo_new_path (cr);
 }
 
 static const char *css =
 " document { background: black; }"
 "";
 
+void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
+{
+  GList *l;
+  cairo_t *cr = mrg_cr (mrg);
+
+  cairo_set_source_rgba (cr, 1,0,0,1);
+  cairo_set_line_width (cr, 1);
+  cairo_rectangle (cr, x, y, w, h);
+  cairo_stroke (cr);
+  mrg_start (mrg, NULL, NULL);
+  mrg_set_style (mrg, "font-size: 10;");
+  mrg_set_xy (mrg, x, y);
+
+  mrg_set_edge_left (mrg, x);
+  mrg_set_edge_right (mrg, x + w);
+  for (l = edl->clip_db; l; l = l->next)
+  {
+    SourceClip *sclip = l->data;
+    mrg_printf (mrg, "%s %i %i %s\n", sclip->path, sclip->start, sclip->end, sclip->title);
+  }
+  mrg_end (mrg);
+}
 
 void gedl_ui (Mrg *mrg, void *data)
 {
@@ -575,6 +632,8 @@ void gedl_ui (Mrg *mrg, void *data)
   mrg_stylesheet_add (mrg, css, NULL, 0, NULL);
   cairo_set_source_rgb (mrg_cr (mrg), 0,0,0);
   cairo_paint (mrg_cr (mrg));
+
+  draw_clips (mrg, edl, 10, 40, mrg_width(mrg)/2 - 20, mrg_height(mrg)/2 - 30);
 
   if (playing)
     {
@@ -603,11 +662,9 @@ void gedl_ui (Mrg *mrg, void *data)
                       mrg_width (mrg)/2, mrg_height (mrg)/2,
                       o->edl2->result, 0,0);
 #endif
-  gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2, 10.0, edl->frame_no);
-  gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2 + 80, 1.0, edl->frame_no);
-  gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2 + 160, 0.1, edl->frame_no);
+  gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2, edl->scale, edl->t0);
 
-  {
+  if(0){
   cairo_t *cr = mrg_cr (mrg);
   cairo_new_path (cr);
   cairo_move_to (cr, mrg_width (mrg)/2, 0);
@@ -632,14 +689,17 @@ void gedl_ui (Mrg *mrg, void *data)
         mrg_printf (mrg, " %s", active_clip->filter_graph);
     }
 
+
+
   mrg_add_binding (mrg, "x", NULL, NULL, remove_clip, edl);
   mrg_add_binding (mrg, "d", NULL, NULL, duplicate_clip, edl);
   mrg_add_binding (mrg, "space", NULL, NULL, toggle_playing, edl);
-  mrg_add_binding (mrg, "j", NULL, NULL, nav_left, edl);
-  mrg_add_binding (mrg, "k", NULL, NULL, nav_right, edl);
+  mrg_add_binding (mrg, "control-left", NULL, NULL, nav_left, edl);
+  mrg_add_binding (mrg, "control-right", NULL, NULL, nav_right, edl);
   mrg_add_binding (mrg, ".", NULL, NULL, clip_end_inc, edl);
   mrg_add_binding (mrg, "f", NULL, NULL, toggle_fade, edl);
   mrg_add_binding (mrg, "s", NULL, NULL, save, edl);
+  mrg_add_binding (mrg, "control-a", NULL, NULL, select_all, edl);
   mrg_add_binding (mrg, "r", NULL, NULL, set_range, edl);
   mrg_add_binding (mrg, ",", NULL, NULL, clip_end_dec, edl);
   mrg_add_binding (mrg, "k", NULL, NULL, clip_start_inc, edl);

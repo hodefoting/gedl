@@ -192,6 +192,8 @@ GeglEDL *gedl_new           (void)
   edl->fade_duration    = DEFAULT_fade_duration;
   edl->frame_no = 0;
 
+  edl->scale = 1.0;
+
   return edl;
 }
 
@@ -576,7 +578,7 @@ double gedl_get_mix (GeglEDL *edl)
   return edl->mix;
 }
 
-int    gedl_get_frames (GeglEDL *edl)
+int    gedl_get_duration (GeglEDL *edl)
 {
   int count = 0;
   GList *l;
@@ -590,6 +592,7 @@ int    gedl_get_frames (GeglEDL *edl)
 
 void frob_fade (GeglEDL *edl, Clip *clip)
 {
+        return;
   if (!clip->is_image)
   {
     if (clip->end == 0)
@@ -623,7 +626,6 @@ void frob_fade (GeglEDL *edl, Clip *clip)
   }
 }
 
-
 void gedl_parse_clip (GeglEDL *edl, const char *line)
 {
   int start = 0; int end = 0;
@@ -642,9 +644,13 @@ void gedl_parse_clip (GeglEDL *edl, const char *line)
   sscanf (line, "%s %i %i", path, &start, &end);
   if (strlen (path) > 3)
     {
-      fprintf (stderr, " %s %i-%i  %s%s%s\n", path, start, end,
-                      rest?"[":"", rest?rest:"", rest?"]":""
-                      );
+      SourceClip *sclip = g_new0 (SourceClip, 1);
+      edl->clip_db = g_list_append (edl->clip_db, sclip);
+      sclip->path = g_strdup (path);
+      sclip->start = start;
+      sclip->end= end;
+      if (rest)
+        sclip->title = g_strdup (rest);
     }
   /* todo: probe video file for length if any of arguments are nont present as 
            integers.. alloving full clips and clips with mm:ss.nn timestamps,
@@ -670,24 +676,24 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
      while (value[strlen(value)-1]==' ' ||
             value[strlen(value)-1]=='\n')
             value[strlen(value)-1]='\0';
-     if (!strcmp (key, "fade-duration")) edl->fade_duration = g_strtod (value, NULL);
-     if (!strcmp (key, "fps"))         gedl_set_fps (edl, g_strtod (value, NULL));
-     if (!strcmp (key, "output-path")) edl->output_path = g_strdup (value);
-     if (!strcmp (key, "video-codec")) edl->video_codec = g_strdup (value);
-     if (!strcmp (key, "audio-codec")) edl->audio_codec = g_strdup (value);
+     if (!strcmp (key, "fade-duration"))   edl->fade_duration = g_strtod (value, NULL);
+     if (!strcmp (key, "fps"))             gedl_set_fps (edl, g_strtod (value, NULL));
+     if (!strcmp (key, "output-path"))     edl->output_path = g_strdup (value);
+     if (!strcmp (key, "video-codec"))     edl->video_codec = g_strdup (value);
+     if (!strcmp (key, "audio-codec"))     edl->audio_codec = g_strdup (value);
      if (!strcmp (key, "audio-sample-rate")) edl->audio_samplerate = g_strtod (value, NULL);
-     if (!strcmp (key, "video-bufsize")) edl->video_bufsize = g_strtod (value, NULL);
-     if (!strcmp (key, "video-bitrate")) edl->video_bitrate = g_strtod (value, NULL);
-     if (!strcmp (key, "audio-bitrate")) edl->audio_bitrate = g_strtod (value, NULL);
-     if (!strcmp (key, "video-width")) edl->video_width = g_strtod (value, NULL);
-     if (!strcmp (key, "video-height")) edl->video_height = g_strtod (value, NULL);
-     if (!strcmp (key, "frame-start")) edl->range_start = g_strtod (value, NULL);
-     if (!strcmp (key, "frame-end")) edl->range_end = g_strtod (value, NULL);
+     if (!strcmp (key, "video-bufsize"))   edl->video_bufsize = g_strtod (value, NULL);
+     if (!strcmp (key, "video-bitrate"))   edl->video_bitrate = g_strtod (value, NULL);
+     if (!strcmp (key, "audio-bitrate"))   edl->audio_bitrate = g_strtod (value, NULL);
+     if (!strcmp (key, "video-width"))     edl->video_width = g_strtod (value, NULL);
+     if (!strcmp (key, "video-height"))    edl->video_height = g_strtod (value, NULL);
+     if (!strcmp (key, "frame-start"))     edl->range_start = g_strtod (value, NULL);
+     if (!strcmp (key, "frame-end"))       edl->range_end = g_strtod (value, NULL);
      if (!strcmp (key, "selection-start")) edl->selection_start = g_strtod (value, NULL);
-     if (!strcmp (key, "selection-end")) edl->selection_end = g_strtod (value, NULL);
-     if (!strcmp (key, "range-start")) edl->range_start = g_strtod (value, NULL);
-     if (!strcmp (key, "range-end")) edl->range_end = g_strtod (value, NULL);
-     if (!strcmp (key, "frame-no")) edl->frame_no = g_strtod (value, NULL);
+     if (!strcmp (key, "selection-end"))   edl->selection_end = g_strtod (value, NULL);
+     if (!strcmp (key, "range-start"))     edl->range_start = g_strtod (value, NULL);
+     if (!strcmp (key, "range-end"))       edl->range_end = g_strtod (value, NULL);
+     if (!strcmp (key, "frame-no"))        edl->frame_no = g_strtod (value, NULL);
 
      g_free (key);
      return;
@@ -1006,7 +1012,7 @@ int gegl_make_thumb_video (const char *path, const char *thumb_path)
   g_string_append_printf (str, "video-bitrate=100\n\noutput-path=%s\nvideo-width=320\nvideo-height=240\n\n%s\n", thumb_path, path);
   edl = gedl_new_from_string (str->str);
   setup (edl);
-  tot_frames = gedl_get_frames (edl);
+  tot_frames = gedl_get_duration (edl);
   if (edl->range_end == 0)
     edl->range_end = tot_frames-1;
   process_frames (edl);
@@ -1105,7 +1111,7 @@ int main (int argc, char **argv)
       return gedl_ui_main (edl, edl2);
     }
 
-  tot_frames  = gedl_get_frames (edl);
+  tot_frames  = gedl_get_duration (edl);
   if (edl->range_end == 0)
     edl->range_end = tot_frames-1;
   process_frames (edl);
