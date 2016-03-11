@@ -193,6 +193,7 @@ static void drag_clip (MrgEvent *e, void *data1, void *data2)
   if (x > edl->selection_start)
   {
     edl->selection_end = e->x - pan_x0;
+    edl->frame_no = x;
   }
   else
   {

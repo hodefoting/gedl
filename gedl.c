@@ -426,7 +426,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
             was_cached = 1;
             gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
             gegl_node_link_many (edl->cache_loader, edl->result, NULL);
-#if 0
+#if 1
             if (!clip->audio)
               clip->audio = gegl_audio_fragment_new (44100, 2, 0, 4000);
             gegl_meta_get_audio (cache_path, clip->audio);
@@ -984,6 +984,7 @@ void rig_frame (GeglEDL *edl, int frame_no)
   gegl_node_set (edl->load_buf, "buffer", gedl_get_buffer (edl), NULL);
   gegl_node_set (edl->encode, "audio", gedl_get_audio (edl), NULL);
 }
+
 int skip_encode = 0;
 static void teardown (void)
 {
@@ -1002,6 +1003,7 @@ static void process_frames (GeglEDL *edl)
   int frame_no;
   for (frame_no = edl->range_start; frame_no <= edl->range_end; frame_no++)
   {
+    edl->frame_no = frame_no;
     rig_frame (edl, edl->frame_no);
     if (!skip_encode)
       gegl_node_process (edl->encode);
