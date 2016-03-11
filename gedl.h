@@ -59,6 +59,7 @@ typedef struct SourceClip
   int   start;
   int   end;
   char *title;
+  int   duration;
 } SourceClip;
 
 typedef struct Clip
@@ -68,9 +69,9 @@ typedef struct Clip
   int    start; /*frame number starting with 0 */
   int    end;   /*last frame, inclusive fro single frame, make equal to start */
   char  *title;
+  int    duration;
 
   double fps;
-  int    duration;
   char   sha256sum[20]; /*< would also be the filename of thumbtrack */
   int    fade_out; /* the main control for fading in.. */
   int    fade_in;  /* implied by previous clip fading */

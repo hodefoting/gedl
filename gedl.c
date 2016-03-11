@@ -622,7 +622,7 @@ void frob_fade (GeglEDL *edl, Clip *clip)
 
 void gedl_parse_clip (GeglEDL *edl, const char *line)
 {
-  int start = 0; int end = 0;
+  int start = 0; int end = 0; int duration = 0;
   const char *rest = NULL;
   char path[1024];
   if (line[0] == '#' ||
@@ -635,7 +635,7 @@ void gedl_parse_clip (GeglEDL *edl, const char *line)
 
   if (rest) while (*rest == ' ')rest++;
 
-  sscanf (line, "%s %i %i", path, &start, &end);
+  sscanf (line, "%s %i %i %i", path, &start, &end, &duration);
   if (strlen (path) > 3)
     {
       SourceClip *sclip = g_new0 (SourceClip, 1);
@@ -646,7 +646,8 @@ void gedl_parse_clip (GeglEDL *edl, const char *line)
        }
       sclip->path = g_strdup (path);
       sclip->start = start;
-      sclip->end= end;
+      sclip->end = end;
+      sclip->duration = duration;
       if (rest)
         sclip->title = g_strdup (rest);
     }
@@ -1186,7 +1187,7 @@ char *gedl_serialise (GeglEDL *edl)
   for (l = edl->clip_db; l; l = l->next)
   {
     SourceClip *clip = l->data;
-    g_string_append_printf (ser, "%s %d %d%s%s%s\n", clip->path, clip->start, clip->end,
+    g_string_append_printf (ser, "%s %d %d %d%s%s%s\n", clip->path, clip->start, clip->end, clip->duration,
         (edl->active_source == clip)?" [active]":"", 
         clip->title?" -- ":"",clip->title?clip->title:"");
   }

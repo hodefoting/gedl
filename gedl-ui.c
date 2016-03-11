@@ -4,7 +4,6 @@
 #define _DEFAULT_SOURCE
 
 /* 
-
 drag in corners pans strip
 
 having done drag select,.. the corresponding region should auto-play?
@@ -15,8 +14,7 @@ creating a reference to another framesource file.
 a too small drag is still just an insertion point selection, permitting a
 single click from previous select drag (or tap to select existing
 seleciton/all),. permitting insertion.
-
- */
+*/
 
 
 #include <stdio.h>
@@ -74,16 +72,16 @@ foo++;
     if (!fmt) fmt = babl_format ("cairo-RGB24");
 
     {
-       float scale = 1.0;
-       scale = width / bounds.width;
-       if (height / bounds.height < scale)
-         scale = height / bounds.height;
+      float scale = 1.0;
+      scale = width / bounds.width;
+      if (height / bounds.height < scale)
+        scale = height / bounds.height;
 
-       //if (scale > 1.0)
-       //  scale = 1.0;
+      //if (scale > 1.0)
+      //  scale = 1.0;
 
-       gegl_node_blit (node, scale, &roi, fmt, buf, width * 4, 
-                       GEGL_BLIT_DEFAULT);
+      gegl_node_blit (node, scale, &roi, fmt, buf, width * 4, 
+                      GEGL_BLIT_DEFAULT);
     }
 
   surface = cairo_image_surface_create_for_data (buf, CAIRO_FORMAT_RGB24, width, height, width * 4);
@@ -117,24 +115,19 @@ static void renderer_set_range (int start, int end)
 }
 
 typedef struct _State State;
-struct _State {
-  void      (*ui) (Mrg *mrg, void *state);
-  Mrg        *mrg;
-  GeglEDL    *edl;
-  GeglEDL    *edl2;
 
-  char       *path;
-  char       *save_path;
+struct _State {
+  void   (*ui) (Mrg *mrg, void *state);
+  Mrg     *mrg;
+  GeglEDL *edl;
+  GeglEDL *edl2;
+  char    *path;
+  char    *save_path;
 };
 
-
-
 static int playing  = 0;
-
-float pan_x0 = 8;
-
-float fpx = 2;
-
+float pan_x0        = 8;
+float fpx           = 2;
 
 static void clicked_source_clip (MrgEvent *e, void *data1, void *data2)
 {
@@ -164,7 +157,7 @@ static void drag_clip (MrgEvent *e, void *data1, void *data2)
 {
   GeglEDL *edl = data2;
   float x = e->x - pan_x0;
-  if (x > edl->selection_start)
+  if (x >= edl->selection_start)
   {
     edl->selection_end = e->x - pan_x0;
     edl->frame_no = x;
@@ -183,6 +176,12 @@ static void released_clip (MrgEvent *e, void *data1, void *data2)
   edl->frame_no = e->x - pan_x0;
   edl->active_clip = clip;
   edl->active_source = NULL;
+  if (edl->selection_end < edl->selection_start)
+  {
+    int temp = edl->selection_end;
+    edl->selection_end = edl->selection_start;
+    edl->selection_start = temp;
+  }
   mrg_queue_draw (e->mrg, NULL);
 }
 
@@ -332,8 +331,6 @@ static void nav_right (MrgEvent *event, void *data1, void *data2)
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
-
-
 
 static void toggle_fade (MrgEvent *event, void *data1, void *data2)
 {
@@ -532,24 +529,24 @@ void render_clip (Mrg *mrg, const char *clip_path, int clip_start, int clip_fram
     cairo_matrix_t   matrix;
     cairo_pattern_t *pattern = cairo_pattern_create_for_surface (surface);
     cairo_matrix_init_scale (&matrix, 1.0, height * 1.0/ VID_HEIGHT);
-    cairo_matrix_translate (&matrix, -(x - clip_start), -y);
+    cairo_matrix_translate  (&matrix, -(x - clip_start), -y);
     cairo_pattern_set_matrix (pattern, &matrix);
     cairo_pattern_set_filter (pattern, CAIRO_FILTER_NEAREST);
     cairo_set_source (cr, pattern);
 
     cairo_save (cr);
     cairo_clip_preserve (cr);
-    cairo_paint (cr);
+    cairo_paint   (cr);
     cairo_restore (cr);
   }
   else
   {
     cairo_fill_preserve (cr);
   }
-
 }
 
-void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double t0)
+void gedl_draw (Mrg     *mrg,
+                GeglEDL *edl, double x0, double y, double fpx, double t0)
 {
 
   GList *l;
@@ -642,8 +639,22 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
   {
     SourceClip *clip = l->data;
     //mrg_printf (mrg, "%s %i %i %s\n", sclip->path, sclip->start, sclip->end, sclip->title);
+
+     if (clip->duration == 0)
+       {
+	     GeglNode *gegl = gegl_node_new ();
+	     GeglNode *probe = gegl_node_new_child (gegl, "operation",
+                          "gegl:ff-load", "path", clip->path, NULL);
+	     gegl_node_process (probe);
+
+	     gegl_node_get (probe, "frames", &clip->duration, NULL);
+	   //  gegl_node_get (probe, "frame-rate", &clip->fps, NULL);
+         g_object_unref (gegl);
+       }
+
     cairo_save (cr);
     cairo_scale (cr, 0.15, 1);
+
     render_clip (mrg, clip->path, clip->start, clip->end - clip->start, 0, y);
     if (clip == edl->active_source)
       cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
