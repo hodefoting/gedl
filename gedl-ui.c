@@ -3,44 +3,18 @@
 #define _BSD_SOURCE
 #define _DEFAULT_SOURCE
 
-#if 0
-state:
-  list of open filtes
-  list of view setting per item
-  currently edited on separate layer
+/* 
 
-  =======\ .-----.
-  =======\ |     |
-  =======\ |     |
-  =======\ '-----'
-  ................
-  ================ <- regardless of scroll,.
-
---------------------------------------------------
-
-each clip show filename, followed by editable clip list for search
-#endif
-
-/*
-   show all .edl .mp4 .ogv and .mpg files in a folder,
-   show images of folder in a row..  permit editing stop-motion
-   by zooming in enough to use individual frames decoded..
-   
-   toggle for generating cache or not
-   implement instant reload on crash
-     
 drag in corners pans strip
 
-tap and hold sets cursor position
-followed by drag to select
+having done drag select,.. the corresponding region should auto-play?
 
-having done drag select,.. the corresponding region should auto-play
-
-an action available on playback deck shouldbe copy,. this would permit
+an action available on playback deck should be copy,. this would permit
 creating a reference to another framesource file.
 
-a too small drag is still just an insertion point selection, permitting
-a single click from previous select drag (or tap to select existing seleciton/all),. permitting insertion.
+a too small drag is still just an insertion point selection, permitting a
+single click from previous select drag (or tap to select existing
+seleciton/all),. permitting insertion.
 
  */
 
@@ -594,6 +568,13 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double 
   cairo_scale (cr, 1.0/fpx, 1);
   cairo_translate (cr, -t0, 0);
 
+  int start = 0, end = 0;
+  gedl_get_selection (edl, &start, &end);
+
+  cairo_rectangle (cr, start + 0.5, y - PAD_DIM, end - start, VID_HEIGHT + PAD_DIM * 2);
+  cairo_set_source_rgba (cr, 1, 0, 0, 0.5);
+  cairo_fill (cr);
+
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
@@ -611,14 +592,6 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double 
     t += clip_get_frames (clip);
   }
 
-  int start = 0, end = 0;
-  gedl_get_selection (edl, &start, &end);
-
-  cairo_rectangle (cr, start, y - PAD_DIM, end - start, VID_HEIGHT + PAD_DIM * 2);
-  cairo_set_source_rgba (cr, 0, 0, 0.11, 0.5);
-  cairo_fill_preserve (cr);
-  cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
-  cairo_stroke (cr);
 
   gedl_get_range (edl, &start, &end);
 
