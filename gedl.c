@@ -422,7 +422,6 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
                         "aaa", 3, "bbb",
                         edl->video_width, edl->video_height, 
                         edl->mix);
-        fprintf (stderr, "[%s]\n", frame_recipe);
 
         hash = g_checksum_new (G_CHECKSUM_MD5);
         g_checksum_update (hash, (void*)frame_recipe, -1);

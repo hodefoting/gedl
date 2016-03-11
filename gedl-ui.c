@@ -183,6 +183,7 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
   edl->selection_end = edl->frame_no;
   edl->active_clip = clip;
   edl->active_source = NULL;
+  playing = 0;
   mrg_queue_draw (e->mrg, NULL);
 }
 static void drag_clip (MrgEvent *e, void *data1, void *data2)
@@ -487,7 +488,6 @@ static Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame)
     Clip *clip = l->data;
     if (frame >= t && frame < t + clip_get_frames (clip))
     {
-      fprintf (stderr, "{%i %i %i|\n", frame, t, clip_get_frames (clip));
       return clip;
     }
     t += clip_get_frames (clip);
