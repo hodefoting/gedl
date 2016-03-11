@@ -105,8 +105,8 @@ foo++;
        if (height / bounds.height < scale)
          scale = height / bounds.height;
 
-       if (scale > 1.0)
-         scale = 1.0;
+       //if (scale > 1.0)
+       //  scale = 1.0;
 
        gegl_node_blit (node, scale, &roi, fmt, buf, width * 4, 
                        GEGL_BLIT_DEFAULT);
@@ -401,11 +401,14 @@ static void set_range (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
+static Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame);
+
 static void step_frame_back (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
   stop_playing (event, data1, data2);
   edl->frame_no --;
+  edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -415,6 +418,7 @@ static void step_frame (MrgEvent *event, void *data1, void *data2)
   GeglEDL *edl = data1;
   stop_playing (event, data1, data2);
   edl->frame_no ++;
+  edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -473,6 +477,24 @@ static void do_quit (MrgEvent *event, void *data1, void *data2)
 }
 
 long last_frame = 0;
+
+static Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame)
+{
+  GList *l;
+  int t = 0;
+  for (l = edl->clips; l; l = l->next)
+  {
+    Clip *clip = l->data;
+    if (frame >= t && frame < t + clip_get_frames (clip))
+    {
+      fprintf (stderr, "{%i %i %i|\n", frame, t, clip_get_frames (clip));
+      return clip;
+    }
+    t += clip_get_frames (clip);
+  }
+
+  return NULL;
+}
 
 static int max_frame (GeglEDL *edl)
 {
@@ -574,6 +596,7 @@ void gedl_draw (Mrg *mrg, GeglEDL *edl, double x0, double y, double fpx, double 
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
+
     render_clip (mrg, clip->path, clip->start, clip_get_frames (clip), t, y);
     if (clip == edl->active_clip)
       cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
@@ -646,7 +669,7 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
     SourceClip *clip = l->data;
     //mrg_printf (mrg, "%s %i %i %s\n", sclip->path, sclip->start, sclip->end, sclip->title);
     cairo_save (cr);
-    //cairo_scale (cr, 8.0, 1);
+    cairo_scale (cr, 0.15, 1);
     render_clip (mrg, clip->path, clip->start, clip->end - clip->start, 0, y);
     if (clip == edl->active_source)
       cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
@@ -685,6 +708,7 @@ void gedl_ui (Mrg *mrg, void *data)
          if (end)
            edl->frame_no = start;
       }
+      edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
       mrg_queue_draw (mrg, NULL);
     }
   rig_frame (edl, edl->frame_no);
