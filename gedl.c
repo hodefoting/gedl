@@ -299,14 +299,6 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
     return;
   }
   edl->frame = frame;
-#if 0
-  edl->source[1]->clip_path     = "unknown";
-  edl->source[1]->clip_frame_no = 0;
-  edl->source[1]->filter_graph  = NULL;
-  edl->source[0]->clip_path     = "unknown";
-  edl->source[0]->filter_graph  = NULL;
-  edl->source[0]->clip_frame_no = 0;
-#endif
   edl->mix = 0.0;
 
   for (l = edl->clips; l; l = l->next)
@@ -434,10 +426,11 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
             was_cached = 1;
             gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
             gegl_node_link_many (edl->cache_loader, edl->result, NULL);
-
+#if 0
             if (!clip->audio)
               clip->audio = gegl_audio_fragment_new (44100, 2, 0, 4000);
             gegl_meta_get_audio (cache_path, clip->audio);
+#endif
           }
         else
           {
@@ -1428,6 +1421,44 @@ void gegl_create_chain (char **ops, GeglNode *start, GeglNode *proxy)
             {
               int val = g_strtod (value, NULL);
               gegl_node_set (iter[level], key, val, NULL);
+            }
+            else if (target_type == GEGL_TYPE_COLOR)
+            {
+              GeglColor *color = g_object_new (GEGL_TYPE_COLOR,
+                                               "string", value, NULL);
+              gegl_node_set (iter[level], key, color, NULL);
+            }
+            else if (g_type_is_a (target_type, G_TYPE_ENUM))
+            {
+              GEnumClass *eclass = g_type_class_peek (target_type);
+              GEnumValue *evalue = g_enum_get_value_by_nick (eclass, value);
+              if (evalue)
+                {
+                  gegl_node_set (new, key, evalue->value, NULL);
+                }
+              else
+                {
+              /* warn, but try to get a valid nick out of the old-style
+               * value name
+               */
+                gchar *nick;
+                gchar *c;
+                g_printerr ("gedl (param_set %s): enum %s has no value '%s'\n",
+                            key,
+                            g_type_name (target_type),
+                            value);
+                nick = g_strdup (value);
+                for (c = nick; *c; c++)
+                  {
+                    *c = g_ascii_tolower (*c);
+                    if (*c == ' ')
+                      *c = '-';
+                  }
+                evalue = g_enum_get_value_by_nick (eclass, nick);
+                if (evalue)
+                  gegl_node_set (iter[level], key, evalue->value, NULL);
+                g_free (nick);
+              }
             }
             else
             {
