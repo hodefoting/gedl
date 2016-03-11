@@ -1007,10 +1007,12 @@ static void process_frames (GeglEDL *edl)
     rig_frame (edl, edl->frame_no);
     if (!skip_encode)
       gegl_node_process (edl->encode);
-    fprintf (stderr, "\r%1.2f%% %04d / %04d    ",
+    fprintf (stdout, "\r%1.2f%% %04d / %04d    ",
      100.0 * (frame_no-edl->range_start) * 1.0 / (edl->range_end - edl->range_start),
      frame_no, edl->range_end);
+    fflush (0);
   }
+  fprintf (stdout, "\n");
 }
 
 int gegl_make_thumb_video (const char *path, const char *thumb_path)
