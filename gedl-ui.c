@@ -3,19 +3,6 @@
 #define _BSD_SOURCE
 #define _DEFAULT_SOURCE
 
-/* 
-drag in corners pans strip
-
-having done drag select,.. the corresponding region should auto-play?
-
-an action available on playback deck should be copy,. this would permit
-creating a reference to another framesource file.
-
-a too small drag is still just an insertion point selection, permitting a
-single click from previous select drag (or tap to select existing
-seleciton/all),. permitting insertion.
-*/
-
 #include <stdio.h>
 #include <mrg.h>
 #include <gegl.h>
@@ -509,7 +496,7 @@ static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
-#define VID_HEIGHT 40
+#define VID_HEIGHT 20
 #define PAD_DIM     5
 
 void render_clip (Mrg *mrg, const char *clip_path, int clip_start, int clip_frames, double x, double y)
@@ -562,7 +549,7 @@ void gedl_draw (Mrg     *mrg,
   cairo_set_font_size (cr, 10.0);
   y += PAD_DIM * 2;
   cairo_move_to (cr, x0 + PAD_DIM, y + VID_HEIGHT + PAD_DIM * 3);
-  cairo_show_text (cr, edl->path);
+  //cairo_show_text (cr, edl->path);
   cairo_save (cr);
   cairo_translate (cr,  x0, 0);
   cairo_scale (cr, 1.0/fpx, 1);
@@ -610,10 +597,6 @@ void gedl_draw (Mrg     *mrg,
   cairo_restore (cr);
 
   cairo_rectangle (cr, 0, y - PAD_DIM, mrg_width (mrg), VID_HEIGHT + PAD_DIM * 4);
-#if 0
-  cairo_set_source_rgba (cr, 1,0,0,1);
-  cairo_stroke_preserve (cr);
-#endif
   mrg_listen (mrg, MRG_SCROLL, zoom_timeline, edl, NULL);
   cairo_new_path (cr);
 }
@@ -639,7 +622,7 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
 	     gegl_node_process (probe);
 
 	     gegl_node_get (probe, "frames", &clip->duration, NULL);
-	   //  gegl_node_get (probe, "frame-rate", &clip->fps, NULL);
+     //  gegl_node_get (probe, "frame-rate", &clip->fps, NULL);
          g_object_unref (gegl);
        }
 
