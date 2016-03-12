@@ -16,7 +16,6 @@ single click from previous select drag (or tap to select existing
 seleciton/all),. permitting insertion.
 */
 
-
 #include <stdio.h>
 #include <mrg.h>
 #include <gegl.h>
@@ -546,7 +545,11 @@ void render_clip (Mrg *mrg, const char *clip_path, int clip_start, int clip_fram
 }
 
 void gedl_draw (Mrg     *mrg,
-                GeglEDL *edl, double x0, double y, double fpx, double t0)
+                GeglEDL *edl,
+                double   x0,
+                double    y,
+                double  fpx,
+                double   t0)
 {
 
   GList *l;
@@ -623,22 +626,10 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
 {
   GList *l;
   cairo_t *cr = mrg_cr (mrg);
-#if 0
-  cairo_set_source_rgba (cr, 1,0,0,1);
-  cairo_set_line_width (cr, 1);
-  cairo_rectangle (cr, x, y, w, h);
-  cairo_stroke (cr);
-#endif
-  //mrg_start (mrg, NULL, NULL);
-  //mrg_set_style (mrg, "font-size: 10;");
-  //mrg_set_xy (mrg, x, y);
 
-  //mrg_set_edge_left (mrg, x);
-  //mrg_set_edge_right (mrg, x + w);
   for (l = edl->clip_db; l; l = l->next)
   {
     SourceClip *clip = l->data;
-    //mrg_printf (mrg, "%s %i %i %s\n", sclip->path, sclip->start, sclip->end, sclip->title);
 
      if (clip->duration == 0)
        {
@@ -653,9 +644,17 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
        }
 
     cairo_save (cr);
-    cairo_scale (cr, 0.15, 1);
 
-    render_clip (mrg, clip->path, clip->start, clip->end - clip->start, 0, y);
+    {
+      float scale = 1.0;
+      if (clip->duration > w)
+        scale = w / clip->duration;
+      cairo_scale (cr, scale, 1);
+
+
+      render_clip (mrg, clip->path, 0, clip->duration, 0, y);
+
+    }
     if (clip == edl->active_source)
       cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
     else
@@ -663,10 +662,15 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
     cairo_stroke_preserve (cr);
     mrg_listen (mrg, MRG_PRESS, clicked_source_clip, clip, edl);
     cairo_new_path (cr);
+
+    cairo_rectangle (cr, clip->start, y - 2,
+                         clip->end - clip->start, VID_HEIGHT + 4);
+    cairo_set_source_rgba (cr, 1, 0, 0, 1);
+    cairo_stroke (cr);
+
     cairo_restore (cr);
     y += VID_HEIGHT + PAD_DIM * 1;
   }
-  //mrg_end (mrg);
 }
 
 void gedl_ui (Mrg *mrg, void *data)
