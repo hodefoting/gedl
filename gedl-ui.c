@@ -791,8 +791,6 @@ int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2)
   renderer_set_range (0, 50);
   mrg_set_ui (mrg, gedl_ui, &o);
 
-  //mrg_restarter_add_path (mrg, "gedl");
-
   gedl_get_duration (edl);
 
   mrg_main (mrg);
