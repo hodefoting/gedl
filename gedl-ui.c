@@ -138,7 +138,7 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
   mrg_queue_draw (e->mrg, NULL);
 }
 
-static void drag_source (MrgEvent *e, void *data1, void *data2)
+static void drag_source_clip (MrgEvent *e, void *data1, void *data2)
 {
   GeglEDL *edl = data2;
   edl->frame_no = e->x;
@@ -662,6 +662,8 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
       cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
     cairo_stroke_preserve (cr);
     mrg_listen (mrg, MRG_PRESS, clicked_source_clip, clip, edl);
+    mrg_listen (mrg, MRG_DRAG, drag_source_clip, clip, edl);
+    //mrg_listen (mrg, MRG_RELEASE, released_source, clip, edl);
     cairo_new_path (cr);
 
     cairo_rectangle (cr, clip->start, y - 2,
