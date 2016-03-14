@@ -63,9 +63,6 @@ foo++;
       if (height / bounds.height < scale)
         scale = height / bounds.height;
 
-      //if (scale > 1.0)
-      //  scale = 1.0;
-
       gegl_node_blit (node, scale, &roi, fmt, buf, width * 4, 
                       GEGL_BLIT_DEFAULT);
     }
@@ -112,7 +109,6 @@ struct _State {
 };
 
 static int playing  = 0;
-float pan_x0        = 8;
 float fpx           = 2;
 
 static void clicked_source_clip (MrgEvent *e, void *data1, void *data2)
@@ -121,6 +117,9 @@ static void clicked_source_clip (MrgEvent *e, void *data1, void *data2)
   GeglEDL *edl = data2;
   edl->active_clip = NULL;
   edl->active_source = clip;
+  edl->frame_no = e->x;
+  edl->selection_start = edl->frame_no;
+  edl->selection_end = edl->frame_no;
   mrg_queue_draw (e->mrg, NULL);
 }
 
@@ -129,9 +128,8 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
 {
   Clip *clip = data1;
   GeglEDL *edl = data2;
-  float x = e->x - pan_x0;
   
-  edl->frame_no = x;
+  edl->frame_no = e->x;
   edl->selection_start = edl->frame_no;
   edl->selection_end = edl->frame_no;
   edl->active_clip = clip;
@@ -139,18 +137,33 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
   playing = 0;
   mrg_queue_draw (e->mrg, NULL);
 }
-static void drag_clip (MrgEvent *e, void *data1, void *data2)
+
+static void drag_source (MrgEvent *e, void *data1, void *data2)
 {
   GeglEDL *edl = data2;
-  float x = e->x - pan_x0;
-  if (x >= edl->selection_start)
+  edl->frame_no = e->x;
+  if (e->x >= edl->selection_start)
   {
-    edl->selection_end = e->x - pan_x0;
-    edl->frame_no = x;
+    edl->selection_end = e->x;
   }
   else
   {
-    edl->selection_start = e->x - pan_x0;
+    edl->selection_start = e->x;
+  }
+  mrg_queue_draw (e->mrg, NULL);
+}
+
+static void drag_clip (MrgEvent *e, void *data1, void *data2)
+{
+  GeglEDL *edl = data2;
+  edl->frame_no = e->x;
+  if (e->x >= edl->selection_start)
+  {
+    edl->selection_end = e->x;
+  }
+  else
+  {
+    edl->selection_start = e->x;
   }
   mrg_queue_draw (e->mrg, NULL);
 }
@@ -159,7 +172,7 @@ static void released_clip (MrgEvent *e, void *data1, void *data2)
 {
   Clip *clip = data1;
   GeglEDL *edl = data2;
-  edl->frame_no = e->x - pan_x0;
+  edl->frame_no = e->x;
   edl->active_clip = clip;
   edl->active_source = NULL;
   if (edl->selection_end < edl->selection_start)
@@ -589,8 +602,10 @@ void gedl_draw (Mrg     *mrg,
   cairo_stroke (cr);
 
   double frame = edl->frame_no;
-  
-  cairo_rectangle (cr, frame, y-PAD_DIM, 1, VID_HEIGHT + PAD_DIM * 2);
+  if (fpx < 1.0)
+    cairo_rectangle (cr, frame, y-PAD_DIM, 1.0, VID_HEIGHT + PAD_DIM * 2);
+  else
+    cairo_rectangle (cr, frame, y-PAD_DIM, fpx, VID_HEIGHT + PAD_DIM * 2);
   cairo_set_source_rgba (cr,1,0,0,1);
   cairo_fill (cr);
 
@@ -637,9 +652,12 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
 
       render_clip (mrg, clip->path, 0, clip->duration, 0, y);
 
-    }
     if (clip == edl->active_source)
+    {
       cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
+
+
+    }
     else
       cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
     cairo_stroke_preserve (cr);
@@ -651,7 +669,20 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
     cairo_set_source_rgba (cr, 1, 0, 0, 1);
     cairo_stroke (cr);
 
-    cairo_restore (cr);
+    if (clip == edl->active_source)
+    {
+      double frame = edl->frame_no;
+      if (scale > 1.0)
+      cairo_rectangle (cr, frame, y-PAD_DIM, 1.0, VID_HEIGHT + PAD_DIM * 2);
+      else
+      cairo_rectangle (cr, frame, y-PAD_DIM, 1.0/scale, VID_HEIGHT + PAD_DIM * 2);
+      cairo_set_source_rgba (cr,1,0,0,1);
+      cairo_fill (cr);
+    }
+
+
+      cairo_restore (cr);
+    }
     y += VID_HEIGHT + PAD_DIM * 1;
   }
 }
@@ -665,6 +696,7 @@ void gedl_ui (Mrg *mrg, void *data)
   cairo_set_source_rgb (mrg_cr (mrg), 0,0,0);
   cairo_paint (mrg_cr (mrg));
 
+  /* draw source clip list */
   draw_clips (mrg, edl, 10, 40, mrg_width(mrg)/2 - 20, mrg_height(mrg)/2 - 30);
 
   if (playing)
@@ -683,8 +715,9 @@ void gedl_ui (Mrg *mrg, void *data)
       edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
       mrg_queue_draw (mrg, NULL);
     }
-  rig_frame (edl, edl->frame_no);
 
+  /* render viewport */
+  rig_frame (edl, edl->frame_no);
   mrg_gegl_blit (mrg, mrg_width (mrg)/2, 0,
                       mrg_width (mrg)/2, mrg_height (mrg)/2,
                       o->edl->result, 0,0);
@@ -695,6 +728,8 @@ void gedl_ui (Mrg *mrg, void *data)
                       mrg_width (mrg)/2, mrg_height (mrg)/2,
                       o->edl2->result, 0,0);
 #endif
+
+  /* draw timeline */
   gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2, edl->scale, edl->t0);
 
   if(0){
