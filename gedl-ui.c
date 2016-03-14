@@ -14,6 +14,8 @@ void frob_fade (void*);
 static unsigned char *copy_buf = NULL;
 static int copy_buf_len = 0;
 
+GeglNode *preview_loader;
+
 static void mrg_gegl_blit (Mrg *mrg,
                           float x0, float y0,
                           float width, float height,
@@ -509,8 +511,8 @@ static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
-#define VID_HEIGHT 96
-#define PAD_DIM     5
+#define VID_HEIGHT 48
+#define PAD_DIM     8
 
 void render_clip (Mrg *mrg, const char *clip_path, int clip_start, int clip_frames, double x, double y)
 {
@@ -703,26 +705,40 @@ void gedl_ui (Mrg *mrg, void *data)
 
   if (playing)
     {
-     int start, end;
-
-     gedl_get_range (edl, &start, &end);
-
       edl->frame_no++;
-      if (edl->frame_no > max_frame (edl))
+      if (edl->active_clip)
       {
-         edl->frame_no = 0;
-         if (end)
-           edl->frame_no = start;
+        int start, end;
+        gedl_get_range (edl, &start, &end);
+        if (edl->frame_no > max_frame (edl))
+        {
+           edl->frame_no = 0;
+           if (end)
+             edl->frame_no = start;
+        }
+        edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
       }
-      edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
       mrg_queue_draw (mrg, NULL);
     }
+
+  if (edl->active_source)
+  {
+    gegl_node_set (preview_loader, 
+            "path", edl->active_source->path, 
+            "frame", edl->frame_no, NULL);
+    mrg_gegl_blit (mrg, mrg_width (mrg)/2, 0,
+                        mrg_width (mrg)/2, mrg_height (mrg)/2,
+                        preview_loader, 0,0);
+  }
+  else
+  {
 
   /* render viewport */
   rig_frame (edl, edl->frame_no);
   mrg_gegl_blit (mrg, mrg_width (mrg)/2, 0,
                       mrg_width (mrg)/2, mrg_height (mrg)/2,
                       o->edl->result, 0,0);
+  }
 #if 0
   o->edl2->frame_no = o->edl->frame_no + 20;
   rig_frame (o->edl2, o->edl2->frame_no);
@@ -807,6 +823,10 @@ int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2)
   o.mrg = mrg;
   o.edl = edl;
   o.edl2 = edl2;
+
+  preview_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:ff-load",
+                         "path", "/tmp", NULL);
+
   edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
   renderer_set_range (0, 50);
   mrg_set_ui (mrg, gedl_ui, &o);
