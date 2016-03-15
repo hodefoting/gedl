@@ -135,6 +135,8 @@ struct _GeglEDL
   int         audio_samplerate;
   int         fade_duration;
   int         frame_no;
+  int         source_frame_no;
+
   GeglNode   *nop_raw;
   GeglNode   *nop_transformed;
   GeglNode   *nop_raw2;

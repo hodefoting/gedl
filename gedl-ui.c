@@ -127,9 +127,9 @@ static void *prev_sclip = NULL;
 void make_active_source (GeglEDL *edl, SourceClip *clip);
 void make_active_source (GeglEDL *edl, SourceClip *clip)
 {
-  edl->frame_no = clip->start;
   edl->active_clip = NULL;
   edl->active_source = clip;
+  edl->source_frame_no = clip->start;
   edl->selection_start = clip->start;
   edl->selection_end = clip->end;
 }
@@ -147,7 +147,7 @@ static void clicked_source_clip (MrgEvent *e, void *data1, void *data2)
   {
     edl->active_clip = NULL;
     edl->active_source = clip;
-    edl->frame_no = e->x;
+    edl->source_frame_no = e->x;
     edl->selection_start = edl->frame_no;
     edl->selection_end = edl->frame_no;
   }
@@ -820,7 +820,7 @@ void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, f
 
     if (clip == (void*)edl->active_source)
       {
-        double frame = edl->frame_no;
+        double frame = edl->source_frame_no;
         if (scale > 1.0)
           cairo_rectangle (cr, frame, y-PAD_DIM, 1.0, VID_HEIGHT + PAD_DIM * 2);
         else
@@ -864,23 +864,23 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
 #endif
 }
 
-void gedl_ui (Mrg *mrg, void *data)
+void playing_iteration (Mrg *mrg, GeglEDL *edl)
 {
-  State *o = data;
-  GeglEDL *edl = o->edl;
-
-  mrg_stylesheet_add (mrg, css, NULL, 0, NULL);
-  cairo_set_source_rgb (mrg_cr (mrg), 0,0,0);
-  cairo_paint (mrg_cr (mrg));
-
-  /* draw source clip list */
-  draw_clips (mrg, edl, 10, 40, mrg_width(mrg)/2 - 20, mrg_height(mrg)/2 - 30);
-
   if (playing)
     {
-      edl->frame_no++;
+      if (edl->active_source)
+      {
+        edl->source_frame_no++;
+        if (edl->source_frame_no > edl->active_source->end)
+        {
+           edl->source_frame_no = 0;
+           edl->source_frame_no = edl->active_source->start;
+        }
+      }
+
       if (edl->active_clip)
       {
+        edl->frame_no++;
         int start, end;
         gedl_get_range (edl, &start, &end);
         if (edl->frame_no > max_frame (edl))
@@ -893,12 +893,26 @@ void gedl_ui (Mrg *mrg, void *data)
       }
       mrg_queue_draw (mrg, NULL);
     }
+}
 
+void gedl_ui (Mrg *mrg, void *data)
+{
+  State *o = data;
+  GeglEDL *edl = o->edl;
+
+  mrg_stylesheet_add (mrg, css, NULL, 0, NULL);
+  cairo_set_source_rgb (mrg_cr (mrg), 0,0,0);
+  cairo_paint (mrg_cr (mrg));
+
+  /* draw source clip list */
+  draw_clips (mrg, edl, 10, 40, mrg_width(mrg)/2 - 20, mrg_height(mrg)/2 - 30);
+
+  
   if (edl->active_source)
   {
     gegl_node_set (preview_loader, 
             "path", edl->active_source->path, 
-            "frame", edl->frame_no, NULL);
+            "frame", edl->source_frame_no, NULL);
     mrg_gegl_blit (mrg, mrg_width (mrg)/2, 0,
                         mrg_width (mrg)/2, mrg_height (mrg)/2,
                         preview_loader, 0,0);
@@ -947,6 +961,8 @@ void gedl_ui (Mrg *mrg, void *data)
       if (edl->active_clip->filter_graph)
         mrg_printf (mrg, " %s", edl->active_clip->filter_graph);
     }
+
+  playing_iteration (mrg, edl);
 
   mrg_add_binding (mrg, "delete", NULL, NULL, remove_clip, edl);
   mrg_add_binding (mrg, "control-x", NULL, NULL, remove_clip, edl);
