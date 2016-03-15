@@ -113,16 +113,31 @@ struct _State {
 static int playing  = 0;
 float fpx           = 2;
 
+static void *prev_sclip = NULL;
+
 static void clicked_source_clip (MrgEvent *e, void *data1, void *data2)
 {
   SourceClip *clip = data1;
   GeglEDL *edl = data2;
-  edl->active_clip = NULL;
-  edl->active_source = clip;
-  edl->frame_no = e->x;
-  edl->selection_start = edl->frame_no;
-  edl->selection_end = edl->frame_no;
+
+  if (prev_sclip != clip)
+  {
+    edl->active_clip = NULL;
+    edl->active_source = clip;
+    edl->frame_no = clip->start;
+    edl->selection_start = edl->frame_no;
+    edl->selection_end = edl->frame_no;
+  }
+  else
+  {
+    edl->active_clip = NULL;
+    edl->active_source = clip;
+    edl->frame_no = e->x;
+    edl->selection_start = edl->frame_no;
+    edl->selection_end = edl->frame_no;
+  }
   mrg_queue_draw (e->mrg, NULL);
+  prev_sclip = clip;
 }
 
 //void rig_frame (int frame_no);
@@ -168,6 +183,10 @@ static void drag_clip (MrgEvent *e, void *data1, void *data2)
     edl->selection_start = e->x;
   }
   mrg_queue_draw (e->mrg, NULL);
+}
+
+static void released_source_clip (MrgEvent *e, void *data1, void *data2)
+{
 }
 
 static void released_clip (MrgEvent *e, void *data1, void *data2)
@@ -622,73 +641,79 @@ static const char *css =
 " document { background: black; }"
 "";
 
-void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
+void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, float w, float h)
 {
-  GList *l;
-  cairo_t *cr = mrg_cr (mrg);
-
-  for (l = edl->clip_db; l; l = l->next)
-  {
-    SourceClip *clip = l->data;
-
-     if (clip->duration == 0)
+        cairo_t *cr = mrg_cr (mrg);
+    if (clip->duration == 0)
        {
 	     GeglNode *gegl = gegl_node_new ();
 	     GeglNode *probe = gegl_node_new_child (gegl, "operation",
                           "gegl:ff-load", "path", clip->path, NULL);
 	     gegl_node_process (probe);
-
 	     gegl_node_get (probe, "frames", &clip->duration, NULL);
-     //  gegl_node_get (probe, "frame-rate", &clip->fps, NULL);
          g_object_unref (gegl);
        }
 
     cairo_save (cr);
-
     {
       float scale = 1.0;
       if (clip->duration > w)
         scale = w / clip->duration;
       cairo_scale (cr, scale, 1);
 
-
       render_clip (mrg, clip->path, 0, clip->duration, 0, y);
 
-    if (clip == edl->active_source)
+    if (clip == (void*)edl->active_source)
     {
       cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
-
-
+      cairo_stroke_preserve (cr);
     }
     else
-      cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
-    cairo_stroke_preserve (cr);
-    mrg_listen (mrg, MRG_PRESS, clicked_source_clip, clip, edl);
-    mrg_listen (mrg, MRG_DRAG, drag_source_clip, clip, edl);
-    //mrg_listen (mrg, MRG_RELEASE, released_source, clip, edl);
-    cairo_new_path (cr);
-
-    cairo_rectangle (cr, clip->start, y - 2,
-                         clip->end - clip->start, VID_HEIGHT + 4);
-    cairo_set_source_rgba (cr, 1, 0, 0, 1);
-    cairo_stroke (cr);
-
-    if (clip == edl->active_source)
     {
-      double frame = edl->frame_no;
-      if (scale > 1.0)
-      cairo_rectangle (cr, frame, y-PAD_DIM, 1.0, VID_HEIGHT + PAD_DIM * 2);
-      else
-      cairo_rectangle (cr, frame, y-PAD_DIM, 1.0/scale, VID_HEIGHT + PAD_DIM * 2);
-      cairo_set_source_rgba (cr,1,0,0,1);
-      cairo_fill (cr);
+      cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
     }
 
+    mrg_listen (mrg, MRG_PRESS, clicked_source_clip, clip, edl);
+    mrg_listen (mrg, MRG_DRAG, drag_source_clip, clip, edl);
+    mrg_listen (mrg, MRG_DRAG, released_source_clip, clip, edl);
+    cairo_new_path (cr);
+
+    cairo_set_source_rgba (cr, 0,0,0,0.75);
+    cairo_rectangle (cr, 0, y, clip->start, VID_HEIGHT);
+    cairo_rectangle (cr, clip->end, y, clip->duration - clip->end, VID_HEIGHT);
+    cairo_fill (cr);
+
+    if (clip == (void*)edl->active_source)
+      {
+        double frame = edl->frame_no;
+        if (scale > 1.0)
+          cairo_rectangle (cr, frame, y-PAD_DIM, 1.0, VID_HEIGHT + PAD_DIM * 2);
+        else
+          cairo_rectangle (cr, frame, y-PAD_DIM, 1.0/scale, VID_HEIGHT + PAD_DIM * 2);
+        cairo_set_source_rgba (cr,1,0,0,1);
+        cairo_fill (cr);
+      }
 
       cairo_restore (cr);
     }
+}
+
+void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
+{
+  GList *l;
+
+  for (l = edl->clip_db; l; l = l->next)
+  {
+    SourceClip *clip = l->data;
+    render_clip2 (mrg, edl, clip, x, y, w, h);
+
     y += VID_HEIGHT + PAD_DIM * 1;
   }
+  if (edl->active_clip)
+    render_clip2 (mrg, edl, (void*)edl->active_clip, x, y, w, h);
+
+  /* code replication of above, for current clip */
+
 }
 
 void gedl_ui (Mrg *mrg, void *data)
