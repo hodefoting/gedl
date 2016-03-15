@@ -487,6 +487,7 @@ static void up (MrgEvent *event, void *data1, void *data2)
         break;
       }
     }
+    edl->active_source = NULL;
   }
   else
   {
