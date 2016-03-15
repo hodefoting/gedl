@@ -1,4 +1,11 @@
-/* one of these days, one might even want to clean windows here :)*/
+/*
+
+todo: prime cache frames when navigating clips, shared with raw edits of same
+frames appearing in timeline
+
+
+
+ */
 
 #define _BSD_SOURCE
 #define _DEFAULT_SOURCE
@@ -117,6 +124,16 @@ float fpx           = 2;
 
 static void *prev_sclip = NULL;
 
+void make_active_source (GeglEDL *edl, SourceClip *clip);
+void make_active_source (GeglEDL *edl, SourceClip *clip)
+{
+  edl->frame_no = clip->start;
+  edl->active_clip = NULL;
+  edl->active_source = clip;
+  edl->selection_start = clip->start;
+  edl->selection_end = clip->end;
+}
+
 static void clicked_source_clip (MrgEvent *e, void *data1, void *data2)
 {
   SourceClip *clip = data1;
@@ -124,11 +141,7 @@ static void clicked_source_clip (MrgEvent *e, void *data1, void *data2)
 
   if (prev_sclip != clip)
   {
-    edl->active_clip = NULL;
-    edl->active_source = clip;
-    edl->frame_no = clip->start;
-    edl->selection_start = edl->frame_no;
-    edl->selection_end = edl->frame_no;
+    make_active_source (edl, clip);
   }
   else
   {
@@ -296,6 +309,23 @@ static void extend_left (MrgEvent *event, void *data1, void *data2)
 static void remove_clip (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
+  if (edl->active_source)
+  {
+    GList *iter = g_list_find (edl->clip_db, edl->active_source);
+    if (iter) iter = iter->next;
+    if (!iter)
+      return;
+    edl->clip_db = g_list_remove (edl->clip_db, edl->active_source);
+    if (iter) edl->active_source = iter->data;
+    else
+        edl->active_source = NULL;
+    edl->frame=-1;
+    mrg_event_stop_propagate (event);
+    mrg_queue_draw (event->mrg, NULL);
+    changed++;
+    return;
+  }
+
   if (!edl->active_clip)
     return;
   {
@@ -317,6 +347,19 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
 static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
+  if (edl->active_source)
+  {
+    GList *iter = g_list_find (edl->clip_db, edl->active_source);
+    Clip *clip = clip_new_full (edl->active_source->path, edl->active_source->start, edl->active_source->end);
+    edl->clips = g_list_insert_before (edl->clips, iter, clip);
+    edl->active_source = (void*)clip;
+    edl->frame=-1;
+    mrg_event_stop_propagate (event);
+    mrg_queue_draw (event->mrg, NULL);
+    changed++;
+    return;
+  }
+
   if (!edl->active_clip)
     return;
   {
@@ -440,6 +483,7 @@ static void up (MrgEvent *event, void *data1, void *data2)
       if (l->next && l->next->data == edl->active_source)
       {
         edl->active_source = l->data;
+        make_active_source (edl, edl->active_source);
         break;
       }
     }
@@ -448,6 +492,7 @@ static void up (MrgEvent *event, void *data1, void *data2)
   {
     edl->active_clip = NULL;
     edl->active_source = edl->clip_db?g_list_last (edl->clip_db)->data:NULL;
+    make_active_source (edl, edl->active_source);
 
   }
   mrg_queue_draw (event->mrg, NULL);
@@ -465,6 +510,7 @@ static void down (MrgEvent *event, void *data1, void *data2)
       if (l->next && l->data == edl->active_source)
       {
         edl->active_source = l->next->data;
+        make_active_source (edl, l->next->data);
         break;
       }
     }
@@ -472,6 +518,7 @@ static void down (MrgEvent *event, void *data1, void *data2)
   else
   {
     edl->active_source = edl->clip_db->data;
+    make_active_source (edl, (void*)edl->active_source);
     edl->active_clip = NULL;
   }
   mrg_queue_draw (event->mrg, NULL);
@@ -780,12 +827,21 @@ void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, f
           cairo_rectangle (cr, frame, y-PAD_DIM, 1.0/scale, VID_HEIGHT + PAD_DIM * 2);
         cairo_set_source_rgba (cr,1,0,0,1);
         cairo_fill (cr);
+
+
+  int start = 0, end = 0;
+  gedl_get_selection (edl, &start, &end);
+
+  cairo_rectangle (cr, start + 0.5, y - PAD_DIM, end - start, VID_HEIGHT + PAD_DIM * 2);
+  cairo_set_source_rgba (cr, 1, 0, 0, 0.5);
+  cairo_fill (cr);
+
       }
       
     cairo_restore (cr);
-    if (1) /* draw more aspect right selection (at least for start/end "frame aspect part..?) */
+    if (0) /* draw more aspect right selection (at least for start/end "frame aspect part..?) */
     {
-    render_clip (mrg, clip->path, clip->start, (clip->end - clip->start) * scale, clip->start * scale, y + 6);
+    render_clip (mrg, clip->path, clip->start, (clip->end - clip->start) * scale, clip->start * scale, y);
     cairo_new_path (cr);
     }
     }
@@ -892,8 +948,9 @@ void gedl_ui (Mrg *mrg, void *data)
         mrg_printf (mrg, " %s", edl->active_clip->filter_graph);
     }
 
-  mrg_add_binding (mrg, "x", NULL, NULL, remove_clip, edl);
-  mrg_add_binding (mrg, "d", NULL, NULL, duplicate_clip, edl);
+  mrg_add_binding (mrg, "delete", NULL, NULL, remove_clip, edl);
+  mrg_add_binding (mrg, "control-x", NULL, NULL, remove_clip, edl);
+  mrg_add_binding (mrg, "control-d", NULL, NULL, duplicate_clip, edl);
   mrg_add_binding (mrg, "space", NULL, NULL, toggle_playing, edl);
   mrg_add_binding (mrg, "control-left", NULL, NULL, nav_left, edl);
   mrg_add_binding (mrg, "control-right", NULL, NULL, nav_right, edl);
