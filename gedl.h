@@ -110,6 +110,7 @@ struct _GeglEDL
   GList      *clips;
   int         frame;
   double      fps;
+  GeglBuffer *buffer;
   GeglNode   *gegl;
   int         width;
   int         height;
@@ -144,6 +145,8 @@ struct _GeglEDL
   GeglNode   *load_buf;
   GeglNode   *result, *encode, *crop, *scale_size, *opacity,
              *load_buf2, *crop2, *scale_size2, *over;
+  GeglNode   *store_buf;
+  GeglNode   *cached_result;
   double      scale;
   double      t0;
   Clip       *active_clip;

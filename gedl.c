@@ -137,6 +137,7 @@ void clip_fade_set (Clip *clip, int do_fade_out)
 
 GeglEDL *gedl_new           (void)
 {
+  GeglRectangle roi = {0,0,1024, 1024};
   GeglEDL *edl = g_malloc0(sizeof (GeglEDL));
   system ("mkdir .gedl 2>/dev/null");  /* XXX: create cache dir */
   edl->gegl = gegl_node_new ();
@@ -163,6 +164,8 @@ GeglEDL *gedl_new           (void)
   edl->frame_no         = 0;
   edl->scale            = 1.0;
 
+  edl->buffer = gegl_buffer_new (&roi, babl_format ("R'G'B'A u8"));
+
   return edl;
 }
 
@@ -184,6 +187,7 @@ void     gedl_free          (GeglEDL *edl)
     g_free (edl->path);
  
   g_object_unref (edl->gegl);
+  g_object_unref (edl->buffer);
   g_free (edl);
 }
 
@@ -935,10 +939,14 @@ static void setup (GeglEDL *edl)
                                       "audio-codec",    edl->audio_codec,
                                       "video-codec",    edl->video_codec,
                                       NULL);
+  edl->cached_result = gegl_node_new_child (edl->gegl, "operation", "gegl:buffer-source", "buffer", edl->buffer, NULL);
+  edl->store_buf = gegl_node_new_child (edl->gegl, "operation", "gegl:write-buffer", "buffer", edl->buffer, NULL);
+
   gegl_node_link_many (edl->result, edl->encode, NULL); 
   gegl_node_link_many (edl->load_buf, edl->scale_size, edl->nop_raw, edl->nop_transformed, edl->crop, NULL); 
   gegl_node_link_many (edl->load_buf2, edl->scale_size2, edl->nop_raw2, edl->nop_transformed2, edl->opacity, edl->crop2,  NULL); 
 
+  gegl_node_connect_to (edl->result, "output", edl->store_buf, "input");
   gegl_node_connect_to (edl->nop_raw, "output", edl->nop_transformed, "input");
   gegl_node_connect_to (edl->nop_raw2, "output", edl->nop_transformed2, "input");
   gegl_node_connect_to (edl->crop2, "output", edl->over, "aux");

@@ -3,7 +3,7 @@
 todo: prime cache frames when navigating clips, shared with raw edits of same
 frames appearing in timeline
 
-
+split rendering to separate thread.
 
  */
 
@@ -927,6 +927,7 @@ void gedl_ui (Mrg *mrg, void *data)
     gegl_node_set (preview_loader, 
             "path", edl->active_source->path, 
             "frame", edl->source_frame_no, NULL);
+
     mrg_gegl_blit (mrg, mrg_width (mrg)/2, 0,
                         mrg_width (mrg)/2, mrg_height (mrg)/2,
                         preview_loader, 0,0);
@@ -936,9 +937,14 @@ void gedl_ui (Mrg *mrg, void *data)
 
   /* render viewport */
   rig_frame (edl, edl->frame_no);
+  gegl_node_process (o->edl->store_buf);
+  GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
+  gegl_buffer_set_extent (o->edl->buffer, &ext);
+
+
   mrg_gegl_blit (mrg, mrg_width (mrg)/2, 0,
                       mrg_width (mrg)/2, mrg_height (mrg)/2,
-                      o->edl->result, 0,0);
+                      o->edl->cached_result, 0,0);
   }
 #if 0
   o->edl2->frame_no = o->edl->frame_no + 20;
