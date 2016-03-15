@@ -151,6 +151,8 @@ struct _GeglEDL
   double      t0;
   Clip       *active_clip;
   SourceClip *active_source;
+
+  void       *mrg;
 } _GeglEDL;
 
 Clip *clip_new            (void);

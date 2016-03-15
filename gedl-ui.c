@@ -15,6 +15,7 @@ split rendering to separate thread.
 #include <gegl.h>
 #include "gedl.h"
 
+static GThread *thread;
 long babl_ticks (void);
 
 void frob_fade (void*);
@@ -24,6 +25,31 @@ static int copy_buf_len = 0;
 static int changed = 0;
 
 GeglNode *preview_loader;
+
+int rendered_frame = -1;
+int done_frame     = -1;
+static gpointer renderer_thread (gpointer data)
+{
+  GeglEDL *edl = data;
+  while (1)
+  {
+    if (edl->frame_no != rendered_frame)
+    {
+      rendered_frame = edl->frame_no;
+      GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
+      gegl_buffer_set_extent (edl->buffer, &ext);
+      rig_frame (edl, edl->frame_no);
+      gegl_node_process (edl->store_buf);
+      done_frame = rendered_frame;
+      MrgRectangle rect = {mrg_width (edl->mrg)/2, 0,
+                           mrg_width (edl->mrg)/2, mrg_height (edl->mrg)/2};
+      mrg_queue_draw (edl->mrg, &rect);
+    }
+    else
+      g_usleep (100);
+  }
+  return NULL;
+}
 
 static void mrg_gegl_blit (Mrg *mrg,
                           float x0, float y0,
@@ -439,7 +465,7 @@ static void save_edl (GeglEDL *edl)
   if (edl->path)
   {
     gedl_save_path (edl, edl->path);
-    fprintf (stderr, "saved to %s\n", edl->path);
+    //fprintf (stderr, "saved to %s\n", edl->path);
   }
 }
 
@@ -882,6 +908,8 @@ void playing_iteration (Mrg *mrg, GeglEDL *edl)
 {
   if (playing)
     {
+      if (rendered_frame != done_frame)
+        return;
       if (edl->active_source)
       {
         edl->source_frame_no++;
@@ -936,10 +964,7 @@ void gedl_ui (Mrg *mrg, void *data)
   {
 
   /* render viewport */
-  rig_frame (edl, edl->frame_no);
-  gegl_node_process (o->edl->store_buf);
-  GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
-  gegl_buffer_set_extent (o->edl->buffer, &ext);
+  //gegl_node_process (o->edl->store_buf);
 
 
   mrg_gegl_blit (mrg, mrg_width (mrg)/2, 0,
@@ -1027,7 +1052,6 @@ gpointer renderer_main (gpointer data)
 }
 
 
-
 int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2);
 int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2)
 {
@@ -1038,6 +1062,8 @@ int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2)
   o.edl = edl;
   o.edl2 = edl2;
 
+  edl->mrg = mrg;
+  if (edl2) edl2->mrg = mrg;
   preview_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:ff-load",
                          "path", "/tmp", NULL);
 
@@ -1045,6 +1071,8 @@ int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2)
   renderer_set_range (0, 50);
   mrg_set_ui (mrg, gedl_ui, &o);
   g_timeout_add (1000, save_idle, edl);
+  if (1)
+    thread = g_thread_new ("renderer", renderer_thread, edl);
 
   gedl_get_duration (edl);
 
