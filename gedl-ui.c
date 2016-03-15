@@ -478,16 +478,22 @@ static void up (MrgEvent *event, void *data1, void *data2)
   if (edl->active_source)
   {
     GList *l;
+    int found = 0;
     for (l = edl->clip_db; l; l = l->next)
     {
       if (l->next && l->next->data == edl->active_source)
       {
         edl->active_source = l->data;
         make_active_source (edl, edl->active_source);
+        found = 1;
         break;
       }
     }
-    edl->active_source = NULL;
+    if (!found)
+    {
+      edl->active_source = NULL;
+      edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+    }
   }
   else
   {
@@ -506,14 +512,21 @@ static void down (MrgEvent *event, void *data1, void *data2)
   if (edl->active_source)
   {
     GList *l;
+    int found = 0;
     for (l = edl->clip_db; l; l = l->next)
     {
       if (l->next && l->data == edl->active_source)
       {
         edl->active_source = l->next->data;
         make_active_source (edl, l->next->data);
+        found = 1;
         break;
       }
+    }
+    if (!found)
+    {
+      edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+      edl->active_source = NULL;
     }
   }
   else
