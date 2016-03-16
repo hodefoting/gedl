@@ -146,6 +146,7 @@ struct _GeglEDL
   GeglNode   *result, *encode, *crop, *scale_size, *opacity,
              *load_buf2, *crop2, *scale_size2, *over;
   GeglNode   *store_buf;
+  GeglNode   *source_store_buf;
   GeglNode   *cached_result;
   double      scale;
   double      t0;

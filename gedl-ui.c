@@ -36,24 +36,38 @@ static gpointer renderer_thread (gpointer data)
   {
     if (edl->active_source)
     {
-      g_usleep (100);
+      if (edl->source_frame_no != done_frame)
+      {
+        rendered_frame = edl->source_frame_no;
+        gegl_node_set (preview_loader, "path", edl->active_source->path, NULL);
+        gegl_node_set (preview_loader, "frame", edl->source_frame_no, NULL);
+        GeglRectangle ext = gegl_node_get_bounding_box (preview_loader);
+        gegl_buffer_set_extent (edl->buffer, &ext);
+        gegl_node_process (edl->source_store_buf);
+        done_frame = rendered_frame;
+        MrgRectangle rect = {mrg_width (edl->mrg)/2, 0,
+                             mrg_width (edl->mrg)/2, mrg_height (edl->mrg)/2};
+        mrg_queue_draw (edl->mrg, &rect);
+      }
+      else
+        g_usleep (100);
     }
     else
     {
-    if (edl->frame_no != done_frame)
-    {
-      rendered_frame = edl->frame_no;
-      GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
-      gegl_buffer_set_extent (edl->buffer, &ext);
-      rig_frame (edl, edl->frame_no);
-      gegl_node_process (edl->store_buf);
-      done_frame = rendered_frame;
-      MrgRectangle rect = {mrg_width (edl->mrg)/2, 0,
-                           mrg_width (edl->mrg)/2, mrg_height (edl->mrg)/2};
-      mrg_queue_draw (edl->mrg, &rect);
-    }
-    else
-      g_usleep (100);
+      if (edl->frame_no != done_frame)
+      {
+        rendered_frame = edl->frame_no;
+        GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
+        gegl_buffer_set_extent (edl->buffer, &ext);
+        rig_frame (edl, edl->frame_no);
+        gegl_node_process (edl->store_buf);
+        done_frame = rendered_frame;
+        MrgRectangle rect = {mrg_width (edl->mrg)/2, 0,
+                             mrg_width (edl->mrg)/2, mrg_height (edl->mrg)/2};
+        mrg_queue_draw (edl->mrg, &rect);
+      }
+      else
+        g_usleep (100);
     }
   }
   return NULL;
@@ -957,7 +971,7 @@ void gedl_ui (Mrg *mrg, void *data)
   /* draw source clip list */
   draw_clips (mrg, edl, 10, 40, mrg_width(mrg)/2 - 20, mrg_height(mrg)/2 - 30);
 
-  
+#if 0
   if (edl->active_source)
   {
     gegl_node_set (preview_loader, 
@@ -973,12 +987,12 @@ void gedl_ui (Mrg *mrg, void *data)
 
   /* render viewport */
   //gegl_node_process (o->edl->store_buf);
-
+#endif
 
   mrg_gegl_blit (mrg, mrg_width (mrg)/2, 0,
                       mrg_width (mrg)/2, mrg_height (mrg)/2,
                       o->edl->cached_result, 0,0);
-  }
+  //}
 #if 0
   o->edl2->frame_no = o->edl->frame_no + 20;
   rig_frame (o->edl2, o->edl2->frame_no);
@@ -1074,6 +1088,7 @@ int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2)
   if (edl2) edl2->mrg = mrg;
   preview_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:ff-load",
                          "path", "/tmp", NULL);
+  gegl_node_connect_to (preview_loader, "output", edl->source_store_buf, "input");
 
   edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
   renderer_set_range (0, 50);
