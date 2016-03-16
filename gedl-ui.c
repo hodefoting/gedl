@@ -3,7 +3,8 @@
 todo: prime cache frames when navigating clips, shared with raw edits of same
 frames appearing in timeline
 
-split rendering to separate thread.
+split rendering to separate thread  ... also split rendering of selecting in
+clip-db to the separate thread.
 
  */
 
@@ -33,7 +34,13 @@ static gpointer renderer_thread (gpointer data)
   GeglEDL *edl = data;
   while (1)
   {
-    if (edl->frame_no != rendered_frame)
+    if (edl->active_source)
+    {
+      g_usleep (100);
+    }
+    else
+    {
+    if (edl->frame_no != done_frame)
     {
       rendered_frame = edl->frame_no;
       GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
@@ -47,6 +54,7 @@ static gpointer renderer_thread (gpointer data)
     }
     else
       g_usleep (100);
+    }
   }
   return NULL;
 }
@@ -201,7 +209,7 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
 static void drag_source_clip (MrgEvent *e, void *data1, void *data2)
 {
   GeglEDL *edl = data2;
-  edl->frame_no = e->x;
+  edl->source_frame_no = e->x;
   if (e->x >= edl->selection_start)
   {
     edl->selection_end = e->x;
@@ -1045,7 +1053,7 @@ gpointer renderer_main (gpointer data)
     }
     else
     {
-      g_usleep (1000);
+      g_usleep (100);
     }
   }
   return NULL;
