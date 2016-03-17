@@ -140,6 +140,7 @@ struct _GeglEDL
   int         frame_no;
   int         source_frame_no;
 
+
   GeglNode   *nop_raw;
   GeglNode   *nop_transformed;
   GeglNode   *nop_raw2;
@@ -158,6 +159,7 @@ struct _GeglEDL
   void       *mrg;
 
   char       *clip_query;
+  int         clip_query_edited;
 
 } _GeglEDL;
 

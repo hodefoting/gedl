@@ -878,10 +878,17 @@ static void update_clip_title (const char *new_string, void *user_data)
   clip->title = g_strdup (new_string);
 }
 
+static void update_query (const char *new_string, void *user_data)
+{
+  GeglEDL *edl = user_data;
+  if (edl->clip_query)
+    g_free (edl->clip_query);
+  edl->clip_query = g_strdup (new_string);
+}
+
 void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, float w, float h)
 {
-    mrg_set_style (mrg, "background: transparent; color: white");
-        cairo_t *cr = mrg_cr (mrg);
+    cairo_t *cr = mrg_cr (mrg);
     if (clip->duration == 0)
        {
 	     GeglNode *gegl = gegl_node_new ();
@@ -948,12 +955,14 @@ void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, f
     cairo_new_path (cr);
     }
 
+#if 0
     cairo_move_to (cr, x, y + 10);
     cairo_set_source_rgba (cr, 0,0,0,0.8);
     cairo_set_font_size (cr, 10.0);
     cairo_show_text (cr, clip->title);
     cairo_set_source_rgba (cr, 1,1,1,0.8);
     cairo_move_to (cr, x - 1, y + 10 - 1);
+#endif
 
     mrg_set_xy (mrg, x, y + 20);
     if (clip->editing)
@@ -968,10 +977,18 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
 {
   GList *l;
 
-  cairo_move_to (mrg_cr (mrg), x, y + 10);
   cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1);
   cairo_set_font_size (mrg_cr (mrg), y);
-  cairo_show_text (mrg_cr (mrg), edl->clip_query);
+
+  mrg_set_style (mrg, "background: transparent; color: white");
+
+  mrg_set_xy (mrg, x, y + 10);
+  if (edl->clip_query_edited)
+    mrg_edit_start (mrg, update_query, edl);
+  mrg_print (mrg, edl->clip_query);
+  if (edl->clip_query_edited)
+    mrg_edit_end (mrg);
+
   y += 20;
 
   for (l = edl->clip_db; l; l = l->next)
