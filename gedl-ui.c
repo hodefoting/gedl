@@ -1080,66 +1080,37 @@ void gedl_ui (Mrg *mrg, void *data)
   cairo_set_source_rgb (mrg_cr (mrg), 0,0,0);
   cairo_paint (mrg_cr (mrg));
 
-  /* draw source clip list */
-
-#if 0
-  if (edl->active_source)
-  {
-    gegl_node_set (preview_loader, 
-            "path", edl->active_source->path, 
-            "frame", edl->source_frame_no, NULL);
-
-    mrg_gegl_blit (mrg, mrg_width (mrg)/2, 0,
-                        mrg_width (mrg)/2, mrg_height (mrg)/2,
-                        preview_loader, 0,0);
-  }
-  else
-  {
-
-  /* render viewport */
-  //gegl_node_process (o->edl->store_buf);
-#endif
-
-  mrg_gegl_blit (mrg, mrg_width (mrg)/2, 0,
-                      mrg_width (mrg)/2, mrg_height (mrg)/2,
+  mrg_gegl_blit (mrg, (int)(mrg_width (mrg) * 0.25), 0,
+                      (int)(mrg_width (mrg) * 0.75), mrg_height (mrg)/2,
                       o->edl->cached_result, 0,0);
-  //}
-#if 0
-  o->edl2->frame_no = o->edl->frame_no + 20;
-  rig_frame (o->edl2, o->edl2->frame_no);
-  mrg_gegl_blit (mrg, 0, 0,
-                      mrg_width (mrg)/2, mrg_height (mrg)/2,
-                      o->edl2->result, 0,0);
-#endif
 
-  /* draw timeline */
   gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2, edl->scale, edl->t0);
   draw_clips (mrg, edl, 10, mrg_height(mrg)/2 + VID_HEIGHT + PAD_DIM * 5, mrg_width(mrg) - 20, mrg_height(mrg)/2 - VID_HEIGHT + PAD_DIM * 5);
 
-  if(0){
-    cairo_t *cr = mrg_cr (mrg);
-    cairo_new_path (cr);
-    cairo_move_to (cr, mrg_width (mrg)/2, 0);
-    cairo_line_to (cr, mrg_width (mrg)/2, mrg_height (mrg)/2);
-    cairo_move_to (cr, 0, mrg_height (mrg)/2);
-    cairo_line_to (cr, mrg_width (mrg), mrg_height (mrg)/2);
-    cairo_set_source_rgba (cr, 1,1,1,0.5);
-    cairo_stroke (cr);
-  }
-
   mrg_set_xy (mrg, 0, 40);
-
-  mrg_printf (mrg, "%i\n", edl->frame_no);
 
   if (edl->active_clip)
     {
-      mrg_printf (mrg, "%s %i %i%s", edl->active_clip->path,
-                                     edl->active_clip->start, edl->active_clip->end,
-                                     edl->active_clip->fade_out?" [fade]":"");
+      char *basename = g_path_get_basename (edl->active_clip->path);
+      mrg_printf (mrg, "%i\n", edl->frame_no);
+      mrg_printf (mrg, "%s\n%i %i\n", basename,
+                                     edl->active_clip->start, edl->active_clip->end);
+      g_free (basename);
 
       if (edl->active_clip->filter_graph)
         mrg_printf (mrg, " %s", edl->active_clip->filter_graph);
     }
+
+  //mrg_printf (mrg, "%i %i %i %i %i\n", edl->frame, edl->frame_no, edl->source_frame_no, rendered_frame, done_frame);
+
+  if (done_frame != rendered_frame)
+    mrg_printf (mrg, ".. ");
+  else if (edl->active_source &&
+           edl->source_frame_no != rendered_frame)
+    mrg_printf (mrg, ".. ");
+  else if (edl->active_clip &&
+           edl->frame_no != rendered_frame)
+    mrg_printf (mrg, "...");
 
   playing_iteration (mrg, edl);
 
