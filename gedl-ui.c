@@ -402,6 +402,9 @@ static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
   {
     GList *iter = g_list_find (edl->clip_db, edl->active_source);
     Clip *clip = clip_new_full (edl->active_source->path, edl->active_source->start, edl->active_source->end);
+    if (edl->active_source->title)
+      clip->title = g_strdup (edl->active_source->title);
+
     edl->clips = g_list_insert_before (edl->clips, iter, clip);
     edl->active_source = (void*)clip;
     edl->frame=-1;
@@ -561,11 +564,11 @@ static void up (MrgEvent *event, void *data1, void *data2)
 static void down (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  edl->active_source->editing = 0;
   if (edl->active_source)
   {
     GList *l;
     int found = 0;
+    edl->active_source->editing = 0;
     for (l = edl->clip_db; l; l = l->next)
     {
       if (l->next && l->data == edl->active_source)
