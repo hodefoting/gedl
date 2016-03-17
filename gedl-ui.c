@@ -3,9 +3,6 @@
 todo: prime cache frames when navigating clips, shared with raw edits of same
 frames appearing in timeline
 
-split rendering to separate thread  ... also split rendering of selecting in
-clip-db to the separate thread.
-
  */
 
 #define _BSD_SOURCE
@@ -837,7 +834,6 @@ void gedl_draw (Mrg     *mrg,
 
   int start = 0, end = 0;
   gedl_get_selection (edl, &start, &end);
-
   cairo_rectangle (cr, start + 0.5, y - PAD_DIM, end - start, VID_HEIGHT + PAD_DIM * 2);
   cairo_set_source_rgba (cr, 1, 0, 0, 0.5);
   cairo_fill (cr);
@@ -955,14 +951,14 @@ void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, f
         cairo_set_source_rgba (cr,1,0,0,1);
         cairo_fill (cr);
 
-
+#if 0
   int start = 0, end = 0;
   gedl_get_selection (edl, &start, &end);
 
   cairo_rectangle (cr, start + 0.5, y - PAD_DIM, end - start, VID_HEIGHT + PAD_DIM * 2);
   cairo_set_source_rgba (cr, 1, 0, 0, 0.5);
   cairo_fill (cr);
-
+#endif
       }
       
     cairo_restore (cr);
