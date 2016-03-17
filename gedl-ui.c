@@ -591,8 +591,13 @@ static void step_frame_back (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
   stop_playing (event, data1, data2);
-  edl->frame_no --;
-  edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+  if (edl->active_source)
+    edl->source_frame_no --;
+  else
+  {
+    edl->frame_no --;
+    edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+  }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
@@ -602,8 +607,15 @@ static void step_frame (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
   stop_playing (event, data1, data2);
-  edl->frame_no ++;
-  edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+  if (edl->active_source)
+  {
+    edl->source_frame_no ++;
+  }
+  else
+  {
+    edl->frame_no ++;
+    edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+  }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
@@ -955,7 +967,7 @@ void playing_iteration (Mrg *mrg, GeglEDL *edl)
         }
         edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
       }
-      mrg_queue_draw (mrg, NULL);
+   //   mrg_queue_draw (mrg, NULL);
     }
 }
 
