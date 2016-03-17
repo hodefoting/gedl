@@ -568,18 +568,29 @@ static void up (MrgEvent *event, void *data1, void *data2)
       edl->active_source = NULL;
       //edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
       edl->clip_query_edited = 1;
-    
       mrg_set_cursor_pos (event->mrg, strlen (edl->clip_query));
-
-
+    }
+  }
+  else if (edl->active_clip)
+  {
+    if(edl->filter_edited)
+    {
+      edl->active_source = edl->clip_db?g_list_last (edl->clip_db)->data:NULL;
+      make_active_source (edl, edl->active_source);
+      edl->filter_edited = 0;
+      edl->active_clip = NULL;
+    }
+    else
+    {
+      edl->active_source = NULL;
+      edl->filter_edited = 1;
+      mrg_set_cursor_pos (event->mrg, 0);
+      fprintf (stderr, "...\n");
     }
   }
   else
   {
-    edl->active_clip = NULL;
-    edl->active_source = edl->clip_db?g_list_last (edl->clip_db)->data:NULL;
-    make_active_source (edl, edl->active_source);
-
+          fprintf (stderr, "uh\n");
   }
   mrg_queue_draw (event->mrg, NULL);
   mrg_event_stop_propagate (event);
@@ -935,6 +946,14 @@ static void update_query (const char *new_string, void *user_data)
   edl->clip_query = g_strdup (new_string);
 }
 
+static void update_filter (const char *new_string, void *user_data)
+{
+  GeglEDL *edl = user_data;
+  if (edl->active_clip->filter_graph)
+    g_free (edl->active_clip->filter_graph);
+  edl->active_clip->filter_graph = g_strdup (new_string);
+}
+
 void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, float w, float h)
 {
     cairo_t *cr = mrg_cr (mrg);
@@ -1116,8 +1135,17 @@ void gedl_ui (Mrg *mrg, void *data)
                                      edl->active_clip->start, edl->active_clip->end);
       g_free (basename);
 
-      if (edl->active_clip->filter_graph)
-        mrg_printf (mrg, " %s", edl->active_clip->filter_graph);
+    if (edl->active_clip->filter_graph)
+    {
+        if (edl->filter_edited)
+        {
+          mrg_edit_start (mrg, update_filter, edl);
+          mrg_printf (mrg, "%s", edl->active_clip->filter_graph);
+          mrg_edit_end (mrg);
+        }
+        else 
+          mrg_printf (mrg, " %s", edl->active_clip->filter_graph);
+    }
     }
 
   //mrg_printf (mrg, "%i %i %i %i %i\n", edl->frame, edl->frame_no, edl->source_frame_no, rendered_frame, done_frame);
@@ -1133,7 +1161,9 @@ void gedl_ui (Mrg *mrg, void *data)
 
   playing_iteration (mrg, edl);
 
-  if (!edl->clip_query_edited && (
+  if (!edl->clip_query_edited &&
+      !edl->filter_edited 
+                  && (
                   
       !edl->active_source   ||
       edl->active_source->editing == 0))
