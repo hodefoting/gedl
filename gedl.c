@@ -162,6 +162,7 @@ GeglEDL *gedl_new           (void)
   edl->audio_samplerate = DEFAULT_audio_samplerate;
   edl->fade_duration    = DEFAULT_fade_duration;
   edl->frame_no         = 0;
+  edl->frame = -1;
   edl->scale            = 1.0;
 
   edl->buffer = gegl_buffer_new (&roi, babl_format ("R'G'B'A u8"));

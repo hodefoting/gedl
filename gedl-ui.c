@@ -644,40 +644,54 @@ static void step_frame (MrgEvent *event, void *data1, void *data2)
 static void clip_end_inc (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  if (edl->active_clip)
+  if (edl->active_source)
+  {
+      edl->active_source->end++;
+  }
+  else if (edl->active_clip)
     {
       edl->active_clip->end++;
+    }
       edl->frame=-1;
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
       changed++;
-    }
 }
 
 static void clip_end_dec (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  if (edl->active_clip)
+  if (edl->active_source)
+  {
+      edl->active_source->end--;
+      edl->frame=-1;
+  }
+  else if (edl->active_clip)
     {
       edl->active_clip->end--;
       edl->frame=-1;
+    }
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
       changed++;
-    }
 }
 
 static void clip_start_inc (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  if (edl->active_clip)
+  if (edl->active_source)
+  {
+      edl->active_source->start++;
+      edl->frame=-1; // hack - to dirty it
+  }
+  else if (edl->active_clip)
     {
       edl->active_clip->start++;
       edl->frame=-1; // hack - to dirty it
+    }
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
       changed++;
-    }
 }
 
 static void clip_start_dec (MrgEvent *event, void *data1, void *data2)
