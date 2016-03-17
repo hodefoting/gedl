@@ -1068,7 +1068,6 @@ void gedl_ui (Mrg *mrg, void *data)
   cairo_paint (mrg_cr (mrg));
 
   /* draw source clip list */
-  draw_clips (mrg, edl, 10, 10, mrg_width(mrg)/2 - 20, mrg_height(mrg)/2 - 30);
 
 #if 0
   if (edl->active_source)
@@ -1102,6 +1101,7 @@ void gedl_ui (Mrg *mrg, void *data)
 
   /* draw timeline */
   gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2, edl->scale, edl->t0);
+  draw_clips (mrg, edl, 10, mrg_height(mrg)/2 + VID_HEIGHT + PAD_DIM * 5, mrg_width(mrg) - 20, mrg_height(mrg)/2 - VID_HEIGHT + PAD_DIM * 5);
 
   if(0){
     cairo_t *cr = mrg_cr (mrg);
@@ -1114,7 +1114,7 @@ void gedl_ui (Mrg *mrg, void *data)
     cairo_stroke (cr);
   }
 
-  mrg_set_xy (mrg, 0, mrg_height (mrg) / 2 + VID_HEIGHT + PAD_DIM * 10);
+  mrg_set_xy (mrg, 0, 40);
 
   mrg_printf (mrg, "%i\n", edl->frame_no);
 
