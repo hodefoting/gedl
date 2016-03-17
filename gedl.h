@@ -154,6 +154,9 @@ struct _GeglEDL
   SourceClip *active_source;
 
   void       *mrg;
+
+  char       *clip_query;
+
 } _GeglEDL;
 
 Clip *clip_new            (void);

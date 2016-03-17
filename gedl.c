@@ -166,6 +166,8 @@ GeglEDL *gedl_new           (void)
 
   edl->buffer = gegl_buffer_new (&roi, babl_format ("R'G'B'A u8"));
 
+  edl->clip_query = strdup ("query");
+
   return edl;
 }
 

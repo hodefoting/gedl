@@ -918,12 +918,28 @@ void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, f
     render_clip (mrg, clip->path, clip->start, (clip->end - clip->start) * scale, clip->start * scale, y);
     cairo_new_path (cr);
     }
+
+    cairo_move_to (cr, x, y + 10);
+    cairo_set_source_rgba (cr, 0,0,0,0.8);
+    cairo_set_font_size (cr, 10.0);
+    cairo_show_text (cr, clip->title);
+    cairo_set_source_rgba (cr, 1,1,1,0.8);
+    cairo_move_to (cr, x - 1, y + 10 - 1);
+    cairo_show_text (cr, clip->title);
+
     }
 }
 
 void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
 {
   GList *l;
+
+  cairo_move_to (mrg_cr (mrg), x, y + 10);
+  cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1);
+  cairo_set_font_size (mrg_cr (mrg), y);
+  cairo_show_text (mrg_cr (mrg), edl->clip_query);
+  y += 20;
+
 
   for (l = edl->clip_db; l; l = l->next)
   {
@@ -981,7 +997,7 @@ void gedl_ui (Mrg *mrg, void *data)
   cairo_paint (mrg_cr (mrg));
 
   /* draw source clip list */
-  draw_clips (mrg, edl, 10, 40, mrg_width(mrg)/2 - 20, mrg_height(mrg)/2 - 30);
+  draw_clips (mrg, edl, 10, 10, mrg_width(mrg)/2 - 20, mrg_height(mrg)/2 - 30);
 
 #if 0
   if (edl->active_source)
