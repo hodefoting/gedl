@@ -175,8 +175,11 @@ static void *prev_sclip = NULL;
 void make_active_source (GeglEDL *edl, SourceClip *clip);
 void make_active_source (GeglEDL *edl, SourceClip *clip)
 {
+  if (edl->active_source)
+    edl->active_source->editing = 0;
   edl->active_clip = NULL;
   edl->active_source = clip;
+  edl->active_source->editing = 0;
   edl->source_frame_no = clip->start;
   edl->selection_start = clip->start;
   edl->selection_end = clip->end;
@@ -527,6 +530,7 @@ static void up (MrgEvent *event, void *data1, void *data2)
   {
     GList *l;
     int found = 0;
+    edl->active_source->editing = 0;
     for (l = edl->clip_db; l; l = l->next)
     {
       if (l->next && l->next->data == edl->active_source)
@@ -557,6 +561,7 @@ static void up (MrgEvent *event, void *data1, void *data2)
 static void down (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
+  edl->active_source->editing = 0;
   if (edl->active_source)
   {
     GList *l;
@@ -646,6 +651,15 @@ static void clip_end_dec (MrgEvent *event, void *data1, void *data2)
       changed++;
     }
 }
+
+static void toggle_edit_source (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+
+  edl->active_source->editing = !edl->active_source->editing;
+  mrg_queue_draw (event->mrg, NULL);
+}
+
 
 static void clip_start_inc (MrgEvent *event, void *data1, void *data2)
 {
@@ -852,6 +866,7 @@ static const char *css =
 
 void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, float w, float h)
 {
+    mrg_set_style (mrg, "background: transparent; color: white");
         cairo_t *cr = mrg_cr (mrg);
     if (clip->duration == 0)
        {
@@ -925,7 +940,11 @@ void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, f
     cairo_show_text (cr, clip->title);
     cairo_set_source_rgba (cr, 1,1,1,0.8);
     cairo_move_to (cr, x - 1, y + 10 - 1);
-    cairo_show_text (cr, clip->title);
+
+    mrg_set_xy (mrg, x, y + 20);
+    if (clip->editing)
+      mrg_set_xy (mrg, x + 10, y + 20);
+    mrg_print (mrg, clip->title);
 
     }
 }
@@ -939,7 +958,6 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
   cairo_set_font_size (mrg_cr (mrg), y);
   cairo_show_text (mrg_cr (mrg), edl->clip_query);
   y += 20;
-
 
   for (l = edl->clip_db; l; l = l->next)
   {
@@ -1080,6 +1098,9 @@ void gedl_ui (Mrg *mrg, void *data)
   mrg_add_binding (mrg, "left", NULL, NULL, step_frame_back, edl);
   mrg_add_binding (mrg, "up", NULL, NULL, up, edl);
   mrg_add_binding (mrg, "down", NULL, NULL, down, edl);
+
+  if (edl->active_source)
+    mrg_add_binding (mrg, "return", NULL, NULL, toggle_edit_source, edl);
 }
 
 gpointer renderer_main (gpointer data)

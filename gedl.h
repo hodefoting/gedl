@@ -60,16 +60,18 @@ typedef struct SourceClip
   int   end;
   char *title;
   int   duration;
+  int   editing;
 } SourceClip;
 
 typedef struct Clip
 {
-
   char  *path;  /*path to media file */
   int    start; /*frame number starting with 0 */
   int    end;   /*last frame, inclusive fro single frame, make equal to start */
   char  *title;
   int    duration;
+  int    editing;
+  /* start of this must match start of clip */
 
   double fps;
   char   sha256sum[20]; /*< would also be the filename of thumbtrack */
