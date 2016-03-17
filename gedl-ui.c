@@ -406,7 +406,7 @@ static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
     if (edl->active_source->title)
       clip->title = g_strdup (edl->active_source->title);
 
-    edl->clips = g_list_insert_before (edl->clips, iter, clip);
+    edl->clip_db = g_list_insert_before (edl->clip_db, iter, clip);
     edl->active_source = (void*)clip;
     edl->frame=-1;
     mrg_event_stop_propagate (event);
@@ -530,7 +530,12 @@ static Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame);
 static void up (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  if (edl->active_source)
+  if (edl->clip_query_edited)
+  {
+    edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+    edl->clip_query_edited = 0;
+  }
+  else if (edl->active_source)
   {
     GList *l;
     int found = 0;
@@ -548,7 +553,12 @@ static void up (MrgEvent *event, void *data1, void *data2)
     if (!found)
     {
       edl->active_source = NULL;
-      edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+      //edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+      edl->clip_query_edited = 1;
+    
+      mrg_set_cursor_pos (event->mrg, strlen (edl->clip_query));
+
+
     }
   }
   else
@@ -559,13 +569,20 @@ static void up (MrgEvent *event, void *data1, void *data2)
 
   }
   mrg_queue_draw (event->mrg, NULL);
+  mrg_event_stop_propagate (event);
   changed++;
 }
 
 static void down (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  if (edl->active_source)
+  if (edl->clip_query_edited)
+  {
+    edl->active_source = edl->clip_db->data;
+    make_active_source (edl, (void*)edl->active_source);
+    edl->clip_query_edited = 0;
+  }
+  else if (edl->active_source)
   {
     GList *l;
     int found = 0;
@@ -588,10 +605,10 @@ static void down (MrgEvent *event, void *data1, void *data2)
   }
   else
   {
-    edl->active_source = edl->clip_db->data;
-    make_active_source (edl, (void*)edl->active_source);
     edl->active_clip = NULL;
+    edl->clip_query_edited = 1;
   }
+  mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
 }
@@ -994,9 +1011,13 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
   for (l = edl->clip_db; l; l = l->next)
   {
     SourceClip *clip = l->data;
-    render_clip2 (mrg, edl, clip, x, y, w, h);
 
-    y += VID_HEIGHT + PAD_DIM * 1;
+    if (strlen (edl->clip_query) == 0 ||
+        strstr (clip->title, edl->clip_query))
+    {
+      render_clip2 (mrg, edl, clip, x, y, w, h);
+      y += VID_HEIGHT + PAD_DIM * 1;
+    }
   }
 #if 0
   if (edl->active_clip)
@@ -1109,7 +1130,10 @@ void gedl_ui (Mrg *mrg, void *data)
 
   playing_iteration (mrg, edl);
 
-  if (!edl->active_source || edl->active_source->editing == 0)
+  if (!edl->clip_query_edited && (
+                  
+      !edl->active_source   ||
+      edl->active_source->editing == 0))
   {
     mrg_add_binding (mrg, "delete", NULL, NULL, remove_clip, edl);
     mrg_add_binding (mrg, "x", NULL, NULL, remove_clip, edl);
