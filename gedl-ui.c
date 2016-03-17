@@ -11,6 +11,7 @@ clip-db to the separate thread.
 #define _BSD_SOURCE
 #define _DEFAULT_SOURCE
 
+#include <string.h>
 #include <stdio.h>
 #include <mrg.h>
 #include <gegl.h>
@@ -655,10 +656,13 @@ static void clip_end_dec (MrgEvent *event, void *data1, void *data2)
     }
 }
 
+
 static void toggle_edit_source (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
   edl->active_source->editing = !edl->active_source->editing;
+  if (edl->active_source->editing)
+    mrg_set_cursor_pos (event->mrg, strlen (edl->active_source->title));
   changed++;
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -1087,7 +1091,6 @@ void gedl_ui (Mrg *mrg, void *data)
     }
 
   playing_iteration (mrg, edl);
-
 
   if (!edl->active_source || edl->active_source->editing == 0)
   {
