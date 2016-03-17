@@ -1097,7 +1097,7 @@ int main (int argc, char **argv)
     else
     if (!strcmp (argv[i], "-ui"))
     {
-      if (0)
+      if (1)
         thread = g_thread_new ("renderer", preloader, edl);
       return gedl_ui_main (edl, edl2);
     }

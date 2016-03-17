@@ -658,11 +658,10 @@ static void clip_end_dec (MrgEvent *event, void *data1, void *data2)
 static void toggle_edit_source (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-
   edl->active_source->editing = !edl->active_source->editing;
+  changed++;
   mrg_queue_draw (event->mrg, NULL);
 }
-
 
 static void clip_start_inc (MrgEvent *event, void *data1, void *data2)
 {
@@ -867,6 +866,14 @@ static const char *css =
 " document { background: black; }"
 "";
 
+static void update_clip_title (const char *new_string, void *user_data)
+{
+  SourceClip *clip = user_data;
+  if (clip->title)
+          g_free (clip->title);
+  clip->title = g_strdup (new_string);
+}
+
 void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, float w, float h)
 {
     mrg_set_style (mrg, "background: transparent; color: white");
@@ -946,9 +953,10 @@ void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, f
 
     mrg_set_xy (mrg, x, y + 20);
     if (clip->editing)
-      mrg_set_xy (mrg, x + 10, y + 20);
+      mrg_edit_start (mrg, update_clip_title, clip);
     mrg_print (mrg, clip->title);
-
+    if (clip->editing)
+      mrg_edit_end (mrg);
     }
 }
 
@@ -1080,25 +1088,31 @@ void gedl_ui (Mrg *mrg, void *data)
 
   playing_iteration (mrg, edl);
 
-  mrg_add_binding (mrg, "delete", NULL, NULL, remove_clip, edl);
-  mrg_add_binding (mrg, "control-x", NULL, NULL, remove_clip, edl);
-  mrg_add_binding (mrg, "control-d", NULL, NULL, duplicate_clip, edl);
-  mrg_add_binding (mrg, "space", NULL, NULL, toggle_playing, edl);
-  mrg_add_binding (mrg, "control-left", NULL, NULL, nav_left, edl);
-  mrg_add_binding (mrg, "control-right", NULL, NULL, nav_right, edl);
-  mrg_add_binding (mrg, ".", NULL, NULL, clip_end_inc, edl);
-  mrg_add_binding (mrg, "f", NULL, NULL, toggle_fade, edl);
-  mrg_add_binding (mrg, "s", NULL, NULL, save, edl);
-  mrg_add_binding (mrg, "control-a", NULL, NULL, select_all, edl);
-  mrg_add_binding (mrg, "r", NULL, NULL, set_range, edl);
-  mrg_add_binding (mrg, ",", NULL, NULL, clip_end_dec, edl);
-  mrg_add_binding (mrg, "k", NULL, NULL, clip_start_inc, edl);
-  mrg_add_binding (mrg, "l", NULL, NULL, clip_start_dec, edl);
-  mrg_add_binding (mrg, "q", NULL, NULL, (void*)do_quit, mrg);
-  mrg_add_binding (mrg, "shift-right", NULL, NULL, extend_right, edl);
-  mrg_add_binding (mrg, "shift-left", NULL, NULL, extend_left, edl);
-  mrg_add_binding (mrg, "right", NULL, NULL, step_frame, edl);
-  mrg_add_binding (mrg, "left", NULL, NULL, step_frame_back, edl);
+
+  if (!edl->active_source || edl->active_source->editing == 0)
+  {
+    mrg_add_binding (mrg, "delete", NULL, NULL, remove_clip, edl);
+    mrg_add_binding (mrg, "x", NULL, NULL, remove_clip, edl);
+    mrg_add_binding (mrg, "d", NULL, NULL, duplicate_clip, edl);
+    mrg_add_binding (mrg, "f", NULL, NULL, toggle_fade, edl);
+    mrg_add_binding (mrg, "s", NULL, NULL, save, edl);
+    mrg_add_binding (mrg, "a", NULL, NULL, select_all, edl);
+    mrg_add_binding (mrg, "r", NULL, NULL, set_range, edl);
+    mrg_add_binding (mrg, "q", NULL, NULL, (void*)do_quit, mrg);
+    mrg_add_binding (mrg, "space", NULL, NULL, toggle_playing, edl);
+
+    mrg_add_binding (mrg, "control-left", NULL, NULL, nav_left, edl);
+    mrg_add_binding (mrg, "control-right", NULL, NULL, nav_right, edl);
+    mrg_add_binding (mrg, ".", NULL, NULL, clip_end_inc, edl);
+    mrg_add_binding (mrg, ",", NULL, NULL, clip_end_dec, edl);
+    mrg_add_binding (mrg, "alt-left", NULL, NULL, clip_start_inc, edl);
+    mrg_add_binding (mrg, "alt-right", NULL, NULL, clip_start_dec, edl);
+    mrg_add_binding (mrg, "shift-right", NULL, NULL, extend_right, edl);
+    mrg_add_binding (mrg, "shift-left", NULL, NULL, extend_left, edl);
+
+    mrg_add_binding (mrg, "right", NULL, NULL, step_frame, edl);
+    mrg_add_binding (mrg, "left", NULL, NULL, step_frame_back, edl);
+  }
   mrg_add_binding (mrg, "up", NULL, NULL, up, edl);
   mrg_add_binding (mrg, "down", NULL, NULL, down, edl);
 
