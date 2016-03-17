@@ -730,10 +730,10 @@ static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
       edl->scale /= 1.02;
       break;
     case MRG_SCROLL_DIRECTION_LEFT:
-      edl->t0 += 2;
+      edl->t0 += edl->scale * 2;
       break;
     case MRG_SCROLL_DIRECTION_RIGHT:
-      edl->t0 -= 2;
+      edl->t0 -= edl->scale * 2;
       break;
   }
   mrg_queue_draw (event->mrg, NULL);
