@@ -197,8 +197,6 @@ static void clicked_source_clip (MrgEvent *e, void *data1, void *data2)
     edl->active_clip = NULL;
     edl->active_source = clip;
     edl->source_frame_no = e->x;
-    edl->selection_start = edl->frame_no;
-    edl->selection_end = edl->frame_no;
   }
   mrg_queue_draw (e->mrg, NULL);
   prev_sclip = clip;
@@ -221,18 +219,17 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
   changed++;
 }
 
+#include <math.h>
+
 static void drag_source_clip (MrgEvent *e, void *data1, void *data2)
 {
   GeglEDL *edl = data2;
-  edl->source_frame_no = e->x;
-  if (e->x >= edl->selection_start)
-  {
-    edl->selection_end = e->x;
-  }
-  else
-  {
-    edl->selection_start = e->x;
-  }
+  if (fabs(e->delta_x) > 3 ||
+      fabs(e->delta_y) > 3)
+      {
+        fprintf (stderr, "!!!!\n");
+        edl->source_frame_no = e->x;
+      }
   mrg_queue_draw (e->mrg, NULL);
   changed++;
 }
@@ -670,17 +667,6 @@ static void clip_end_dec (MrgEvent *event, void *data1, void *data2)
     }
 }
 
-
-static void toggle_edit_source (MrgEvent *event, void *data1, void *data2)
-{
-  GeglEDL *edl = data1;
-  edl->active_source->editing = !edl->active_source->editing;
-  if (edl->active_source->editing)
-    mrg_set_cursor_pos (event->mrg, strlen (edl->active_source->title));
-  changed++;
-  mrg_queue_draw (event->mrg, NULL);
-}
-
 static void clip_start_inc (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -697,15 +683,32 @@ static void clip_start_inc (MrgEvent *event, void *data1, void *data2)
 static void clip_start_dec (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  if (edl->active_clip)
+  if (edl->active_source)
+  {
+      edl->active_source->start--;
+      edl->frame=-1;
+
+  }
+  else if (edl->active_clip)
     {
       edl->active_clip->start--;
       edl->frame=-1;
-      mrg_event_stop_propagate (event);
-      mrg_queue_draw (event->mrg, NULL);
-      changed++;
     }
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+  changed++;
 }
+
+static void toggle_edit_source (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  edl->active_source->editing = !edl->active_source->editing;
+  if (edl->active_source->editing)
+    mrg_set_cursor_pos (event->mrg, strlen (edl->active_source->title));
+  changed++;
+  mrg_queue_draw (event->mrg, NULL);
+}
+
 
 static void do_quit (MrgEvent *event, void *data1, void *data2)
 {
@@ -931,9 +934,9 @@ void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, f
       cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
     }
 
-    mrg_listen (mrg, MRG_PRESS, clicked_source_clip, clip, edl);
+    mrg_listen (mrg, MRG_DRAG_PRESS, clicked_source_clip, clip, edl);
     mrg_listen (mrg, MRG_DRAG, drag_source_clip, clip, edl);
-    mrg_listen (mrg, MRG_DRAG, released_source_clip, clip, edl);
+    mrg_listen (mrg, MRG_DRAG_RELEASE, released_source_clip, clip, edl);
     cairo_new_path (cr);
 
     cairo_set_source_rgba (cr, 0,0,0,0.75);
