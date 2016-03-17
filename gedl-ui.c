@@ -15,6 +15,7 @@ frames appearing in timeline
 #include "gedl.h"
 
 static GThread *thread;
+static GThread *thread2;
 long babl_ticks (void);
 
 void frob_fade (void*);
@@ -27,10 +28,41 @@ GeglNode *preview_loader;
 
 int rendered_frame = -1;
 int done_frame     = -1;
+
+static gpointer renderer2_thread (gpointer data)
+{
+  GeglEDL *edl = data;
+  for (;;)
+  {
+    if (edl->active_source)
+    {
+        g_usleep (500);
+    }
+    else
+    {
+      if (edl->frame_no != done_frame)
+      {
+        rendered_frame = edl->frame_no;
+        GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
+        gegl_buffer_set_extent (edl->buffer, &ext);
+        rig_frame (edl, edl->frame_no);
+        gegl_node_process (edl->store_buf);
+        done_frame = rendered_frame;
+        MrgRectangle rect = {mrg_width (edl->mrg)/2, 0,
+                             mrg_width (edl->mrg)/2, mrg_height (edl->mrg)/2};
+        mrg_queue_draw (edl->mrg, &rect);
+      }
+      else
+        g_usleep (100);
+    }
+  }
+  return NULL;
+}
+
 static gpointer renderer_thread (gpointer data)
 {
   GeglEDL *edl = data;
-  while (1)
+  for (;;)
   {
     if (edl->active_source)
     {
@@ -52,20 +84,7 @@ static gpointer renderer_thread (gpointer data)
     }
     else
     {
-      if (edl->frame_no != done_frame)
-      {
-        rendered_frame = edl->frame_no;
-        GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
-        gegl_buffer_set_extent (edl->buffer, &ext);
-        rig_frame (edl, edl->frame_no);
-        gegl_node_process (edl->store_buf);
-        done_frame = rendered_frame;
-        MrgRectangle rect = {mrg_width (edl->mrg)/2, 0,
-                             mrg_width (edl->mrg)/2, mrg_height (edl->mrg)/2};
-        mrg_queue_draw (edl->mrg, &rect);
-      }
-      else
-        g_usleep (100);
+        g_usleep (500);
     }
   }
   return NULL;
@@ -1190,6 +1209,7 @@ int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2)
   g_timeout_add (1000, save_idle, edl);
   if (1)
     thread = g_thread_new ("renderer", renderer_thread, edl);
+    thread2 = g_thread_new ("renderer", renderer2_thread, edl);
 
   gedl_get_duration (edl);
 
