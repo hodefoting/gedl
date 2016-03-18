@@ -404,12 +404,13 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
   {
     GList *iter = g_list_find (edl->clip_db, edl->active_source);
     if (iter) iter = iter->next;
-    if (!iter)
-      return;
+    //if (!iter)
+    //  return;
     edl->clip_db = g_list_remove (edl->clip_db, edl->active_source);
     if (iter) edl->active_source = iter->data;
     else
-        edl->active_source = NULL;
+        edl->active_source = g_list_last (edl->clip_db)?
+                             g_list_last (edl->clip_db)->data:NULL;
     edl->frame=-1;
     mrg_event_stop_propagate (event);
     mrg_queue_draw (event->mrg, NULL);
@@ -1159,7 +1160,7 @@ void gedl_ui (Mrg *mrg, void *data)
 
   mrg_set_xy (mrg, 0, 40);
 
-  mrg_printf (mrg, "%i\n", done_frame);
+  mrg_printf (mrg, "%i %i\n", done_frame, rendered_frame);
   if (edl->active_clip)
     {
       char *basename = g_path_get_basename (edl->active_clip->path);
