@@ -6,6 +6,12 @@
 
 /* GEGL edit decision list - a digital video cutter and splicer */
 
+/* take a string and expand {t=v i t=v t=v }  to numeric or string
+   value. Having it that way.. makes it hard to keep parts of graph,.
+   unless graph is kept when constructing... and values are filled in
+   if topology of graphs match..
+ */
+
 #include "gedl.h"
 
 void
@@ -356,6 +362,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
 
       if (clip->filter_graph)
         {
+#if 0
           if (clip->cached_filter_graph &&
                 !strcmp(clip->cached_filter_graph,
                         clip->filter_graph))
@@ -364,12 +371,15 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
             }
           else
             {
+#endif
               remove_in_betweens (edl->nop_raw, edl->nop_transformed);
               gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed /*, clip->clip_frame_no - clip->end, clip->end - clip->start */);
                 if (clip->cached_filter_graph)
                   g_free (clip->cached_filter_graph);
                 clip->cached_filter_graph = g_strdup (clip->filter_graph);
+#if 0
             }
+#endif
          }
        else
          {
@@ -389,7 +399,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
                         //gedl_get_clip2_path (edl), gedl_get_clip2_frame_no (edl), clip2->filter_graph,
                         "aaa", 3, "bbb",
                         edl->video_width, edl->video_height, 
-                        edl->mix);
+                        0.0/*edl->mix*/);
 
         hash = g_checksum_new (G_CHECKSUM_MD5);
         g_checksum_update (hash, (void*)frame_recipe, -1);
@@ -897,19 +907,19 @@ GeglEDL *gedl_new_from_path (const char *path)
 }
 const char *gedl_get_clip_path (GeglEDL *edl)
 {
-  return edl->clip->clip_path;
+  return edl->clip?edl->clip->clip_path:"";
 }
 int gedl_get_clip_frame_no    (GeglEDL *edl)
 {
-  return edl->clip->clip_frame_no;
+  return edl->clip?edl->clip->clip_frame_no:0;
 }
 const char *gedl_get_clip2_path          (GeglEDL *edl)
 {
-  return edl->clip2->clip_path;
+  return edl->clip2?edl->clip2->clip_path:"";
 }
 int gedl_get_clip2_frame_no      (GeglEDL *edl)
 {
-  return edl->clip2->clip_frame_no;
+  return edl->clip2?edl->clip2->clip_frame_no:0;
 }
 static void setup (GeglEDL *edl)
 {

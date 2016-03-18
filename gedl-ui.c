@@ -936,6 +936,7 @@ static void update_clip_title (const char *new_string, void *user_data)
   if (clip->title)
           g_free (clip->title);
   clip->title = g_strdup (new_string);
+  changed++;
 }
 
 static void update_query (const char *new_string, void *user_data)
@@ -943,6 +944,7 @@ static void update_query (const char *new_string, void *user_data)
   GeglEDL *edl = user_data;
   if (edl->clip_query)
     g_free (edl->clip_query);
+  changed++;
   edl->clip_query = g_strdup (new_string);
 }
 
@@ -952,6 +954,11 @@ static void update_filter (const char *new_string, void *user_data)
   if (edl->active_clip->filter_graph)
     g_free (edl->active_clip->filter_graph);
   edl->active_clip->filter_graph = g_strdup (new_string);
+  changed++;
+  edl->frame=-1;
+  done_frame=-1;
+  rendered_frame=-1;
+  mrg_queue_draw (edl->mrg, NULL);
 }
 
 void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, float w, float h)
@@ -1134,6 +1141,14 @@ void gedl_ui (Mrg *mrg, void *data)
       mrg_printf (mrg, "%s\n%i %i\n", basename,
                                      edl->active_clip->start, edl->active_clip->end);
       g_free (basename);
+
+        mrg_printf (mrg, "%s %s %i %s %s %i %s %ix%i %f",
+          "gedl-pre-3", gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl), edl->clip?edl->clip->filter_graph:"-",
+                        //gedl_get_clip2_path (edl), gedl_get_clip2_frame_no (edl), clip2->filter_graph,
+                        "aaa", 3, "bbb",
+                        edl->video_width, edl->video_height, 
+                        0.0/*edl->mix*/);
+
 
     if (edl->active_clip->filter_graph)
     {
