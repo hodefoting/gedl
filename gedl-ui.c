@@ -342,6 +342,32 @@ static void extend_right (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
   changed++;
 }
+static Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame);
+
+static void insert (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+
+  if (edl->active_source)
+  {
+    GList *iter = g_list_find (edl->clip_db, edl->active_source);
+    Clip *clip = clip_new_full (edl->active_source->path, edl->active_source->start, edl->active_source->end);
+    if (edl->active_source->title)
+      clip->title = g_strdup (edl->active_source->title);
+    
+    iter = g_list_find (edl->clips, edl_get_clip_for_frame (edl, edl->frame_no));
+    edl->clips = g_list_insert_before (edl->clips, iter, clip);
+
+    edl->active_clip = clip;
+    edl->active_source = NULL;
+    edl->frame=-1;
+    mrg_event_stop_propagate (event);
+    mrg_queue_draw (event->mrg, NULL);
+    changed++;
+    return;
+  }
+  changed++;
+}
 
 static void extend_left (MrgEvent *event, void *data1, void *data2)
 {
@@ -537,7 +563,6 @@ static void set_range (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
-static Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame);
 
 
 static void up (MrgEvent *event, void *data1, void *data2)
@@ -1134,11 +1159,13 @@ void gedl_ui (Mrg *mrg, void *data)
 
   mrg_set_xy (mrg, 0, 40);
 
+  mrg_printf (mrg, "%i\n", done_frame);
   if (edl->active_clip)
     {
       char *basename = g_path_get_basename (edl->active_clip->path);
       mrg_printf (mrg, "%i\n", edl->frame_no);
-      mrg_printf (mrg, "%s\n%i %i\n", basename,
+      mrg_printf (mrg, "%s %i\n%i %i\n", basename,
+                                     gedl_get_clip_frame_no (edl),
                                      edl->active_clip->start, edl->active_clip->end);
       g_free (basename);
 
@@ -1150,8 +1177,8 @@ void gedl_ui (Mrg *mrg, void *data)
                         0.0/*edl->mix*/);
 
 
-    if (edl->active_clip->filter_graph)
-    {
+      if (edl->active_clip->filter_graph)
+      {
         if (edl->filter_edited)
         {
           mrg_edit_start (mrg, update_filter, edl);
@@ -1160,8 +1187,14 @@ void gedl_ui (Mrg *mrg, void *data)
         }
         else 
           mrg_printf (mrg, " %s", edl->active_clip->filter_graph);
+      }
     }
-    }
+  if (edl->active_source)
+  {
+    char *basename = g_path_get_basename (edl->active_source->path);
+    mrg_printf (mrg, "%i\n", edl->source_frame_no);
+    mrg_printf (mrg, "%s\n", basename);
+  }
 
   //mrg_printf (mrg, "%i %i %i %i %i\n", edl->frame, edl->frame_no, edl->source_frame_no, rendered_frame, done_frame);
 
@@ -1179,11 +1212,11 @@ void gedl_ui (Mrg *mrg, void *data)
   if (!edl->clip_query_edited &&
       !edl->filter_edited 
                   && (
-                  
       !edl->active_source   ||
       edl->active_source->editing == 0))
   {
     mrg_add_binding (mrg, "delete", NULL, NULL, remove_clip, edl);
+    mrg_add_binding (mrg, "i", NULL, NULL, insert, edl);
     mrg_add_binding (mrg, "x", NULL, NULL, remove_clip, edl);
     mrg_add_binding (mrg, "d", NULL, NULL, duplicate_clip, edl);
     mrg_add_binding (mrg, "f", NULL, NULL, toggle_fade, edl);
