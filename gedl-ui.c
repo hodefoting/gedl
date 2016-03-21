@@ -1159,6 +1159,11 @@ void gedl_ui (Mrg *mrg, void *data)
   draw_clips (mrg, edl, 10, mrg_height(mrg)/2 + VID_HEIGHT + PAD_DIM * 5, mrg_width(mrg) - 20, mrg_height(mrg)/2 - VID_HEIGHT + PAD_DIM * 5);
 
   mrg_set_xy (mrg, 0, 40);
+  {
+    GeglRectangle rect;
+    rect = gegl_node_get_bounding_box (o->edl->cached_result);
+    mrg_printf (mrg, "%ix%i\n", rect.width, rect.height);
+  }
 
   mrg_printf (mrg, "%i %i\n", done_frame, rendered_frame);
   if (edl->active_clip)
@@ -1170,7 +1175,7 @@ void gedl_ui (Mrg *mrg, void *data)
                                      edl->active_clip->start, edl->active_clip->end);
       g_free (basename);
 
-        mrg_printf (mrg, "%s %s %i %s %s %i %s %ix%i %f",
+      if(0)  mrg_printf (mrg, "%s %s %i %s %s %i %s %ix%i %f",
           "gedl-pre-3", gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl), edl->clip?edl->clip->filter_graph:"-",
                         //gedl_get_clip2_path (edl), gedl_get_clip2_frame_no (edl), clip2->filter_graph,
                         "aaa", 3, "bbb",

@@ -824,31 +824,11 @@ GeglEDL *gedl_new_from_string (const char *string)
     }
   gedl_set_size (edl, edl->video_width, edl->video_height);
 
+  //gedl_update_video_size (edl);
+  //gedl_set_size (edl, edl->video_width, edl->video_height);
+
   return edl;
 }
-
-#if 0
-void gedl_load_path (GeglEDL *edl, const char *path)
-{
-  gchar *string = NULL;
-
-  if (edl->path)
-    g_free (edl->path);
-  edl->path = g_strdup (path);
-  edl->video_width = DEFAULT_video_width;
-  edl->video_height = DEFAULT_video_height;
-
-  FILE *file = fopen (path, "r");
-  if (file)
-    {
-       char line [4096];
-       while (fgets (line, sizeof (line), file))
-         gedl_parse_line (edl, line);
-       fclose (file);
-    }
-}
-#endif
-
 void gedl_save_path (GeglEDL *edl, const char *path)
 {
   char *serialized;
@@ -900,8 +880,6 @@ GeglEDL *gedl_new_from_path (const char *path)
   {
     edl = gedl_new_from_string (string);
     g_free (string);
-    gedl_update_video_size (edl);
-    gedl_set_size (edl, edl->video_width, edl->video_height);
     if (!edl->path)
       edl->path = g_strdup (path);
   }
@@ -962,7 +940,6 @@ static void setup (GeglEDL *edl)
   gegl_node_link_many (edl->result, edl->encode, NULL); 
   gegl_node_link_many (edl->load_buf, edl->scale_size, edl->nop_raw, edl->nop_transformed, edl->crop, NULL); 
   gegl_node_link_many (edl->load_buf2, edl->scale_size2, edl->nop_raw2, edl->nop_transformed2, edl->opacity, edl->crop2,  NULL); 
-
   gegl_node_connect_to (edl->result, "output", edl->store_buf, "input");
   gegl_node_connect_to (edl->nop_raw, "output", edl->nop_transformed, "input");
   gegl_node_connect_to (edl->nop_raw2, "output", edl->nop_transformed2, "input");
@@ -1157,24 +1134,27 @@ char *gedl_serialise (GeglEDL *edl)
   if (edl->selection_end != DEFAULT_selection_end)
     g_string_append_printf (ser, "selection-end=%i\n",  edl->selection_end);
 
+  g_string_append_printf (ser, "fps=%f\n", gedl_get_fps (edl));
+
   if (edl->range_start != DEFAULT_range_start)
     g_string_append_printf (ser, "range-start=%i\n",  edl->range_start);
   if (edl->range_end != DEFAULT_range_end)
     g_string_append_printf (ser, "range-end=%i\n", edl->range_end);
 
-  if (edl->scale != 1.0)//DEFAULT_range_end)
+  if (edl->scale != 1.0)
     g_string_append_printf (ser, "frame-scale=%f\n", edl->scale);
-  if (edl->t0 != 1.0)//DEFAULT_range_end)
+  if (edl->t0 != 1.0)
     g_string_append_printf (ser, "t0=%f\n", edl->t0);
   g_string_append_printf (ser, "frame-no=%i\n", edl->frame_no);
   
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
-    g_string_append_printf (ser, "%s %d %d%s%s%s%s\n", clip->path, clip->start, clip->end,
+    g_string_append_printf (ser, "%s %d %d%s%s%s%s%s\n", clip->path, clip->start, clip->end,
         clip->fade_out?" [fade]":"", 
         (edl->active_clip == clip)?" [active]":"", 
-        clip->filter_graph?" -- ":"",clip->filter_graph?clip->filter_graph:"");
+        clip->filter_graph?" -- ":"",clip->filter_graph?clip->filter_graph:"",
+        clip->filter_graph?"\n":"\n");
  
   }
   g_string_append_printf (ser, "-----\n");
