@@ -896,7 +896,6 @@ void gedl_draw (Mrg     *mrg,
   t = 0;
 
   cairo_set_source_rgba (cr, 1, 1,1, 1);
-  cairo_set_font_size (cr, 10.0);
   y += PAD_DIM * 2;
   cairo_move_to (cr, x0 + PAD_DIM, y + VID_HEIGHT + PAD_DIM * 3);
   //cairo_show_text (cr, edl->path);
@@ -963,6 +962,16 @@ static void update_clip_title (const char *new_string, void *user_data)
           g_free (clip->title);
   clip->title = g_strdup (new_string);
   changed++;
+}
+
+
+static void edit_filter_graph (MrgEvent *event, void *data1, void *data2)
+{ //XXX
+  GeglEDL *edl = data1;
+
+  //edl->active_source = NULL;
+  edl->filter_edited = TRUE;
+  mrg_queue_draw (event->mrg, NULL);
 }
 
 static void update_query (const char *new_string, void *user_data)
@@ -1159,6 +1168,7 @@ void gedl_ui (Mrg *mrg, void *data)
   draw_clips (mrg, edl, 10, mrg_height(mrg)/2 + VID_HEIGHT + PAD_DIM * 5, mrg_width(mrg) - 20, mrg_height(mrg)/2 - VID_HEIGHT + PAD_DIM * 5);
 
   mrg_set_xy (mrg, 0, 40);
+  mrg_set_edge_right (mrg, mrg_width (mrg) * 0.25 - 8);
   {
     GeglRectangle rect;
     rect = gegl_node_get_bounding_box (o->edl->cached_result);
@@ -1192,7 +1202,10 @@ void gedl_ui (Mrg *mrg, void *data)
           mrg_edit_end (mrg);
         }
         else 
+          mrg_text_listen (mrg, MRG_PRESS, 
+                           edit_filter_graph, edl, NULL);
           mrg_printf (mrg, " %s", edl->active_clip->filter_graph);
+          mrg_text_listen_done (mrg);
       }
     }
   if (edl->active_source)
