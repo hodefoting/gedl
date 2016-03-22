@@ -569,6 +569,8 @@ static void set_range (MrgEvent *event, void *data1, void *data2)
 static void up (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
+  if (edl->active_clip && edl->filter_edited)
+    return;
   if (edl->clip_query_edited)
   {
     edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
@@ -626,6 +628,8 @@ static void up (MrgEvent *event, void *data1, void *data2)
 static void down (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
+  if (edl->active_clip && edl->filter_edited)
+    return;
   if (edl->clip_query_edited)
   {
     edl->active_source = edl->clip_db->data;
@@ -1202,10 +1206,12 @@ void gedl_ui (Mrg *mrg, void *data)
           mrg_edit_end (mrg);
         }
         else 
+        {
           mrg_text_listen (mrg, MRG_PRESS, 
                            edit_filter_graph, edl, NULL);
           mrg_printf (mrg, " %s", edl->active_clip->filter_graph);
           mrg_text_listen_done (mrg);
+        }
       }
     }
   if (edl->active_source)
