@@ -14,6 +14,9 @@ frames appearing in timeline
 #include <gegl.h>
 #include "gedl.h"
 
+
+#define SPLIT_VER  0.8
+
 static GThread *thread;
 static GThread *thread2;
 long babl_ticks (void);
@@ -49,7 +52,7 @@ static gpointer renderer2_thread (gpointer data)
         gegl_node_process (edl->store_buf);
         done_frame = rendered_frame;
         MrgRectangle rect = {mrg_width (edl->mrg)/2, 0,
-                             mrg_width (edl->mrg)/2, mrg_height (edl->mrg)/2};
+                             mrg_width (edl->mrg)/2, mrg_height (edl->mrg) * SPLIT_VER};
         mrg_queue_draw (edl->mrg, &rect);
       }
       else
@@ -76,7 +79,7 @@ static gpointer renderer_thread (gpointer data)
         gegl_node_process (edl->source_store_buf);
         done_frame = rendered_frame;
         MrgRectangle rect = {mrg_width (edl->mrg)/2, 0,
-                             mrg_width (edl->mrg)/2, mrg_height (edl->mrg)/2};
+                             mrg_width (edl->mrg)/2, mrg_height (edl->mrg) * SPLIT_VER};
         mrg_queue_draw (edl->mrg, &rect);
       }
       else
@@ -436,6 +439,37 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
   changed++;
 }
+
+static void split_clip (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  if (!edl->active_clip)
+    return;
+
+  fprintf (stderr, ">%i( x=%f)<\n", gedl_get_clip_frame_no (edl), event->x);
+
+  return;
+  {
+    GList *iter = g_list_find (edl->clips, edl->active_clip);
+    Clip *oldclip = edl->active_clip;
+    Clip *clip = clip_new_full (edl->active_clip->path, edl->active_clip->start, edl->active_clip->end);
+    edl->clips = g_list_insert_before (edl->clips, iter, clip);
+    frob_fade (edl->active_clip);
+    if (edl->active_clip->filter_graph)
+      clip->filter_graph = g_strdup (edl->active_clip->filter_graph);
+    edl->active_clip = clip;
+
+    // XXX compute frame time for x..
+
+   // XXX : adjust for splitting
+    frob_fade (edl->active_clip);
+  }
+  edl->frame=-1;
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+  changed++;
+}
+
 static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -974,7 +1008,7 @@ static void edit_filter_graph (MrgEvent *event, void *data1, void *data2)
   GeglEDL *edl = data1;
 
   //edl->active_source = NULL;
-  edl->filter_edited = TRUE;
+  edl->filter_edited = !edl->filter_edited;
   mrg_queue_draw (event->mrg, NULL);
 }
 
@@ -1165,11 +1199,11 @@ void gedl_ui (Mrg *mrg, void *data)
   cairo_paint (mrg_cr (mrg));
 
   mrg_gegl_blit (mrg, (int)(mrg_width (mrg) * 0.25), 0,
-                      (int)(mrg_width (mrg) * 0.75), mrg_height (mrg)/2,
+                      (int)(mrg_width (mrg) * 0.75), mrg_height (mrg) * SPLIT_VER,
                       o->edl->cached_result, 0,0);
 
-  gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg)/2, edl->scale, edl->t0);
-  draw_clips (mrg, edl, 10, mrg_height(mrg)/2 + VID_HEIGHT + PAD_DIM * 5, mrg_width(mrg) - 20, mrg_height(mrg)/2 - VID_HEIGHT + PAD_DIM * 5);
+  gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg) * SPLIT_VER, edl->scale, edl->t0);
+  draw_clips (mrg, edl, 10, mrg_height(mrg) * SPLIT_VER + VID_HEIGHT + PAD_DIM * 5, mrg_width(mrg) - 20, mrg_height(mrg) * SPLIT_VER - VID_HEIGHT + PAD_DIM * 5);
 
   mrg_set_xy (mrg, 0, 40);
   mrg_set_edge_right (mrg, mrg_width (mrg) * 0.25 - 8);
@@ -1209,9 +1243,16 @@ void gedl_ui (Mrg *mrg, void *data)
         {
           mrg_text_listen (mrg, MRG_PRESS, 
                            edit_filter_graph, edl, NULL);
-          mrg_printf (mrg, " %s", edl->active_clip->filter_graph);
+          if (edl->active_clip->filter_graph && strlen (edl->active_clip->filter_graph) > 2)
+            mrg_printf (mrg, " %s", edl->active_clip->filter_graph);
+          else
+            mrg_printf (mrg, " %s", "[click to add filter]\n");
           mrg_text_listen_done (mrg);
         }
+      }
+      else
+      {
+        mrg_printf (mrg, " %s", "[click to add filter]\n");
       }
     }
   if (edl->active_source)
@@ -1244,6 +1285,7 @@ void gedl_ui (Mrg *mrg, void *data)
     mrg_add_binding (mrg, "i", NULL, NULL, insert, edl);
     mrg_add_binding (mrg, "x", NULL, NULL, remove_clip, edl);
     mrg_add_binding (mrg, "d", NULL, NULL, duplicate_clip, edl);
+    mrg_add_binding (mrg, "v", NULL, NULL, split_clip, edl);
     mrg_add_binding (mrg, "f", NULL, NULL, toggle_fade, edl);
     mrg_add_binding (mrg, "s", NULL, NULL, save, edl);
     mrg_add_binding (mrg, "a", NULL, NULL, select_all, edl);
@@ -1268,6 +1310,8 @@ void gedl_ui (Mrg *mrg, void *data)
 
   if (edl->active_source)
     mrg_add_binding (mrg, "return", NULL, NULL, toggle_edit_source, edl);
+  if (edl->filter_edited)
+    mrg_add_binding (mrg, "return", NULL, NULL, edit_filter_graph, edl);
 }
 
 gpointer renderer_main (gpointer data)

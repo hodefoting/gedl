@@ -322,8 +322,8 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
           edl->clip2 = clip2;
           edl->mix = (clip->end - clip->clip_frame_no) * 1.0 / clip->fade_pad_end;
           edl->mix = (1.0 - edl->mix) / 2.0;
-
-#if 1
+#define CACHE_FILTER 1
+#if CACHE_FILTER
       //  if (edl->source[1]->clip_path == NULL || strcmp (clip_get_path (clip2), edl->source[1]->clip_path))
            {
              gegl_node_set (clip2->loader, "operation", clip2->is_image?"gegl:load":"gegl:ff-load", "path", clip2->clip_path, NULL);
@@ -341,7 +341,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
           edl->mix = (clip->fade_pad_start - (clip->clip_frame_no - clip->start) ) * 1.0 / clip->fade_pad_start;
            edl->mix /= 2.0;
 
-#if 1
+#if CACHE_FILTER
       //     if (edl->source[1]->clip_path == NULL || strcmp (clip_get_path (clip2), edl->source[1]->clip_path))
              {
                gegl_node_set (clip2->loader, "operation", clip2->is_image?"gegl:load":"gegl:ff-load", "path", clip2->clip_path, NULL);
@@ -364,7 +364,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
 
       if (clip->filter_graph)
         {
-#if 0
+#if CACHE_FILTER
           if (clip->cached_filter_graph &&
                 !strcmp(clip->cached_filter_graph,
                         clip->filter_graph))
@@ -378,9 +378,8 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
               gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip->clip_frame_no /*, clip->clip_frame_no - clip->end, clip->end - clip->start */);
                 if (clip->cached_filter_graph)
                   g_free (clip->cached_filter_graph);
-                //clip->cached_filter_graph = g_strdup (clip->filter_graph);
-                clip->cached_filter_graph = NULL;//g_strdup (clip->filter_graph);
-#if 0
+                clip->cached_filter_graph = g_strdup (clip->filter_graph);
+#if CACHE_FILTER
             }
 #endif
          }
@@ -775,12 +774,15 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
    */
 }
 
+#include <string.h>
+
 GeglEDL *gedl_new_from_string (const char *string);
 GeglEDL *gedl_new_from_string (const char *string)
 {
   GString *line = g_string_new ("");
   GeglEDL *edl = gedl_new ();
   int clips_done = 0;
+  int newlines = 0;
 
   for (const char *p = string; p==string || *(p-1); p++)
   {
@@ -792,17 +794,43 @@ GeglEDL *gedl_new_from_string (const char *string)
        {
          if (line->len > 2)
            gedl_parse_clip (edl, line->str);
+         g_string_assign (line, "");
        }
        else
        {
          if (line->str[0] == '-' &&
              line->str[1] == '-' &&
              line->str[2] == '-')
+         {
            clips_done = 1;
+           g_string_assign (line, "");
+         }
          else
-           gedl_parse_line (edl, line->str);
+         {
+           if (*p == 0)
+           {
+             newlines = 2;
+           }
+           else if (*p == '\n')
+           {
+             newlines ++;
+           }
+           else
+           {
+             newlines = 0;
+           }
+           if (strchr (line->str, '='))
+             newlines = 3;
+
+           if (newlines >= 2)
+           {
+             gedl_parse_line (edl, line->str);
+             g_string_assign (line, "");
+           }
+           else
+             g_string_append_c (line, *p);
+         }
        }
-       g_string_assign (line, "");
        break;
       default: g_string_append_c (line, *p);
        break;
