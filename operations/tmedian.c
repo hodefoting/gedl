@@ -137,14 +137,14 @@ process (GeglOperation       *operation,
           avg2[c] /= (TEMP_BUFS - 1 - 2);
 
 #define ACC(a) acc[a][i*4+c]
-          if (ACC(0) > avg[c]) 
+          if (fabs (ACC(0) - avg[c]) > 0.05)
             ACC(0) = avg2[c];
         }
       }
 
     i = 0;
 
-    for (y = result->y; y < result->y + result->height; y++)
+    for (y = result->y; y < result->y + result->height-1; y++)
       for (x = result->x; x < result->x + result->width; x++)
       {
         int c;
@@ -158,21 +158,22 @@ process (GeglOperation       *operation,
         diff = sqrtf (diff);
         if (diff > 0.02f)
         {
-          if (last_set[x] < 2) /* permit up to two pixels wide artifacts */
+          if (last_set[x] < 1) /* permit up to two pixels wide artifacts */
           {
             if (y > 1)
             for (c = 0; c < 4; c++)
-              buf[i * 4 + c] = acc[0][i * 4 + c] * 0.1 + buf[(i-result->width) * 4 + c] * 0.9;
+              buf[i * 4 + c] = acc[0][i * 4 + c] * 0.2 + buf[(i-result->width) * 4 + c] * 0.4 + buf[(i-result->width) * 4 + c] * 0.4;
             else
             for (c = 0; c < 4; c++)
               buf[i * 4 + c] = acc[0][i * 4 + c];
             last_set[x]++;
           }
-          else if (last_set[x] > 4)
+          else if (last_set[x] > 1)
           {
             if (y > 1)
             for (c = 0; c < 4; c++)
-              buf[i * 4 + c] = buf[(i-result->width) * 4 + c];
+              buf[i * 4 + c] = acc[0][i * 4 + c] * 0.2 + buf[(i-result->width) * 4 + c] * 0.4 + buf[(i-result->width) * 4 + c] * 0.4;
+
             else
             for (c = 0; c < 4; c++)
               buf[i * 4 + c] = acc[0][i * 4 + c];
@@ -213,6 +214,7 @@ process (GeglOperation       *operation,
     gegl_buffer_set (output, result, 0, babl_format ("RGBA float"), buf, GEGL_AUTO_ROWSTRIDE);
     for (i = 0; i < TEMP_BUFS; i++)
       g_free (acc[i]);
+    g_free (buf);
   }
 
   return  TRUE;

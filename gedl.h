@@ -2,6 +2,7 @@
 #define GEDL_H
 
 typedef struct _GeglEDL GeglEDL;
+typedef struct _Clip    Clip;
 
 int         gegl_make_thumb_video (const char *path, const char *thumb_path);
 const char *compute_cache_path    (const char *path);
@@ -28,6 +29,7 @@ GeglEDL    *gedl_new_from_path      (const char *path);
 void        gedl_load_path          (GeglEDL    *edl, const char *path);
 void        gedl_save_path          (GeglEDL    *edl, const char *path);
 GeglAudioFragment  *gedl_get_audio  (GeglEDL    *edl);
+Clip       *gedl_get_clip (GeglEDL *edl, int frame, int *clip_frame_no);
 GeglBuffer *gedl_get_buffer         (GeglEDL    *edl);
 GeglBuffer *gedl_get_buffer2        (GeglEDL    *edl);
 double gedl_get_mix                 (GeglEDL    *edl);
@@ -63,7 +65,7 @@ typedef struct SourceClip
   int   editing;
 } SourceClip;
 
-typedef struct Clip
+struct _Clip
 {
   char  *path;  /*path to media file */
   int    start; /*frame number starting with 0 */
@@ -93,7 +95,7 @@ typedef struct Clip
   char              *cached_filter_graph;
 
   GMutex             mutex;
-} Clip;
+};
 
 
 /*

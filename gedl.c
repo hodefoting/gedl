@@ -273,6 +273,28 @@ static void rig_filters (GeglEDL *edl, Clip *clip, Clip *clip2, int frame_no)
 }
 #endif
 
+Clip *gedl_get_clip (GeglEDL *edl, int frame, int *clip_frame_no)
+{
+  GList *l;
+  int clip_start = 0;
+
+  for (l = edl->clips; l; l = l->next)
+  {
+    Clip *clip = l->data;
+    int clip_frames = clip_get_frames (clip);
+
+    if (frame - clip_start < clip_frames)
+    {
+      /* found right clip */
+      if (clip_frame_no)
+       *clip_frame_no = (frame - clip_start) + clip_get_start (clip);
+      return clip;
+    }
+    clip_start += clip_frames;
+  }
+  return NULL;
+}
+
 void gedl_set_frame         (GeglEDL *edl, int    frame)
 {
   GList *l;
@@ -322,7 +344,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
           edl->clip2 = clip2;
           edl->mix = (clip->end - clip->clip_frame_no) * 1.0 / clip->fade_pad_end;
           edl->mix = (1.0 - edl->mix) / 2.0;
-#define CACHE_FILTER 1
+#define CACHE_FILTER 0
 #if CACHE_FILTER
       //  if (edl->source[1]->clip_path == NULL || strcmp (clip_get_path (clip2), edl->source[1]->clip_path))
            {
@@ -374,8 +396,14 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
           else
             {
 #endif
+              GError *error = NULL;
               remove_in_betweens (edl->nop_raw, edl->nop_transformed);
-              gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip->clip_frame_no /*, clip->clip_frame_no - clip->end, clip->end - clip->start */);
+              gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip->clip_frame_no /*, clip->clip_frame_no - clip->end, clip->end - clip->start */, &error);
+              if (error)
+              {
+                fprintf (stderr, "%s\n", error->message);
+                g_error_free (error);
+              }
                 if (clip->cached_filter_graph)
                   g_free (clip->cached_filter_graph);
                 clip->cached_filter_graph = g_strdup (clip->filter_graph);

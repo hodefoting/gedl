@@ -446,12 +446,18 @@ static void split_clip (MrgEvent *event, void *data1, void *data2)
   if (!edl->active_clip)
     return;
 
-  fprintf (stderr, ">%i( x=%f)<\n", gedl_get_clip_frame_no (edl), event->x);
+  fprintf (stderr, ">%i( x=%i)<\n", gedl_get_clip_frame_no (edl), edl->frame_no);
+    // XXX compute frame time for x..
+    {
+      int clip_frame_no = 0;
+      Clip *clip = gedl_get_clip (edl, edl->frame_no, &clip_frame_no);
+      fprintf (stderr, "]%i( x=%i)< %p\n", clip_frame_no, edl->frame_no, clip);
+    }
 
   return;
   {
     GList *iter = g_list_find (edl->clips, edl->active_clip);
-    Clip *oldclip = edl->active_clip;
+    //Clip *oldclip = edl->active_clip;
     Clip *clip = clip_new_full (edl->active_clip->path, edl->active_clip->start, edl->active_clip->end);
     edl->clips = g_list_insert_before (edl->clips, iter, clip);
     frob_fade (edl->active_clip);
@@ -459,7 +465,6 @@ static void split_clip (MrgEvent *event, void *data1, void *data2)
       clip->filter_graph = g_strdup (edl->active_clip->filter_graph);
     edl->active_clip = clip;
 
-    // XXX compute frame time for x..
 
    // XXX : adjust for splitting
     frob_fade (edl->active_clip);
