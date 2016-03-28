@@ -233,46 +233,6 @@ GeglEDL *edl2;
 
 void frob_fade (GeglEDL *edl, Clip *clip);
 
-#if 0
-static void rig_filters (GeglEDL *edl, Clip *clip, Clip *clip2, int frame_no)
-{
-  /* create filter graph if a secondary clip is in use */
-  if (edl->mix != 0.0 && clip2 && clip2->filter_graph)
-    {
-      if (clip2->cached_filter_graph &&
-          !strcmp(clip2->cached_filter_graph,
-                  clip2->filter_graph))
-        {
-          /* reuse previous filter graph (when proeprty tweening arrives, should compute frame
-                                          for tweening) */
-        }
-      else
-       {
-         remove_in_betweens (edl->nop_raw2, edl->nop_transformed2);
-         gegl_create_chain (clip2->filter_graph, edl->nop_raw2, edl->nop_transformed2
-                            /*,
-                            clip2->clip_frame_no - clip2->end,
-                            clip2->end - clip2->start*/);
-
-         if (clip2->cached_filter_graph)
-           g_free (clip2->cached_filter_graph);
-         clip2->cached_filter_graph = g_strdup (clip2->filter_graph);
-       }
-    }
-   else
-    {
-      remove_in_betweens (edl->nop_raw2, edl->nop_transformed2);
-      if (clip2)
-      {
-        if (clip2->cached_filter_graph)
-          g_free (clip2->cached_filter_graph);
-        clip2->cached_filter_graph = NULL;
-      }
-      gegl_node_link_many (edl->nop_raw2, edl->nop_transformed2, NULL);
-    }
-}
-#endif
-
 Clip *gedl_get_clip (GeglEDL *edl, int frame, int *clip_frame_no)
 {
   GList *l;
