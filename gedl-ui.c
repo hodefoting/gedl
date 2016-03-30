@@ -166,7 +166,7 @@ foo++;
 
 }
 
-int renderer_pos = 0;
+int renderer_pos   = 0;
 int renderer_start = 0;
 int renderer_end   = 0;
 static void renderer_set_range (int start, int end)
@@ -225,7 +225,6 @@ static void clicked_source_clip (MrgEvent *e, void *data1, void *data2)
   changed++;
 }
 
-//void rig_frame (int frame_no);
 static void clicked_clip (MrgEvent *e, void *data1, void *data2)
 {
   Clip *clip = data1;
@@ -1318,8 +1317,10 @@ void gedl_ui (Mrg *mrg, void *data)
 
   if (edl->active_source)
     mrg_add_binding (mrg, "return", NULL, NULL, toggle_edit_source, edl);
-  if (edl->filter_edited)
+  else //if (edl->filter_edited)
     mrg_add_binding (mrg, "return", NULL, NULL, edit_filter_graph, edl);
+
+
 }
 
 gpointer renderer_main (gpointer data)
