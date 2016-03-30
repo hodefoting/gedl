@@ -72,9 +72,22 @@ const char *clip_get_path (Clip *clip)
 }
 void clip_set_path (Clip *clip, const char *path)
 {
+  if (clip->path && !strcmp (clip->path ,path))
+    return;
   if (clip->path)
     g_free (clip->path);
   clip->path = g_strdup (path);
+  if (strstr (path, "jpg") ||
+      strstr (path, "png"))
+  {
+    g_object_set (clip->loader, "operation", "gegl:load", NULL);
+    gegl_node_set (clip->loader, "path", path, NULL);
+  }
+  else
+  {
+    g_object_set (clip->loader, "operation", "gegl:ff-load", NULL);
+    gegl_node_set (clip->loader, "path", path, NULL);
+  }
   gegl_node_set (clip->loader, "path", path, NULL);
 }
 int clip_get_start (Clip *clip)
@@ -384,8 +397,8 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
 #endif
         /**********************************************************************/
 
-        frame_recipe = g_strdup_printf ("%s: %s %s %i %s %s %i %s %ix%i %f",
-          "gedl-pre-3", clip_path, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl) * 0, gegl_node_to_xml (edl->result, NULL),
+        frame_recipe = g_strdup_printf ("%s: %s %s %i %s %s %s %i %s %ix%i %f",
+          "gedl-pre-3", clip_path, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl) * 0, gegl_node_to_xml (edl->result, NULL), gegl_node_to_xml (clip->loader, NULL),
                         //gedl_get_clip2_path (edl), gedl_get_clip2_frame_no (edl), clip2->filter_graph,
                         "aaa", 3, "bbb",
                         edl->video_width, edl->video_height, 
