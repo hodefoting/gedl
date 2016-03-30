@@ -304,7 +304,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
           edl->clip2 = clip2;
           edl->mix = (clip->end - clip->clip_frame_no) * 1.0 / clip->fade_pad_end;
           edl->mix = (1.0 - edl->mix) / 2.0;
-#define CACHE_FILTER 0
+//#define CACHE_FILTER 0
 #if CACHE_FILTER
       //  if (edl->source[1]->clip_path == NULL || strcmp (clip_get_path (clip2), edl->source[1]->clip_path))
            {
@@ -385,7 +385,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
         /**********************************************************************/
 
         frame_recipe = g_strdup_printf ("%s: %s %s %i %s %s %i %s %ix%i %f",
-          "gedl-pre-3", clip_path, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl), clip->filter_graph,
+          "gedl-pre-3", clip_path, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl) * 0, gegl_node_to_xml (edl->result, NULL),
                         //gedl_get_clip2_path (edl), gedl_get_clip2_frame_no (edl), clip2->filter_graph,
                         "aaa", 3, "bbb",
                         edl->video_width, edl->video_height, 
