@@ -32,6 +32,14 @@ GeglNode *preview_loader;
 int rendering_frame = -1;
 int done_frame     = -1;
 
+static void gedl_cache_invalid (GeglEDL *edl)
+{
+  edl->frame = -1;
+  done_frame=-1;
+  rendering_frame=-1;
+  changed++;
+}
+
 static gpointer renderer2_thread (gpointer data)
 {
   GeglEDL *edl = data;
@@ -48,7 +56,10 @@ static gpointer renderer2_thread (gpointer data)
         rendering_frame = edl->frame_no;
         GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
         gegl_buffer_set_extent (edl->buffer, &ext);
+
         rig_frame (edl, edl->frame_no); /* this does the frame-set */
+        /* this set edl->frame */
+
         gegl_node_process (edl->store_buf);
         done_frame = rendering_frame;
         MrgRectangle rect = {mrg_width (edl->mrg)/2, 0,
@@ -371,13 +382,11 @@ static void insert (MrgEvent *event, void *data1, void *data2)
 
     edl->active_clip = clip;
     edl->active_source = NULL;
-    edl->frame=-1;
+    gedl_cache_invalid (edl);
     mrg_event_stop_propagate (event);
     mrg_queue_draw (event->mrg, NULL);
-    changed++;
     return;
   }
-  changed++;
 }
 
 static void extend_left (MrgEvent *event, void *data1, void *data2)
@@ -422,10 +431,9 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
     else
         edl->active_source = g_list_last (edl->clip_db)?
                              g_list_last (edl->clip_db)->data:NULL;
-    edl->frame=-1;
+    gedl_cache_invalid (edl);
     mrg_event_stop_propagate (event);
     mrg_queue_draw (event->mrg, NULL);
-    changed++;
     return;
   }
 
@@ -442,10 +450,9 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
         edl->active_clip = NULL;
     frob_fade (edl->active_clip);
   }
-  edl->frame=-1;
+  gedl_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
-  changed++;
 }
 
 static void split_clip (MrgEvent *event, void *data1, void *data2)
@@ -480,7 +487,7 @@ static void split_clip (MrgEvent *event, void *data1, void *data2)
   //  frob_fade (clip);
   //  frob_fade (oldclip);
   }
-  edl->frame=-1;
+  gedl_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
@@ -498,7 +505,7 @@ static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
 
     edl->clip_db = g_list_insert_before (edl->clip_db, iter, clip);
     edl->active_source = (void*)clip;
-    edl->frame=-1;
+    gedl_cache_invalid (edl);
     mrg_event_stop_propagate (event);
     mrg_queue_draw (event->mrg, NULL);
     changed++;
@@ -517,7 +524,7 @@ static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
     edl->active_clip = clip;
     frob_fade (edl->active_clip);
   }
-  edl->frame=-1;
+  gedl_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
@@ -573,10 +580,9 @@ static void toggle_fade (MrgEvent *event, void *data1, void *data2)
   }
   if (!edl->active_clip->fade_out)
     edl->active_clip->fade_pad_end = 0;
-  edl->frame = -1;
+  gedl_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
-  changed++;
 }
 
 static void save_edl (GeglEDL *edl)
@@ -762,10 +768,9 @@ static void clip_end_inc (MrgEvent *event, void *data1, void *data2)
     {
       edl->active_clip->end++;
     }
-      edl->frame=-1;
+      gedl_cache_invalid (edl);
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
-      changed++;
 }
 
 static void clip_end_dec (MrgEvent *event, void *data1, void *data2)
@@ -774,16 +779,16 @@ static void clip_end_dec (MrgEvent *event, void *data1, void *data2)
   if (edl->active_source)
   {
       edl->active_source->end--;
-      edl->frame=-1;
+      gedl_cache_invalid (edl);
   }
   else if (edl->active_clip)
     {
       edl->active_clip->end--;
-      edl->frame=-1;
+      gedl_cache_invalid (edl);
     }
-      mrg_event_stop_propagate (event);
-      mrg_queue_draw (event->mrg, NULL);
-      changed++;
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+  changed++;
 }
 
 static void clip_start_inc (MrgEvent *event, void *data1, void *data2)
@@ -792,16 +797,15 @@ static void clip_start_inc (MrgEvent *event, void *data1, void *data2)
   if (edl->active_source)
   {
       edl->active_source->start++;
-      edl->frame=-1; // hack - to dirty it
+      gedl_cache_invalid (edl);
   }
   else if (edl->active_clip)
     {
       edl->active_clip->start++;
-      edl->frame=-1; // hack - to dirty it
+      gedl_cache_invalid (edl);
     }
       mrg_event_stop_propagate (event);
       mrg_queue_draw (event->mrg, NULL);
-      changed++;
 }
 
 static void clip_start_dec (MrgEvent *event, void *data1, void *data2)
@@ -810,13 +814,13 @@ static void clip_start_dec (MrgEvent *event, void *data1, void *data2)
   if (edl->active_source)
   {
       edl->active_source->start--;
-      edl->frame=-1;
+      gedl_cache_invalid (edl);
 
   }
   else if (edl->active_clip)
     {
       edl->active_clip->start--;
-      edl->frame=-1;
+      gedl_cache_invalid (edl);
     }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -829,7 +833,7 @@ static void toggle_edit_source (MrgEvent *event, void *data1, void *data2)
   edl->active_source->editing = !edl->active_source->editing;
   if (edl->active_source->editing)
     mrg_set_cursor_pos (event->mrg, strlen (edl->active_source->title));
-  changed++;
+  gedl_cache_invalid (edl);
   mrg_queue_draw (event->mrg, NULL);
 }
 
@@ -1043,10 +1047,7 @@ static void update_filter (const char *new_string, void *user_data)
   if (edl->active_clip->filter_graph)
     g_free (edl->active_clip->filter_graph);
   edl->active_clip->filter_graph = g_strdup (new_string);
-  changed++;
-  edl->frame=-1;
-  done_frame=-1;
-  rendering_frame=-1;
+  gedl_cache_invalid (edl);
   mrg_queue_draw (edl->mrg, NULL);
 }
 
@@ -1205,6 +1206,10 @@ void playing_iteration (Mrg *mrg, GeglEDL *edl)
     }
 }
 
+
+extern int cache_hits;
+extern int cache_misses;
+
 void gedl_ui (Mrg *mrg, void *data)
 {
   State *o = data;
@@ -1233,6 +1238,7 @@ void gedl_ui (Mrg *mrg, void *data)
     mrg_printf (mrg, "%ix%i\n", rect.width, rect.height);
   }
 
+  mrg_printf (mrg, "cache hit: %2.2f%% of %i\n", 100.0 * cache_hits / (cache_hits + cache_misses), cache_hits + cache_misses);
   mrg_printf (mrg, "frame_no: %i\n", edl->frame_no);
   mrg_printf (mrg, "rendering:%i\n", rendering_frame);
   mrg_printf (mrg, "frame: %i\n", edl->frame);
