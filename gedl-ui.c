@@ -29,7 +29,7 @@ static int changed = 0;
 
 GeglNode *preview_loader;
 
-int rendered_frame = -1;
+int rendering_frame = -1;
 int done_frame     = -1;
 
 static gpointer renderer2_thread (gpointer data)
@@ -45,12 +45,12 @@ static gpointer renderer2_thread (gpointer data)
     {
       if (edl->frame_no != done_frame)
       {
-        rendered_frame = edl->frame_no;
+        rendering_frame = edl->frame_no;
         GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
         gegl_buffer_set_extent (edl->buffer, &ext);
-        rig_frame (edl, edl->frame_no);
+        rig_frame (edl, edl->frame_no); /* this does the frame-set */
         gegl_node_process (edl->store_buf);
-        done_frame = rendered_frame;
+        done_frame = rendering_frame;
         MrgRectangle rect = {mrg_width (edl->mrg)/2, 0,
                              mrg_width (edl->mrg)/2, mrg_height (edl->mrg) * SPLIT_VER};
         mrg_queue_draw (edl->mrg, &rect);
@@ -71,13 +71,13 @@ static gpointer renderer_thread (gpointer data)
     {
       if (edl->source_frame_no != done_frame)
       {
-        rendered_frame = edl->source_frame_no;
+        rendering_frame = edl->source_frame_no;
         gegl_node_set (preview_loader, "path", edl->active_source->path, NULL);
         gegl_node_set (preview_loader, "frame", edl->source_frame_no, NULL);
         GeglRectangle ext = gegl_node_get_bounding_box (preview_loader);
         gegl_buffer_set_extent (edl->buffer, &ext);
         gegl_node_process (edl->source_store_buf);
-        done_frame = rendered_frame;
+        done_frame = rendering_frame;
         MrgRectangle rect = {mrg_width (edl->mrg)/2, 0,
                              mrg_width (edl->mrg)/2, mrg_height (edl->mrg) * SPLIT_VER};
         mrg_queue_draw (edl->mrg, &rect);
@@ -97,7 +97,8 @@ static void mrg_gegl_blit (Mrg *mrg,
                           float x0, float y0,
                           float width, float height,
                           GeglNode *node,
-                          float u, float v)
+                          float u, float v,
+                          float opacity)
 {
   GeglRectangle bounds;
 
@@ -160,7 +161,15 @@ foo++;
   cairo_set_source_surface (cr, surface, 0, 0);
    
   cairo_set_operator (cr, CAIRO_OPERATOR_SOURCE);
-  cairo_paint (cr);
+
+  if (opacity < 0.9)
+  {
+    cairo_paint_with_alpha (cr, opacity);
+  }
+  else
+  {
+    cairo_paint (cr);
+  }
   cairo_surface_destroy (surface);
   cairo_restore (cr);
 
@@ -1037,7 +1046,7 @@ static void update_filter (const char *new_string, void *user_data)
   changed++;
   edl->frame=-1;
   done_frame=-1;
-  rendered_frame=-1;
+  rendering_frame=-1;
   mrg_queue_draw (edl->mrg, NULL);
 }
 
@@ -1167,7 +1176,7 @@ void playing_iteration (Mrg *mrg, GeglEDL *edl)
 {
   if (playing)
     {
-      if (rendered_frame != done_frame)
+      if (rendering_frame != done_frame)
         return;
       if (edl->active_source)
       {
@@ -1207,7 +1216,11 @@ void gedl_ui (Mrg *mrg, void *data)
 
   mrg_gegl_blit (mrg, (int)(mrg_width (mrg) * 0.25), 0,
                       (int)(mrg_width (mrg) * 0.75), mrg_height (mrg) * SPLIT_VER,
-                      o->edl->cached_result, 0,0);
+                      o->edl->cached_result, 0,0,
+                      
+                      edl->frame_no == done_frame?1.0:0.5
+                      
+                      );
 
   gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg) * SPLIT_VER, edl->scale, edl->t0);
   draw_clips (mrg, edl, 10, mrg_height(mrg) * SPLIT_VER + VID_HEIGHT + PAD_DIM * 5, mrg_width(mrg) - 20, mrg_height(mrg) * SPLIT_VER - VID_HEIGHT + PAD_DIM * 5);
@@ -1220,11 +1233,14 @@ void gedl_ui (Mrg *mrg, void *data)
     mrg_printf (mrg, "%ix%i\n", rect.width, rect.height);
   }
 
-  mrg_printf (mrg, "%i %i\n", done_frame, rendered_frame);
+  mrg_printf (mrg, "frame_no: %i\n", edl->frame_no);
+  mrg_printf (mrg, "rendering:%i\n", rendering_frame);
+  mrg_printf (mrg, "frame: %i\n", edl->frame);
+  mrg_printf (mrg, "done:%i\n", done_frame);
+
   if (edl->active_clip)
     {
       char *basename = g_path_get_basename (edl->active_clip->path);
-      mrg_printf (mrg, "%i\n", edl->frame_no);
       mrg_printf (mrg, "%s %i\n%i %i\n", basename,
                                      gedl_get_clip_frame_no (edl),
                                      edl->active_clip->start, edl->active_clip->end);
@@ -1269,16 +1285,16 @@ void gedl_ui (Mrg *mrg, void *data)
     mrg_printf (mrg, "%s\n", basename);
   }
 
-  //mrg_printf (mrg, "%i %i %i %i %i\n", edl->frame, edl->frame_no, edl->source_frame_no, rendered_frame, done_frame);
+  //mrg_printf (mrg, "%i %i %i %i %i\n", edl->frame, edl->frame_no, edl->source_frame_no, rendering_frame, done_frame);
 
-  if (done_frame != rendered_frame)
+  if (done_frame != rendering_frame)
     mrg_printf (mrg, ".. ");
   else if (edl->active_source &&
-           edl->source_frame_no != rendered_frame)
-    mrg_printf (mrg, ".. ");
+           edl->source_frame_no != rendering_frame)
+    mrg_printf (mrg, "., ");
   else if (edl->active_clip &&
-           edl->frame_no != rendered_frame)
-    mrg_printf (mrg, "...");
+           edl->frame_no != rendering_frame)
+    mrg_printf (mrg, ".:");
 
   playing_iteration (mrg, edl);
 
