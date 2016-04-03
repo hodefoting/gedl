@@ -59,8 +59,8 @@ static gpointer renderer2_thread (gpointer data)
 
         rig_frame (edl, edl->frame_no); /* this does the frame-set */
         /* this set edl->frame */
+        //gegl_node_process (edl->store_buf);
 
-        gegl_node_process (edl->store_buf);
         done_frame = rendering_frame;
         MrgRectangle rect = {mrg_width (edl->mrg)/2, 0,
                              mrg_width (edl->mrg)/2, mrg_height (edl->mrg) * SPLIT_VER};

@@ -72,8 +72,13 @@ const char *clip_get_path (Clip *clip)
 }
 void clip_set_path (Clip *clip, const char *path)
 {
-  if (clip->path && !strcmp (clip->path ,path))
+#if 1
+  if (clip->path && !strcmp (clip->path, path))
+  {
+    fprintf (stderr, "@asdf\n");
     return;
+  }
+#endif
   if (clip->path)
     g_free (clip->path);
   clip->path = g_strdup (path);
@@ -295,7 +300,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
     {
       /* found right clip */
       const char *clip_path = clip_get_path (clip);
-      Clip *clip2 = NULL; 
+      //Clip *clip2 = NULL; 
       gchar *frame_recipe;
       GChecksum *hash;
       gchar *cache_path;
@@ -309,7 +314,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
         {
           gegl_node_set (clip->loader, "frame", clip->clip_frame_no, NULL);
         }
-
+#if 0
       frob_fade (edl, clip);
       
       if (clip->fade_out && (clip->clip_frame_no > (clip->end - clip->fade_pad_end)) && l->next)
@@ -354,6 +359,9 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
         {
           edl->mix = 0.0;
         }
+#else
+          edl->mix = 0.0;
+#endif
 
       /* this is both where we can keep filter graphs, and do more global
        * cache short circuiting, this would leave the cross fading to still have
@@ -374,15 +382,17 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
 #endif
               GError *error = NULL;
               remove_in_betweens (edl->nop_raw, edl->nop_transformed);
-              gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip->clip_frame_no /*, clip->clip_frame_no - clip->end, clip->end - clip->start */, edl->video_height, &error);
+              if(1)gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip->clip_frame_no /*, clip->clip_frame_no - clip->end, clip->end - clip->start */, edl->video_height, &error);
               if (error)
               {
                 fprintf (stderr, "%s\n", error->message);
                 g_error_free (error);
               }
+#if 0
                 if (clip->cached_filter_graph)
                   g_free (clip->cached_filter_graph);
                 clip->cached_filter_graph = g_strdup (clip->filter_graph);
+#endif
 #if CACHE_FILTER
             }
 #endif
@@ -390,16 +400,18 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
        else
          {
            remove_in_betweens (edl->nop_raw, edl->nop_transformed);
+#if 0
            if (clip->cached_filter_graph)
              g_free (clip->cached_filter_graph);
            clip->cached_filter_graph = NULL;
+#endif
            gegl_node_link_many (edl->nop_raw, edl->nop_transformed, NULL);
          }
 
         /**********************************************************************/
 
         frame_recipe = g_strdup_printf ("%s: %s %s %i %s %s %s %i %s %ix%i %f",
-          "gedl-pre-3", clip_path, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl) * 0, gegl_node_to_xml (edl->result, NULL), gegl_node_to_xml (clip->loader, NULL),
+          "gedl-pre-3", clip_path, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl) * 0, gegl_node_to_xml (edl->nop_transformed, NULL), gegl_node_to_xml (clip->loader, NULL),
                         //gedl_get_clip2_path (edl), gedl_get_clip2_frame_no (edl), clip2->filter_graph,
                         "aaa", 3, "bbb",
                         edl->video_width, edl->video_height, 
@@ -409,6 +421,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
         g_checksum_update (hash, (void*)frame_recipe, -1);
         cache_path  = g_strdup_printf (".gedl/%s", g_checksum_get_string(hash));
 
+        fprintf (stderr, "{%s}\n", frame_recipe);
         /*************************************************************************/
 
         if (!strstr (frame_recipe, ".gedl/") &&
@@ -418,23 +431,42 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
             was_cached = 1;
             gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
             gegl_node_link_many (edl->cache_loader, edl->result, NULL);
-#if 1
+#if 0
             if (!clip->audio)
               clip->audio = gegl_audio_fragment_new (44100, 2, 0, 4000);
             gegl_meta_get_audio (cache_path, clip->audio);
 #endif
+            gegl_node_process (edl->store_buf);
             fprintf (stderr, "hit : %i\n", edl->frame);
             cache_hits ++;
           }
         else
           {
+
+	    if (edl->mix != 0.0)
+	    {
+	       gegl_node_set (edl->load_buf2, "buffer", gedl_get_buffer2 (edl), NULL);
+	       gegl_node_connect_to (edl->over, "output", edl->result, "input");
+	       gegl_node_set (edl->opacity, "value", edl->mix, NULL);
+	    }
+	    else
+	    {
+	       gegl_node_connect_to (edl->crop, "output", edl->result, "input");
+	    }
+
             if (!strstr (frame_recipe, ".gedl/"))
             {
               cache_misses ++;
               fprintf (stderr, "miss : %i (%s)\n", edl->frame, frame_recipe);
             }
             g_mutex_lock (&clip->mutex);
-            gegl_node_process (clip->store_buf);
+  
+            if ((clip->is_image && clip->buffer == NULL) ||
+                             !clip->is_image)
+              gegl_node_process (clip->store_buf);
+            gegl_node_set (edl->load_buf, "buffer", clip->buffer, NULL);
+            gegl_node_process (edl->store_buf);
+#if 0
             if (edl->mix != 0.0 && clip2)
               {
                 gegl_node_process (clip2->store_buf);
@@ -475,6 +507,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
                           clip2->audio->data[c][i] * edl->mix;
                    }
                }
+#endif
 
           /* write cached render of this frame */
           if (!strstr (frame_recipe, ".gedl/") && (edl->cache_flags & CACHE_MAKE_ALL))
@@ -510,19 +543,6 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
       g_checksum_free (hash);
       g_free (frame_recipe);
 
-	  if (!was_cached)
-      {
-	    if (edl->mix != 0.0)
-	    {
-	       gegl_node_set (edl->load_buf2, "buffer", gedl_get_buffer2 (edl), NULL);
-	       gegl_node_connect_to (edl->over, "output", edl->result, "input");
-	       gegl_node_set (edl->opacity, "value", edl->mix, NULL);
-	    }
-	    else
-	    {
-	       gegl_node_connect_to (edl->crop, "output", edl->result, "input");
-	    }
-      }
       return;
     }
     clip_start += clip_frames;
@@ -789,6 +809,7 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
 
 #include <string.h>
 
+void gedl_update_video_size (GeglEDL *edl);
 GeglEDL *gedl_new_from_string (const char *string);
 GeglEDL *gedl_new_from_string (const char *string)
 {
@@ -980,7 +1001,6 @@ void rig_frame (GeglEDL *edl, int frame_no)
     return;
   gedl_set_frame (edl, frame_no);
 
-  gegl_node_set (edl->load_buf, "buffer", gedl_get_buffer (edl), NULL);
   gegl_node_set (edl->encode, "audio", gedl_get_audio (edl), NULL);
 }
 
