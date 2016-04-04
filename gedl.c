@@ -304,7 +304,6 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
       gchar *frame_recipe;
       GChecksum *hash;
       gchar *cache_path;
-      int was_cached =0 ;
      
       edl->clip = clip;
 
@@ -421,14 +420,12 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
         g_checksum_update (hash, (void*)frame_recipe, -1);
         cache_path  = g_strdup_printf (".gedl/%s", g_checksum_get_string(hash));
 
-        fprintf (stderr, "{%s}\n", frame_recipe);
         /*************************************************************************/
 
         if (!strstr (frame_recipe, ".gedl/") &&
             g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
             (edl->cache_flags & CACHE_TRY_ALL))
           {
-            was_cached = 1;
             gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
             gegl_node_link_many (edl->cache_loader, edl->result, NULL);
 #if 0
@@ -547,7 +544,6 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
     }
     clip_start += clip_frames;
   }
-  gegl_node_connect_to (edl->crop, "output", edl->result, "input");
   //edl->source[0]->clip_path = "unknown";
   //edl->source[0]->clip_frame_no = 0;
 }
