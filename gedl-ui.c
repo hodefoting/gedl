@@ -202,7 +202,6 @@ struct _State {
   void   (*ui) (Mrg *mrg, void *state);
   Mrg     *mrg;
   GeglEDL *edl;
-  GeglEDL *edl2;
   char    *path;
   char    *save_path;
 };
@@ -1365,18 +1364,16 @@ gpointer renderer_main (gpointer data)
 }
 
 
-int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2);
-int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2)
+int gedl_ui_main (GeglEDL *edl);
+int gedl_ui_main (GeglEDL *edl)
 {
   Mrg *mrg = mrg_new (800, 600, NULL);
   //Mrg *mrg = mrg_new (-1, -1, NULL);
   State o = {NULL,};
   o.mrg = mrg;
   o.edl = edl;
-  o.edl2 = edl2;
 
   edl->mrg = mrg;
-  if (edl2) edl2->mrg = mrg;
   preview_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:ff-load",
                          "path", "/tmp", NULL);
   gegl_node_connect_to (preview_loader, "output", edl->source_store_buf, "input");
@@ -1392,6 +1389,7 @@ int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2)
   gedl_get_duration (edl);
 
   mrg_main (mrg);
+  gedl_free (edl);
   gegl_exit ();
 
   return 0;
