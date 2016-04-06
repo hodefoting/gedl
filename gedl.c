@@ -245,7 +245,6 @@ const char *edl_path = "input.edl";
 
 #if 1
 GeglEDL *edl;
-GeglEDL *edl2;
 #endif
 
 
@@ -1046,7 +1045,7 @@ int gegl_make_thumb_video (const char *path, const char *thumb_path)
 
 static GThread *thread;
 
-int gedl_ui_main (GeglEDL *edl, GeglEDL *edl2);
+int gedl_ui_main (GeglEDL *edl);
 
 static gpointer preloader (gpointer data)
 {
@@ -1109,19 +1108,14 @@ int main (int argc, char **argv)
     sprintf (str, "%s 0 %i\n", edl_path, duration);
     edl = gedl_new_from_string (str);
     edl->path = g_strdup (edl_path);
-    edl2 = gedl_new_from_string (str);
-    edl2->path = g_strdup (edl_path);
   }
   else
   {
     edl = gedl_new_from_path (edl_path);
-    edl2 = gedl_new_from_path (edl_path);
   }
   if (argv[2] && argv[2][0]!='-')
     edl->output_path = argv[2];
   setup (edl);
-  setup (edl2);
-
 
   for (int i = 1; argv[i]; i++)
     if (!strcmp (argv[i], "-c"))
@@ -1131,7 +1125,7 @@ int main (int argc, char **argv)
     {
       if (0)
         thread = g_thread_new ("renderer", preloader, edl);
-      return gedl_ui_main (edl, edl2);
+      return gedl_ui_main (edl);
     }
 
   tot_frames  = gedl_get_duration (edl);
