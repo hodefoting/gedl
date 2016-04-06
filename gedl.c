@@ -369,6 +369,9 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
 
       if (clip->filter_graph)
         {
+#define CACHE_FILTER 0
+
+// CACHE_FILTER doesn't currently work with load-baked time
 #if CACHE_FILTER
           if (clip->cached_filter_graph &&
                 !strcmp(clip->cached_filter_graph,
@@ -380,18 +383,15 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
             {
 #endif
               GError *error = NULL;
-              remove_in_betweens (edl->nop_raw, edl->nop_transformed);
-              if(1)gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip->clip_frame_no /*, clip->clip_frame_no - clip->end, clip->end - clip->start */, edl->video_height, &error);
+              gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip->clip_frame_no /*, clip->clip_frame_no - clip->end, clip->end - clip->start */, edl->video_height, &error);
               if (error)
               {
                 fprintf (stderr, "%s\n", error->message);
                 g_error_free (error);
               }
-#if 0
-                if (clip->cached_filter_graph)
-                  g_free (clip->cached_filter_graph);
-                clip->cached_filter_graph = g_strdup (clip->filter_graph);
-#endif
+              if (clip->cached_filter_graph)
+                g_free (clip->cached_filter_graph);
+              clip->cached_filter_graph = g_strdup (clip->filter_graph);
 #if CACHE_FILTER
             }
 #endif
@@ -399,11 +399,9 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
        else
          {
            remove_in_betweens (edl->nop_raw, edl->nop_transformed);
-#if 0
            if (clip->cached_filter_graph)
              g_free (clip->cached_filter_graph);
            clip->cached_filter_graph = NULL;
-#endif
            gegl_node_link_many (edl->nop_raw, edl->nop_transformed, NULL);
          }
 
