@@ -945,7 +945,6 @@ int gedl_get_clip2_frame_no      (GeglEDL *edl)
 }
 static void setup (GeglEDL *edl)
 {
-  edl->gegl = gegl_node_new ();
   edl->result = gegl_node_new_child    (edl->gegl, "operation", "gegl:nop", NULL);
   edl->load_buf = gegl_node_new_child  (edl->gegl, "operation", "gegl:buffer-source", NULL);
   edl->load_buf2 = gegl_node_new_child (edl->gegl, "operation", "gegl:buffer-source", NULL);
