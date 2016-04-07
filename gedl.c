@@ -425,7 +425,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
           {
             gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
             gegl_node_link_many (edl->cache_loader, edl->result, NULL);
-#if 0
+#if 1
             if (!clip->audio)
               clip->audio = gegl_audio_fragment_new (44100, 2, 0, 4000);
             gegl_meta_get_audio (cache_path, clip->audio);
@@ -465,21 +465,25 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
               {
                 gegl_node_process (clip2->store_buf);
               }
+#endif
             if (clip->audio)
               {
                 g_object_unref (clip->audio);
                 clip->audio = NULL;
               }
+#if 0
              if (clip2 && clip2->audio)
               {
                 g_object_unref (clip2->audio);
                 clip2->audio = NULL;
               }
+#endif
 
             if (clip->is_image)
               clip->audio = NULL;
             else
               gegl_node_get (clip->loader, "audio", &clip->audio, NULL);
+#if 0
             if (edl->mix != 0.0 && clip2)
               {
                /* directly mix the audio from the secondary into the primary, with proportional weighting of samples
