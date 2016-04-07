@@ -431,7 +431,9 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
             gegl_meta_get_audio (cache_path, clip->audio);
 #endif
             gegl_node_process (edl->store_buf);
+#if DEBUG_CACHE
             fprintf (stderr, "hit : %i\n", edl->frame);
+#endif
             cache_hits ++;
           }
         else
@@ -451,7 +453,9 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
             if (!strstr (frame_recipe, ".gedl/"))
             {
               cache_misses ++;
+#if DEBUG_CACHE
               fprintf (stderr, "miss : %i (%s)\n", edl->frame, frame_recipe);
+#endif
             }
             g_mutex_lock (&clip->mutex);
   
