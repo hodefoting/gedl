@@ -1007,13 +1007,15 @@ static void process_frames (GeglEDL *edl)
   {
     edl->frame_no = frame_no;
     rig_frame (edl, edl->frame_no);
-    if (!skip_encode)
-      gegl_node_process (edl->encode);
+
     fprintf (stdout, "\r%1.2f%% %04d / %04d [%s]  ",
      100.0 * (frame_no-edl->range_start) * 1.0 / (edl->range_end - edl->range_start),
      frame_no, edl->range_end,
      
      edl->script_hash);
+
+    if (!skip_encode)
+      gegl_node_process (edl->encode);
     fflush (0);
   }
   fprintf (stdout, "\n");
@@ -1333,5 +1335,3 @@ void        gedl_get_range      (GeglEDL    *edl,
   if (end_frame)
     *end_frame = edl->range_end;
 }
-
-

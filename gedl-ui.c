@@ -1189,11 +1189,21 @@ void playing_iteration (Mrg *mrg, GeglEDL *edl)
         return;
 #endif
       delta = (((ticks - prev_ticks) / 1000000.0) * ( edl->fps ));
-      fprintf (stderr, "%f\n", delta);
+      //fprintf (stderr, "%f\n", delta);
       if (delta < 1)
         delta = 0;
-
-      delta = 1;
+      {
+        static int frameskip = -1;
+        if (frameskip < 0)
+        {
+          if (getenv ("GEDL_FRAMESKIP"))
+            frameskip = 1;
+          else
+            frameskip = 0;
+        }
+        if (!frameskip)
+          delta = 1;
+      }
       if (rendering_frame != done_frame)
         return;
       if (edl->active_source)
@@ -1259,14 +1269,15 @@ void gedl_ui (Mrg *mrg, void *data)
 
   mrg_printf (mrg, "cache hit: %2.2f%% of %i\n", 100.0 * cache_hits / (cache_hits + cache_misses), cache_hits + cache_misses);
   mrg_printf (mrg, "frame_no: %i\n", edl->frame_no);
+  /*
   mrg_printf (mrg, "rendering:%i\n", rendering_frame);
   mrg_printf (mrg, "frame: %i\n", edl->frame);
   mrg_printf (mrg, "done:%i\n", done_frame);
-
+*/
   if (edl->active_clip)
     {
       char *basename = g_path_get_basename (edl->active_clip->path);
-      mrg_printf (mrg, "%s %i\n%i %i\n", basename,
+      mrg_printf (mrg, "%s:%i\n%i %i\n", basename,
                                      gedl_get_clip_frame_no (edl),
                                      edl->active_clip->start, edl->active_clip->end);
       g_free (basename);
@@ -1281,6 +1292,7 @@ void gedl_ui (Mrg *mrg, void *data)
 
       if (edl->active_clip->filter_graph)
       {
+        mrg_set_style (mrg, "font-size: 10px");
         if (edl->filter_edited)
         {
           mrg_edit_start (mrg, update_filter, edl);
