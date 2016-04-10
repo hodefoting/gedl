@@ -165,9 +165,9 @@ GeglEDL *gedl_new           (void)
   GeglEDL *edl = g_malloc0(sizeof (GeglEDL));
   system ("mkdir .gedl 2>/dev/null");  /* XXX: create cache dir */
   edl->gegl = gegl_node_new ();
-  edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
   edl->cache_flags = 0;
   edl->cache_flags = CACHE_TRY_ALL;
+  edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
   edl->selection_start = 23;
   edl->selection_end = 42;
 
@@ -366,42 +366,20 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
        * to happen on he fly.. along with audio mix
        */
 
-      if (clip->filter_graph)
-        {
-#define CACHE_FILTER 0
-
-// CACHE_FILTER doesn't currently work with load-baked time
-#if CACHE_FILTER
-          if (clip->cached_filter_graph &&
-                !strcmp(clip->cached_filter_graph,
-                        clip->filter_graph))
-            {
-              /* reuse previous filter graph (should probably set frame for tweening?  */
-            }
-          else
-            {
-#endif
-              GError *error = NULL;
-              gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip->clip_frame_no /*, clip->clip_frame_no - clip->end, clip->end - clip->start */, edl->video_height, &error);
-              if (error)
-              {
-                fprintf (stderr, "%s\n", error->message);
-                g_error_free (error);
-              }
-              if (clip->cached_filter_graph)
-                g_free (clip->cached_filter_graph);
-              clip->cached_filter_graph = g_strdup (clip->filter_graph);
-#if CACHE_FILTER
-            }
-#endif
-         }
-       else
          {
            remove_in_betweens (edl->nop_raw, edl->nop_transformed);
-           if (clip->cached_filter_graph)
-             g_free (clip->cached_filter_graph);
-           clip->cached_filter_graph = NULL;
            gegl_node_link_many (edl->nop_raw, edl->nop_transformed, NULL);
+         }
+      if (clip->filter_graph)
+        {
+           GError *error = NULL;
+           gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip->clip_frame_no - clip->start/*, clip->clip_frame_no - clip->end, clip->end - clip->start */, edl->video_height, &error);
+           if (error)
+             {
+               /* should set error string */
+               fprintf (stderr, "%s\n", error->message);
+               g_error_free (error);
+             }
          }
 
         /**********************************************************************/
@@ -416,6 +394,9 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
         hash = g_checksum_new (G_CHECKSUM_MD5);
         g_checksum_update (hash, (void*)frame_recipe, -1);
         cache_path  = g_strdup_printf (".gedl/%s", g_checksum_get_string(hash));
+        if (edl->script_hash)
+          g_free (edl->script_hash);
+        edl->script_hash = g_strdup (g_checksum_get_string(hash));
 
         /*************************************************************************/
 
@@ -485,8 +466,10 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
 
             if (clip->is_image)
               clip->audio = NULL;
+#if 0
             else
               gegl_node_get (clip->loader, "audio", &clip->audio, NULL);
+#endif
 #if 0
             if (edl->mix != 0.0 && clip2)
               {
@@ -1026,9 +1009,11 @@ static void process_frames (GeglEDL *edl)
     rig_frame (edl, edl->frame_no);
     if (!skip_encode)
       gegl_node_process (edl->encode);
-    fprintf (stdout, "\r%1.2f%% %04d / %04d    ",
+    fprintf (stdout, "\r%1.2f%% %04d / %04d [%s]  ",
      100.0 * (frame_no-edl->range_start) * 1.0 / (edl->range_end - edl->range_start),
-     frame_no, edl->range_end);
+     frame_no, edl->range_end,
+     
+     edl->script_hash);
     fflush (0);
   }
   fprintf (stdout, "\n");

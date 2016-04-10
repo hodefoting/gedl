@@ -1172,25 +1172,44 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
 #endif
 }
 
+static long prev_ticks = 0;
+
 void playing_iteration (Mrg *mrg, GeglEDL *edl)
 {
+  long ticks = 0;
+  double delta = 1;
+  ticks = babl_ticks ();
+  if (prev_ticks == 0) prev_ticks = ticks;
+
+
   if (playing)
     {
+#if 0
+      if (prev_ticks - ticks < 1000000.0 / gedl_get_fps (edl))
+        return;
+#endif
+      delta = (((ticks - prev_ticks) / 1000000.0) * ( edl->fps ));
+      fprintf (stderr, "%f\n", delta);
+      if (delta < 1)
+        delta = 0;
+
+      delta = 1;
       if (rendering_frame != done_frame)
         return;
       if (edl->active_source)
       {
-        edl->source_frame_no++;
+        edl->source_frame_no += delta;
         if (edl->source_frame_no > edl->active_source->end)
         {
            edl->source_frame_no = 0;
            edl->source_frame_no = edl->active_source->start;
         }
+        prev_ticks = ticks;
       }
 
       if (edl->active_clip)
       {
-        edl->frame_no++;
+        edl->frame_no += delta;
         int start, end;
         gedl_get_range (edl, &start, &end);
         if (edl->frame_no > max_frame (edl))
@@ -1200,6 +1219,7 @@ void playing_iteration (Mrg *mrg, GeglEDL *edl)
              edl->frame_no = start;
         }
         edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+        prev_ticks = ticks;
       }
    //   mrg_queue_draw (mrg, NULL);
     }

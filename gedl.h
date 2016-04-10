@@ -164,6 +164,8 @@ struct _GeglEDL
   int         clip_query_edited;
 
   int         filter_edited;
+
+  char       *script_hash;
 } _GeglEDL;
 
 Clip *clip_new            (void);
