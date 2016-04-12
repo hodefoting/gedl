@@ -1245,6 +1245,7 @@ void gedl_ui (Mrg *mrg, void *data)
   GeglEDL *edl = o->edl;
 
   mrg_stylesheet_add (mrg, css, NULL, 0, NULL);
+  mrg_set_style (mrg, "font-size: 11px");
   cairo_set_source_rgb (mrg_cr (mrg), 0,0,0);
   cairo_paint (mrg_cr (mrg));
 
@@ -1261,14 +1262,23 @@ void gedl_ui (Mrg *mrg, void *data)
 
   mrg_set_xy (mrg, 0, 40);
   mrg_set_edge_right (mrg, mrg_width (mrg) * 0.25 - 8);
+#if 0
   {
     GeglRectangle rect;
     rect = gegl_node_get_bounding_box (o->edl->cached_result);
+
     mrg_printf (mrg, "%ix%i\n", rect.width, rect.height);
   }
+#endif
 
+#if 0
   mrg_printf (mrg, "cache hit: %2.2f%% of %i\n", 100.0 * cache_hits / (cache_hits + cache_misses), cache_hits + cache_misses);
-  mrg_printf (mrg, "frame_no: %i\n", edl->frame_no);
+#endif
+
+  if (done_frame != edl->frame_no)
+    mrg_printf (mrg, "%i (%i shown)\n",edl->frame_no, done_frame);
+  else
+    mrg_printf (mrg, "%i\n", edl->frame_no);
   /*
   mrg_printf (mrg, "rendering:%i\n", rendering_frame);
   mrg_printf (mrg, "frame: %i\n", edl->frame);
@@ -1277,9 +1287,10 @@ void gedl_ui (Mrg *mrg, void *data)
   if (edl->active_clip)
     {
       char *basename = g_path_get_basename (edl->active_clip->path);
-      mrg_printf (mrg, "%s:%i\n%i %i\n", basename,
-                                     gedl_get_clip_frame_no (edl),
-                                     edl->active_clip->start, edl->active_clip->end);
+      mrg_printf (mrg, "%s:%i %i (%i)\n", basename,
+                                     edl->active_clip->start, edl->active_clip->end,
+                                     gedl_get_clip_frame_no (edl)
+                                     );
       g_free (basename);
 
       if(0)  mrg_printf (mrg, "%s %s %i %s %s %i %s %ix%i %f",
@@ -1292,7 +1303,6 @@ void gedl_ui (Mrg *mrg, void *data)
 
       if (edl->active_clip->filter_graph)
       {
-        mrg_set_style (mrg, "font-size: 10px");
         if (edl->filter_edited)
         {
           mrg_edit_start (mrg, update_filter, edl);
