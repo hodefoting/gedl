@@ -559,11 +559,12 @@ double gedl_get_time (GeglEDL *edl)
 }
 GeglAudioFragment *gedl_get_audio  (GeglEDL *edl)
 {
-  return edl->clip->audio;
+
+  return edl->clip?edl->clip->audio:NULL;
 }
 GeglBuffer *gedl_get_buffer (GeglEDL *edl)
 {
-  return edl->clip->buffer;
+  return edl->clip?edl->clip->buffer:NULL;
 }
 GeglBuffer *gedl_get_buffer2 (GeglEDL *edl)
 {
