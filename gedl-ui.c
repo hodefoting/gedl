@@ -440,8 +440,9 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
     return;
   {
     GList *iter = g_list_find (edl->clips, edl->active_clip);
-    if (iter) iter = iter->next;
-    if (!iter)
+    if (iter->next) iter = iter->next;
+    else if (iter->prev) iter = iter->prev;
+    else 
       return;
     edl->clips = g_list_remove (edl->clips, edl->active_clip);
     if (iter) edl->active_clip = iter->data;
