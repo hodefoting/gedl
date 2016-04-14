@@ -368,6 +368,11 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
 
          {
            remove_in_betweens (edl->nop_raw, edl->nop_transformed);
+
+  gegl_node_set (edl->nop_raw, "operation", "gegl:scale-size-keepaspect",
+                                          "y", 0.0, //
+                                          "x", 1.0 * edl->width, NULL);
+
            gegl_node_link_many (edl->nop_raw, edl->nop_transformed, NULL);
          }
       if (clip->filter_graph)
