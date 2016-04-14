@@ -82,6 +82,7 @@ struct _Clip
   int    fade_pad_start; 
   int    fade_pad_end;
   int    is_image;
+
   char  *filter_graph; /* chain of gegl filters */
   int    abs_start;
 

@@ -14,8 +14,7 @@ frames appearing in timeline
 #include <gegl.h>
 #include "gedl.h"
 
-
-#define SPLIT_VER  0.8
+#define SPLIT_VER  0.4
 
 static GThread *thread;
 static GThread *thread2;
