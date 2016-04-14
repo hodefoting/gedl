@@ -945,14 +945,18 @@ static void setup (GeglEDL *edl)
   edl->crop2 = gegl_node_new_child     (edl->gegl, "operation", "gegl:crop", "x", 0.0, "y", 0.0, "width", 1.0 * edl->width,
                                          "height", 1.0 * edl->height, NULL);
   edl->over = gegl_node_new_child      (edl->gegl, "operation", "gegl:over", NULL);
-  edl->nop_raw = gegl_node_new_child   (edl->gegl, "operation", "gegl:nop", NULL);
+  edl->nop_raw = gegl_node_new_child (edl->gegl, "operation", "gegl:scale-size-keepaspect",
+                                          "y", 0.0, //
+                                          "x", 1.0 * edl->width, NULL);
+
   edl->nop_raw2 = gegl_node_new_child  (edl->gegl, "operation", "gegl:nop", NULL);
   edl->nop_transformed = gegl_node_new_child (edl->gegl, "operation", "gegl:nop", NULL);
   edl->nop_transformed2 = gegl_node_new_child (edl->gegl, "operation", "gegl:nop", NULL);
   edl->opacity = gegl_node_new_child (edl->gegl, "operation", "gegl:opacity", NULL);
-  edl->scale_size = gegl_node_new_child (edl->gegl, "operation", "gegl:scale-size-keepaspect",
+  edl->scale_size = gegl_node_new_child (edl->gegl, "operation", "gegl:nop", NULL);
+  /*"operation", "gegl:scale-size-keepaspect",
                                           "y", 0.0, //
-                                          "x", 1.0 * edl->width, NULL);
+                                          "x", 1.0 * edl->width, NULL);*/
   edl->scale_size2 = gegl_node_new_child (edl->gegl, "operation", "gegl:scale-size-keepaspect",
                                     "x", 1.0 * edl->width,
                                     "y", 1.0 * edl->height, NULL);
