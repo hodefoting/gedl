@@ -390,11 +390,8 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
         /**********************************************************************/
 
         frame_recipe = g_strdup_printf ("%s: %s %s %i %s %s %s %i %s %ix%i %f",
-          "gedl-pre-3", clip_path, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl) * 0, gegl_node_to_xml (edl->nop_transformed, NULL), gegl_node_to_xml (clip->loader, NULL),
-                        //gedl_get_clip2_path (edl), gedl_get_clip2_frame_no (edl), clip2->filter_graph,
-                        "aaa", 3, "bbb",
-                        edl->video_width, edl->video_height, 
-                        0.0/*edl->mix*/);
+          "gedl-pre-3", clip_path, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl) * 0, gegl_node_to_xml (edl->nop_transformed, NULL), gegl_node_to_xml (clip->loader, NULL), "aaa", 3, "bbb", edl->video_width, edl->video_height, 
+            0.0/*edl->mix*/);
 
         hash = g_checksum_new (G_CHECKSUM_MD5);
         g_checksum_update (hash, (void*)frame_recipe, -1);
@@ -1018,7 +1015,7 @@ static void process_frames (GeglEDL *edl)
     edl->frame_no = frame_no;
     rig_frame (edl, edl->frame_no);
 
-    fprintf (stdout, "\r%1.2f%% %04d / %04d [%s]  ",
+    fprintf (stdout, "\n%1.2f%% %04d / %04d [%s]  ",
      100.0 * (frame_no-edl->range_start) * 1.0 / (edl->range_end - edl->range_start),
      frame_no, edl->range_end,
      

@@ -6,6 +6,7 @@ clean:
 SOUNDTRACK=TheBlackGoat_64kb.mp3
 #SOUNDTRACK=HamboCorvette-Sweden-ViolaTurpeinensEnsStandardF5002b78-Couple-Advanced.mp3
 #SOUNDTRACK=folk.mp3
+#SOUNDTRACK=drmesno1.mp3
 
 ngegl-audio.mp4: gegl.mp4 Makefile $(SOUNDTRACK)
 	/usr/bin/ffmpeg -i gegl.mp4 -i $(SOUNDTRACK) -map 0:v -map 1:a -c:v copy -c:a copy gegl-audio.mp4
