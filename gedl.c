@@ -378,7 +378,7 @@ void gedl_set_frame         (GeglEDL *edl, int    frame)
       if (clip->filter_graph)
         {
            GError *error = NULL;
-           gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip->clip_frame_no - clip->start/*, clip->clip_frame_no - clip->end, clip->end - clip->start */, edl->video_height, &error);
+           gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip->clip_frame_no - clip->start/*, clip->clip_frame_no - clip->end, clip->end - clip->start */, edl->video_height, NULL, &error);
            if (error)
              {
                /* should set error string */
