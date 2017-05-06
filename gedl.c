@@ -275,7 +275,7 @@ Clip *gedl_get_clip (GeglEDL *edl, int frame, int *clip_frame_no)
 int cache_hits = 0;
 int cache_misses = 0;
 
-void gedl_set_frame         (GeglEDL *edl, int    frame)
+void gedl_set_frame (GeglEDL *edl, int    frame)
 {
   GList *l;
   int clip_start = 0;
@@ -774,6 +774,7 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
          g_object_unref (gegl);
          frob_fade (edl, clip);
 
+         fprintf (stderr, "probed: %i %f\n", clip->duration, clip->fps);
          if (edl->fps == 0.0)
          {
            gedl_set_fps (edl, clip->fps);
@@ -787,6 +788,11 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
                 clip->filter_graph[strlen(clip->filter_graph)-1]=='\n')
                 clip->filter_graph[strlen(clip->filter_graph)-1]='\0';
        }
+
+     if (clip->end == 0)
+     {
+        clip->end = clip->duration;
+     }
     }
   /* todo: probe video file for length if any of arguments are nont present as 
            integers.. alloving full clips and clips with mm:ss.nn timestamps,
@@ -1031,7 +1037,7 @@ int gegl_make_thumb_video (const char *path, const char *thumb_path)
 {
   int tot_frames;
   GString *str = g_string_new ("");
-  g_string_append_printf (str, "video-bitrate=100\n\noutput-path=%s\nvideo-width=320\nvideo-height=240\n\n%s\n", thumb_path, path);
+  g_string_append_printf (str, "video-bitrate=100\n\noutput-path=%s\nvideo-width=256\nvideo-height=144\n\n%s\n", thumb_path, path);
   edl = gedl_new_from_string (str->str);
   setup (edl);
   tot_frames = gedl_get_duration (edl);
@@ -1079,7 +1085,7 @@ int main (int argc, char **argv)
   setenv ("GEGL_USE_OPENCL", "no", 1);
   setenv ("GEGL_MIPMAP_RENDERING", "1", 1);
 
-  if (argv[1] && argv[2] && argv[3] && !strcmp (argv[1], "--make-proxy"))
+  if (argv[1] && argv[2] && argv[3] && !strcmp (argv[1], "genprox"))
      return gegl_make_thumb_video (argv[2], argv[3]);
 
   edl_path = argv[1];
