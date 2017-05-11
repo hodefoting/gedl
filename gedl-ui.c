@@ -1404,7 +1404,7 @@ int gedl_ui_main (GeglEDL *edl)
                          "path", "/tmp", NULL);
   gegl_node_connect_to (preview_loader, "output", edl->source_store_buf, "input");
 
-  edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
+  edl->cache_flags = CACHE_TRY_ALL;// | CACHE_MAKE_ALL;
   renderer_set_range (0, 50);
   mrg_set_ui (mrg, gedl_ui, &o);
   g_timeout_add (1000, save_idle, edl);

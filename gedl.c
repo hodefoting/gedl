@@ -167,7 +167,7 @@ GeglEDL *gedl_new           (void)
   edl->gegl = gegl_node_new ();
   edl->cache_flags = 0;
   edl->cache_flags = CACHE_TRY_ALL;
-  edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
+  //edl->cache_flags = CACHE_TRY_ALL | CACHE_MAKE_ALL;
   edl->selection_start = 23;
   edl->selection_end = 42;
 
@@ -371,7 +371,9 @@ void gedl_set_frame (GeglEDL *edl, int    frame)
 
            gegl_node_set (edl->nop_raw, "operation", "gegl:scale-size-keepaspect",
                                           "y", 0.0, //
-                                          "x", 1.0 * edl->width, NULL);
+                                          "x", 1.0 * edl->width,
+                                          "sampler", GEGL_SAMPLER_CUBIC,
+                                          NULL);
 
            gegl_node_link_many (edl->nop_raw, edl->nop_transformed, NULL);
          }
@@ -954,7 +956,9 @@ static void setup (GeglEDL *edl)
   edl->over = gegl_node_new_child      (edl->gegl, "operation", "gegl:over", NULL);
   edl->nop_raw = gegl_node_new_child (edl->gegl, "operation", "gegl:scale-size-keepaspect",
                                           "y", 0.0, //
-                                          "x", 1.0 * edl->width, NULL);
+                                          "x", 1.0 * edl->width,
+                                          "sampler", GEGL_SAMPLER_CUBIC,
+                                          NULL);
 
   edl->nop_raw2 = gegl_node_new_child  (edl->gegl, "operation", "gegl:nop", NULL);
   edl->nop_transformed = gegl_node_new_child (edl->gegl, "operation", "gegl:nop", NULL);
@@ -966,7 +970,9 @@ static void setup (GeglEDL *edl)
                                           "x", 1.0 * edl->width, NULL);*/
   edl->scale_size2 = gegl_node_new_child (edl->gegl, "operation", "gegl:scale-size-keepaspect",
                                     "x", 1.0 * edl->width,
-                                    "y", 1.0 * edl->height, NULL);
+                                    "y", 1.0 * edl->height,
+                                    "sampler", GEGL_SAMPLER_CUBIC,
+                                    NULL);
   edl->encode = gegl_node_new_child (edl->gegl, "operation", "gegl:ff-save",
                                       "path",           edl->output_path,
                                       "frame-rate",     gedl_get_fps (edl),
@@ -1041,6 +1047,14 @@ int gegl_make_thumb_video (const char *path, const char *thumb_path)
   edl = gedl_new_from_string (str->str);
   setup (edl);
   tot_frames = gedl_get_duration (edl);
+
+#if 1 // just use ffmpeg instead
+  g_string_assign (str, "");
+  g_string_append_printf (str, "ffmpeg -y -i %s -vf scale=256:-1 %s", path, thumb_path);
+  system (str->str);
+  return 0;
+#endif
+
   if (edl->range_end == 0)
     edl->range_end = tot_frames-1;
   process_frames (edl);
