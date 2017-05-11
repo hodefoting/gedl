@@ -275,6 +275,8 @@ Clip *gedl_get_clip (GeglEDL *edl, int frame, int *clip_frame_no)
 int cache_hits = 0;
 int cache_misses = 0;
 
+/*  calling this causes gedl to rig up its graphs for providing/rendering this frame
+ */
 void gedl_set_frame (GeglEDL *edl, int    frame)
 {
   GList *l;
@@ -422,7 +424,6 @@ void gedl_set_frame (GeglEDL *edl, int    frame)
           }
         else
           {
-
             if (edl->mix != 0.0)
             {
                gegl_node_set (edl->load_buf2, "buffer", gedl_get_buffer2 (edl), NULL);
@@ -1086,9 +1087,26 @@ static gpointer preloader (gpointer data)
   return NULL;
 }
 
+
+int gegl_make_thumb_video (const char *path, const char *thumb_path);
+static void gedl_make_proxies (GeglEDL *eld);
+static void gedl_make_proxies (GeglEDL *eld)
+{
+  GList *l;
+  for (l = edl->clips; l; l = l->next)
+  {
+    Clip *clip = l->data;
+    char *proxy_path = g_strdup_printf ("proxy/%s.mp4", clip->path);
+    if (!g_file_test (proxy_path, G_FILE_TEST_IS_REGULAR))
+       gegl_make_thumb_video (clip->path, proxy_path);
+    g_free (proxy_path);
+  }
+}
+
 int main (int argc, char **argv)
 {
   int tot_frames;
+  int make_proxies = 0;
   init (argc, argv);
   if (!argv[1])
   {
@@ -1099,8 +1117,15 @@ int main (int argc, char **argv)
   setenv ("GEGL_USE_OPENCL", "no", 1);
   setenv ("GEGL_MIPMAP_RENDERING", "1", 1);
 
-  if (argv[1] && argv[2] && argv[3] && !strcmp (argv[1], "genprox"))
-     return gegl_make_thumb_video (argv[2], argv[3]);
+  if (argv[1] && !strcmp (argv[1], "proxies") && argv[2])
+  {
+    make_proxies = 1;
+    argv++;
+    argc--;
+  }
+
+  //if (argv[1] && argv[2] && argv[3] && !strcmp (argv[1], "genprox"))
+  //   return gegl_make_thumb_video (argv[2], argv[3]);
 
   edl_path = argv[1];
 
@@ -1136,6 +1161,12 @@ int main (int argc, char **argv)
   if (argv[2] && argv[2][0]!='-')
     edl->output_path = argv[2];
   setup (edl);
+
+  if (make_proxies)
+  {
+     gedl_make_proxies (edl);
+     return 0;
+  }
 
   for (int i = 1; argv[i]; i++)
     if (!strcmp (argv[i], "-c"))
