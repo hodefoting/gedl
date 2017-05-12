@@ -12,7 +12,8 @@ https://www.youtube.com/watch?v=GJJPgLGrSgc was made from raw footage using
 gedl.
 
 This project is shared in the public interest, both as a reference for people
-to study as well as backup.
+to study as well as backup, it is a rough draft of a video editor - and usage
+instructions for the very brave are for now: may the source be with you..
 
 For further possible further development - processing should be split out of
 the ui/editing process, and rather be done by slave process(es) that kan be
