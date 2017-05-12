@@ -75,12 +75,12 @@ const char *clip_get_path (Clip *clip)
 
 char *gedl_make_thumb_path (const char *clip_path)
 {
-  return g_strdup_printf ("thumb/%s.png", clip_path);
+  return g_strdup_printf (".gedl/thumb/%s.png", clip_path);
 }
 
 char *make_proxy_path (const char *clip_path)
 {
-  return g_strdup_printf ("proxy/%s.mp4", clip_path);
+  return g_strdup_printf (".gedl/proxy/%s.mp4", clip_path);
 }
 
 void clip_set_path (Clip *clip, const char *path)
@@ -88,7 +88,6 @@ void clip_set_path (Clip *clip, const char *path)
 #if 1
   if (clip->path && !strcmp (clip->path, path))
   {
-    fprintf (stderr, "@asdf\n");
     return;
   }
 #endif
@@ -177,6 +176,9 @@ GeglEDL *gedl_new           (void)
   GeglRectangle roi = {0,0,1024, 1024};
   GeglEDL *edl = g_malloc0(sizeof (GeglEDL));
   system ("mkdir .gedl 2>/dev/null");  /* XXX: create cache dir */
+  system ("mkdir .gedl/cache 2>/dev/null");  /* XXX: create cache dir */
+  system ("mkdir .gedl/proxy 2>/dev/null");  /* XXX: create cache dir */
+  system ("mkdir .gedl/thumb 2>/dev/null");  /* XXX: create cache dir */
   edl->gegl = gegl_node_new ();
   edl->cache_flags = 0;
   edl->cache_flags = CACHE_TRY_ALL;
@@ -412,14 +414,14 @@ void gedl_set_frame (GeglEDL *edl, int    frame)
 
         hash = g_checksum_new (G_CHECKSUM_MD5);
         g_checksum_update (hash, (void*)frame_recipe, -1);
-        cache_path  = g_strdup_printf (".gedl/%s", g_checksum_get_string(hash));
+        cache_path  = g_strdup_printf (".gedl/cache/%s", g_checksum_get_string(hash));
         if (edl->script_hash)
           g_free (edl->script_hash);
         edl->script_hash = g_strdup (g_checksum_get_string(hash));
 
         /*************************************************************************/
 
-        if (!strstr (frame_recipe, ".gedl/") &&
+        if (!strstr (frame_recipe, ".gedl/cache/") &&
             g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
             (edl->cache_flags & CACHE_TRY_ALL))
           {
@@ -517,8 +519,8 @@ void gedl_set_frame (GeglEDL *edl, int    frame)
           /* write cached render of this frame */
           if (!strstr (frame_recipe, ".gedl/") && (edl->cache_flags & CACHE_MAKE_ALL))
             {
-              gchar *cache_path = g_strdup_printf (".gedl/%s~", g_checksum_get_string(hash));
-              gchar *cache_path_final = g_strdup_printf (".gedl/%s", g_checksum_get_string(hash));
+              gchar *cache_path = g_strdup_printf (".gedl/cache/%s~", g_checksum_get_string(hash));
+              gchar *cache_path_final = g_strdup_printf (".gedl/cache/%s", g_checksum_get_string(hash));
               if (!g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
                   !g_file_test (cache_path_final, G_FILE_TEST_IS_REGULAR))
                 {
@@ -1073,12 +1075,10 @@ int gegl_make_thumb_video (const char *path, const char *thumb_path)
   GString *str = g_string_new ("");
   gchar *icon_path = gedl_make_thumb_path (path);
 
-  system ("mkdir proxy");
   g_string_assign (str, "");
   g_string_append_printf (str, "ffmpeg -y -i %s -vf scale=256:-1 %s", path, thumb_path);
   system (str->str);
 
-  system ("mkdir thumb");
   g_string_assign (str, "");
   g_string_append_printf (str, "iconographer -p -h -f 'thumb 40' %s -a %s",
                 thumb_path, icon_path);
