@@ -464,11 +464,13 @@ void gedl_set_frame (GeglEDL *edl, int    frame)
                 gegl_node_process (clip2->store_buf);
               }
 #endif
+#if 0
             if (clip->audio)
               {
                 g_object_unref (clip->audio);
                 clip->audio = NULL;
               }
+#endif
 #if 0
              if (clip2 && clip2->audio)
               {
