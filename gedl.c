@@ -38,10 +38,12 @@ gegl_meta_get_audio (const char        *path,
 #define DEFAULT_selection_end     0
 #define DEFAULT_range_start       0
 #define DEFAULT_range_end         0
+#define DEFAULT_use_proxies       0
 
-Clip *clip_new (void)
+Clip *clip_new (GeglEDL *edl)
 {
   Clip *clip = g_malloc0 (sizeof (Clip));
+  clip->edl = edl;
   clip->gegl = gegl_node_new ();
   clip->loader = gegl_node_new_child (clip->gegl, "operation", "gegl:ff-load", NULL);
   clip->store_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:buffer-sink", "buffer", &clip->buffer, NULL);
@@ -70,6 +72,12 @@ const char *clip_get_path (Clip *clip)
 {
   return clip->path;
 }
+
+char *make_proxy_path (const char *clip_path)
+{
+  return g_strdup_printf ("proxy/%s.mp4", clip_path);
+}
+
 void clip_set_path (Clip *clip, const char *path)
 {
 #if 1
@@ -91,9 +99,9 @@ void clip_set_path (Clip *clip, const char *path)
   else
   {
     g_object_set (clip->loader, "operation", "gegl:ff-load", NULL);
+    gchar *path = clip->edl->use_proxies?make_proxy_path (clip->path):g_strdup (clip->path);
     gegl_node_set (clip->loader, "path", path, NULL);
   }
-  gegl_node_set (clip->loader, "path", path, NULL);
 }
 int clip_get_start (Clip *clip)
 {
@@ -143,9 +151,9 @@ void clip_set_full (Clip *clip, const char *path, int start, int end)
   clip_set_path (clip, path);
   clip_set_range (clip, start, end);
 }
-Clip *clip_new_full (const char *path, int start, int end)
+Clip *clip_new_full (GeglEDL *edl, const char *path, int start, int end)
 {
-  Clip *clip = clip_new ();
+  Clip *clip = clip_new (edl);
   clip_set_full (clip, path, start, end);
   return clip;
 }
@@ -192,6 +200,7 @@ GeglEDL *gedl_new           (void)
   edl->buffer = gegl_buffer_new (&roi, babl_format ("R'G'B'A u8"));
 
   edl->clip_query = strdup ("");
+  edl->use_proxies = DEFAULT_use_proxies;
 
   return edl;
 }
@@ -702,6 +711,7 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
      if (!strcmp (key, "range-end"))         edl->range_end = g_strtod (value, NULL);
      if (!strcmp (key, "frame-no"))          edl->frame_no = g_strtod (value, NULL);
      if (!strcmp (key, "frame-scale"))       edl->scale = g_strtod (value, NULL);
+     if (!strcmp (key, "use-proxies"))       edl->use_proxies = g_strtod (value, NULL);
      if (!strcmp (key, "t0"))                edl->t0 = g_strtod (value, NULL);
 
      g_free (key);
@@ -724,7 +734,7 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
           g_str_has_suffix (path, ".PNG") ||
           g_str_has_suffix (path, ".JPG"))
        {
-         clip = clip_new_full (path, start, end);
+         clip = clip_new_full (edl, path, start, end);
          clip->is_image = 1;
          edl->clips = g_list_append (edl->clips, clip);
        }
@@ -733,7 +743,7 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
          if ((start == 0 && end == 0))
            ff_probe = 1;
 
-         clip = clip_new_full (path, start, end);
+         clip = clip_new_full (edl, path, start, end);
          edl->clips = g_list_append (edl->clips, clip);
        }
      if (strstr (line, "[fade]"))
@@ -777,7 +787,7 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
          g_object_unref (gegl);
          frob_fade (edl, clip);
 
-         fprintf (stderr, "probed: %i %f\n", clip->duration, clip->fps);
+         //fprintf (stderr, "probed: %i %f\n", clip->duration, clip->fps);
          if (edl->fps == 0.0)
          {
            gedl_set_fps (edl, clip->fps);
@@ -897,6 +907,8 @@ void gedl_save_path (GeglEDL *edl, const char *path)
   fclose (file);
 }
 
+
+
 void gedl_update_video_size (GeglEDL *edl)
 {
   if ((edl->video_width == 0 || edl->video_height == 0) && edl->clips)
@@ -904,7 +916,16 @@ void gedl_update_video_size (GeglEDL *edl)
       Clip *clip = edl->clips->data;
       GeglNode *gegl = gegl_node_new ();
       GeglRectangle rect;
-      GeglNode *probe = gegl_node_new_child (gegl, "operation", "gegl:ff-load", "path", clip->path, NULL);
+      // XXX: is ff-load good for pngs and jpgs as well?
+      GeglNode *probe;
+      if (edl->use_proxies)
+      {
+         gchar *path = make_proxy_path (clip->path);
+         probe = gegl_node_new_child (gegl, "operation", "gegl:ff-load", "path", path, NULL);
+         g_free (path);
+      }
+      else
+         probe = gegl_node_new_child (gegl, "operation", "gegl:ff-load", "path", clip->path, NULL);
       gegl_node_process (probe);
       rect = gegl_node_get_bounding_box (probe);
       edl->video_width = rect.width;
@@ -1096,7 +1117,7 @@ static void gedl_make_proxies (GeglEDL *eld)
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
-    char *proxy_path = g_strdup_printf ("proxy/%s.mp4", clip->path);
+    char *proxy_path = make_proxy_path (clip->path);
     if (!g_file_test (proxy_path, G_FILE_TEST_IS_REGULAR))
        gegl_make_thumb_video (clip->path, proxy_path);
     g_free (proxy_path);
@@ -1167,6 +1188,8 @@ int main (int argc, char **argv)
      gedl_make_proxies (edl);
      return 0;
   }
+  if (edl->use_proxies)
+    gedl_make_proxies (edl);
 
   for (int i = 1; argv[i]; i++)
     if (!strcmp (argv[i], "-c"))
@@ -1193,6 +1216,8 @@ char *gedl_serialise (GeglEDL *edl)
   char *ret;
   GString *ser = g_string_new ("");
 
+  if (edl->use_proxies != DEFAULT_use_proxies)
+    g_string_append_printf (ser, "use-proxies=%i\n",  edl->use_proxies);
   if (strcmp(edl->output_path, DEFAULT_output_path))
     g_string_append_printf (ser, "output-path=%s\n", edl->output_path);
   if (strcmp(edl->video_codec, DEFAULT_video_codec))

@@ -355,7 +355,7 @@ static void insert (MrgEvent *event, void *data1, void *data2)
   if (edl->active_source)
   {
     GList *iter = g_list_find (edl->clip_db, edl->active_source);
-    Clip *clip = clip_new_full (edl->active_source->path, edl->active_source->start, edl->active_source->end);
+    Clip *clip = clip_new_full (edl, edl->active_source->path, edl->active_source->start, edl->active_source->end);
     if (edl->active_source->title)
       clip->title = g_strdup (edl->active_source->title);
     
@@ -456,7 +456,7 @@ static void split_clip (MrgEvent *event, void *data1, void *data2)
     int shift;
     Clip *oldclip = edl->active_clip;
     GList *iter = g_list_find (edl->clips, oldclip);
-    Clip *clip = clip_new_full (oldclip->path, oldclip->start, oldclip->end);
+    Clip *clip = clip_new_full (edl, oldclip->path, oldclip->start, oldclip->end);
     edl->clips = g_list_insert_before (edl->clips, iter, clip);
     if (oldclip->filter_graph)
       clip->filter_graph = g_strdup (oldclip->filter_graph);
@@ -482,7 +482,7 @@ static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
   if (edl->active_source)
   {
     GList *iter = g_list_find (edl->clip_db, edl->active_source);
-    Clip *clip = clip_new_full (edl->active_source->path, edl->active_source->start, edl->active_source->end);
+    Clip *clip = clip_new_full (edl, edl->active_source->path, edl->active_source->start, edl->active_source->end);
     if (edl->active_source->title)
       clip->title = g_strdup (edl->active_source->title);
 
@@ -499,7 +499,7 @@ static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
     return;
   {
     GList *iter = g_list_find (edl->clips, edl->active_clip);
-    Clip *clip = clip_new_full (edl->active_clip->path, edl->active_clip->start, edl->active_clip->end);
+    Clip *clip = clip_new_full (edl, edl->active_clip->path, edl->active_clip->start, edl->active_clip->end);
     edl->clips = g_list_insert_before (edl->clips, iter, clip);
     frob_fade (edl->active_clip);
     if (edl->active_clip->filter_graph)

@@ -67,6 +67,7 @@ typedef struct SourceClip
 
 struct _Clip
 {
+  GeglEDL *edl;
   char  *path;  /*path to media file */
   int    start; /*frame number starting with 0 */
   int    end;   /*last frame, inclusive fro single frame, make equal to start */
@@ -142,7 +143,7 @@ struct _GeglEDL
   int         fade_duration;
   int         frame_no;
   int         source_frame_no;
-
+  int         use_proxies;
 
   GeglNode   *nop_raw;
   GeglNode   *nop_transformed;
@@ -169,7 +170,7 @@ struct _GeglEDL
   char       *script_hash;
 } _GeglEDL;
 
-Clip *clip_new            (void);
+Clip *clip_new            (GeglEDL *edl);
 void  clip_free           (Clip *clip);
 const char *clip_get_path (Clip *clip);
 void  clip_set_path       (Clip *clip, const char *path);
@@ -180,6 +181,6 @@ void  clip_set_start      (Clip *clip, int start);
 void  clip_set_end        (Clip *clip, int end);
 void  clip_set_range      (Clip *clip, int start, int end);
 void  clip_set_full       (Clip *clip, const char *path, int start, int end);
-Clip *clip_new_full       (const char *path, int start, int end);
+Clip *clip_new_full       (GeglEDL *edl, const char *path, int start, int end);
 
 #endif
