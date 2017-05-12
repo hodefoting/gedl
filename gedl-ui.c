@@ -892,14 +892,15 @@ static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
 
 void render_clip (Mrg *mrg, const char *clip_path, int clip_start, int clip_frames, double x, double y)
 {
-  char thumb_path[PATH_MAX];
-  sprintf (thumb_path, "%s.png", clip_path); /* XXX: replace with function */
+  char *thumb_path = gedl_make_thumb_path (clip_path);
+
   cairo_t *cr = mrg_cr (mrg);
   cairo_rectangle (cr, x, y, clip_frames, VID_HEIGHT);
   cairo_set_source_rgba (cr, 0.1, 0.1, 0.1, 0.5);
 
   int width, height;
   MrgImage *img = mrg_query_image (mrg, thumb_path, &width, &height);
+  g_free (thumb_path);
   if (img && width > 0)
   {
     cairo_surface_t *surface = mrg_image_get_surface (img);

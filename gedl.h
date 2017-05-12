@@ -51,6 +51,7 @@ void        gedl_set_selection      (GeglEDL    *edl, int start_frame, int end_f
 void        gedl_get_selection      (GeglEDL    *edl,
                                      int        *start_frame,
                                      int        *end_frame);
+char       *gedl_make_thumb_path    (const char *clip_path);
 void rig_frame (GeglEDL *edl, int frame_no);
 
 /*********/

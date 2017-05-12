@@ -38,7 +38,7 @@ gegl_meta_get_audio (const char        *path,
 #define DEFAULT_selection_end     0
 #define DEFAULT_range_start       0
 #define DEFAULT_range_end         0
-#define DEFAULT_use_proxies       0
+#define DEFAULT_use_proxies       1
 
 Clip *clip_new (GeglEDL *edl)
 {
@@ -71,6 +71,11 @@ void clip_free (Clip *clip)
 const char *clip_get_path (Clip *clip)
 {
   return clip->path;
+}
+
+char *gedl_make_thumb_path (const char *clip_path)
+{
+  return g_strdup_printf ("thumb/%s.png", clip_path);
 }
 
 char *make_proxy_path (const char *clip_path)
@@ -1065,19 +1070,29 @@ static void process_frames (GeglEDL *edl)
 
 int gegl_make_thumb_video (const char *path, const char *thumb_path)
 {
-  int tot_frames;
   GString *str = g_string_new ("");
+  gchar *icon_path = gedl_make_thumb_path (path);
+
+  system ("mkdir proxy");
+  g_string_assign (str, "");
+  g_string_append_printf (str, "ffmpeg -y -i %s -vf scale=256:-1 %s", path, thumb_path);
+  system (str->str);
+
+  system ("mkdir thumb");
+  g_string_assign (str, "");
+  g_string_append_printf (str, "iconographer -p -h -f 'thumb 40' %s -a %s",
+                thumb_path, icon_path);
+  system (str->str);
+
+  g_string_free (str, TRUE);
+
+  return 0;
+#if 0  // much slower and worse for fps/audio than ffmpeg method for creating thumbs
+  int tot_frames; //
   g_string_append_printf (str, "video-bitrate=100\n\noutput-path=%s\nvideo-width=256\nvideo-height=144\n\n%s\n", thumb_path, path);
   edl = gedl_new_from_string (str->str);
   setup (edl);
   tot_frames = gedl_get_duration (edl);
-
-#if 1 // just use ffmpeg instead
-  g_string_assign (str, "");
-  g_string_append_printf (str, "ffmpeg -y -i %s -vf scale=256:-1 %s", path, thumb_path);
-  system (str->str);
-  return 0;
-#endif
 
   if (edl->range_end == 0)
     edl->range_end = tot_frames-1;
@@ -1085,6 +1100,7 @@ int gegl_make_thumb_video (const char *path, const char *thumb_path)
   teardown ();
   g_string_free (str, TRUE);
   return 0;
+#endif
 }
 
 static GThread *thread;
