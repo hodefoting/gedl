@@ -890,9 +890,9 @@ static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
 #define VID_HEIGHT 40
 #define PAD_DIM     8
 
-void render_clip (Mrg *mrg, const char *clip_path, int clip_start, int clip_frames, double x, double y)
+void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start, int clip_frames, double x, double y)
 {
-  char *thumb_path = gedl_make_thumb_path (clip_path);
+  char *thumb_path = gedl_make_thumb_path (edl, clip_path);
 
   cairo_t *cr = mrg_cr (mrg);
   cairo_rectangle (cr, x, y, clip_frames, VID_HEIGHT);
@@ -956,7 +956,7 @@ void gedl_draw (Mrg     *mrg,
   {
     Clip *clip = l->data;
 
-    render_clip (mrg, clip->path, clip->start, clip_get_frames (clip), t, y);
+    render_clip (mrg, edl, clip->path, clip->start, clip_get_frames (clip), t, y);
     if (clip == edl->active_clip)
       cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
     else
@@ -1055,7 +1055,7 @@ void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, f
         scale = w / clip->duration;
       cairo_scale (cr, scale, 1);
 
-      render_clip (mrg, clip->path, 0, clip->duration, 0, y);
+      render_clip (mrg, edl, clip->path, 0, clip->duration, 0, y);
 
     if (clip == (void*)edl->active_source)
     {
@@ -1100,7 +1100,7 @@ void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, f
     cairo_restore (cr);
     if (0) /* draw more aspect right selection (at least for start/end "frame aspect part..?) */
     {
-    render_clip (mrg, clip->path, clip->start, (clip->end - clip->start) * scale, clip->start * scale, y);
+    render_clip (mrg, edl, clip->path, clip->start, (clip->end - clip->start) * scale, clip->start * scale, y);
     cairo_new_path (cr);
     }
 
@@ -1406,6 +1406,8 @@ int gedl_ui_main (GeglEDL *edl)
   gegl_node_connect_to (preview_loader, "output", edl->source_store_buf, "input");
 
   edl->cache_flags = CACHE_TRY_ALL;// | CACHE_MAKE_ALL;
+//  if (!edl->use_proxies)
+//   edl->cache_flags |= CACHE_MAKE_ALL;
   renderer_set_range (0, 50);
   mrg_set_ui (mrg, gedl_ui, &o);
   g_timeout_add (1000, save_idle, edl);

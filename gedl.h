@@ -4,9 +4,8 @@
 typedef struct _GeglEDL GeglEDL;
 typedef struct _Clip    Clip;
 
-int         gegl_make_thumb_video (const char *path, const char *thumb_path);
+int         gegl_make_thumb_video (GeglEDL *edl, const char *path, const char *thumb_path);
 const char *compute_cache_path    (const char *path);
-void        gegl_make_video_cache (const char *path, const char *cache_path);
 
 #define CACHE_TRY_SIMPLE    (1<<0)
 #define CACHE_TRY_MIX       (1<<1)
@@ -51,7 +50,7 @@ void        gedl_set_selection      (GeglEDL    *edl, int start_frame, int end_f
 void        gedl_get_selection      (GeglEDL    *edl,
                                      int        *start_frame,
                                      int        *end_frame);
-char       *gedl_make_thumb_path    (const char *clip_path);
+char       *gedl_make_thumb_path    (GeglEDL    *edl, const char *clip_path);
 void rig_frame (GeglEDL *edl, int frame_no);
 
 /*********/
