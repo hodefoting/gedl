@@ -4,6 +4,8 @@
 #include <gexiv2/gexiv2.h>
 #include <gegl-audio-fragment.h>
 
+#define GEDL_SAMPLER   GEGL_SAMPLER_NEAREST
+
 /* GEGL edit decision list - a digital video cutter and splicer */
 
 /* take a string and expand {t=v i t=v t=v }  to numeric or string
@@ -139,7 +141,7 @@ void clip_set_start (Clip *clip, int start)
 {
   clip->start = start;
 
-  //clip_prepare_for_playback (clip);
+  clip_prepare_for_playback (clip);
 }
 void clip_set_end (Clip *clip, int end)
 {
@@ -390,7 +392,7 @@ void gedl_set_frame (GeglEDL *edl, int    frame)
            gegl_node_set (edl->nop_raw, "operation", "gegl:scale-size-keepaspect",
                                           "y", 0.0, //
                                           "x", 1.0 * edl->width,
-                                          "sampler", GEGL_SAMPLER_CUBIC,
+                                          "sampler", GEDL_SAMPLER,
                                           NULL);
 
            gegl_node_link_many (edl->nop_raw, edl->nop_transformed, NULL);
@@ -988,7 +990,7 @@ static void setup (GeglEDL *edl)
   edl->nop_raw = gegl_node_new_child (edl->gegl, "operation", "gegl:scale-size-keepaspect",
                                           "y", 0.0, //
                                           "x", 1.0 * edl->width,
-                                          "sampler", GEGL_SAMPLER_CUBIC,
+                                          "sampler", GEDL_SAMPLER,
                                           NULL);
 
   edl->nop_raw2 = gegl_node_new_child  (edl->gegl, "operation", "gegl:nop", NULL);
@@ -1002,7 +1004,7 @@ static void setup (GeglEDL *edl)
   edl->scale_size2 = gegl_node_new_child (edl->gegl, "operation", "gegl:scale-size-keepaspect",
                                     "x", 1.0 * edl->width,
                                     "y", 1.0 * edl->height,
-                                    "sampler", GEGL_SAMPLER_CUBIC,
+                                    "sampler", GEDL_SAMPLER,
                                     NULL);
   edl->encode = gegl_node_new_child (edl->gegl, "operation", "gegl:ff-save",
                                       "path",           edl->output_path,
