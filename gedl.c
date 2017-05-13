@@ -438,7 +438,7 @@ void gedl_set_frame (GeglEDL *edl, int    frame)
 #endif
             cache_hits ++;
           }
-        else
+        else /* not found in cache - we have to make the frame */
           {
             if (edl->mix != 0.0)
             {
@@ -471,7 +471,7 @@ void gedl_set_frame (GeglEDL *edl, int    frame)
                 gegl_node_process (clip2->store_buf);
               }
 #endif
-#if 0
+#if 1
             if (clip->audio)
               {
                 g_object_unref (clip->audio);
@@ -488,7 +488,7 @@ void gedl_set_frame (GeglEDL *edl, int    frame)
 
             if (clip->is_image)
               clip->audio = NULL;
-#if 0
+#if 1
             else
               gegl_node_get (clip->loader, "audio", &clip->audio, NULL);
 #endif
