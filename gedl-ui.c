@@ -56,9 +56,11 @@ static gpointer renderer_thread (gpointer data)
         gegl_buffer_set_extent (edl->buffer, &ext);
         gegl_node_process (edl->source_store_buf);
         done_frame = rendering_frame;
+#if 0
         MrgRectangle rect = {mrg_width (edl->mrg)/2, 0,
                              mrg_width (edl->mrg)/2, mrg_height (edl->mrg) * SPLIT_VER};
         mrg_queue_draw (edl->mrg, &rect);
+#endif
       }
       else
         g_usleep (50);

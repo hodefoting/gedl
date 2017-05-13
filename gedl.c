@@ -1038,7 +1038,7 @@ void rig_frame (GeglEDL *edl, int frame_no)
   gegl_node_set (edl->encode, "audio", gedl_get_audio (edl), NULL);
 }
 
-int skip_encode = 0;
+int do_encode = 1;
 static void teardown (void)
 {
   gedl_free (edl);
@@ -1065,7 +1065,7 @@ static void process_frames (GeglEDL *edl)
 
      edl->script_hash);
 
-    if (!skip_encode)
+    if (do_encode)
       gegl_node_process (edl->encode);
     fflush (0);
   }
@@ -1105,10 +1105,11 @@ int gegl_make_thumb_video (GeglEDL *edl, const char *path, const char *thumb_pat
 #endif
 }
 
-static GThread *thread;
 
 int gedl_ui_main (GeglEDL *edl);
 
+#if 0
+static GThread *thread;
 static gpointer preloader (gpointer data)
 {
   GeglEDL *edl = data;
@@ -1127,6 +1128,7 @@ static gpointer preloader (gpointer data)
   }
   return NULL;
 }
+#endif
 
 
 int gegl_make_thumb_video (GeglEDL *edl, const char *path, const char *thumb_path);
@@ -1211,23 +1213,31 @@ int main (int argc, char **argv)
   if (edl->use_proxies)
     gedl_make_proxies (edl);
 
-  for (int i = 1; argv[i]; i++)
-    if (!strcmp (argv[i], "-c"))
-       skip_encode = 1;
-    else
-    if (!strcmp (argv[i], "-ui"))
+  {
+#define RUNMODE_UI     0
+#define RUNMODE_RENDER 1
+    int runmode = RUNMODE_UI;
+    for (int i = 0; argv[i]; i++)
     {
-      if (0)
-        thread = g_thread_new ("renderer", preloader, edl);
-      return gedl_ui_main (edl);
+      if (!strcmp (argv[i], "render")) runmode = RUNMODE_RENDER;
+      {
+        return gedl_ui_main (edl);
+      }
     }
 
-  tot_frames  = gedl_get_duration (edl);
-  if (edl->range_end == 0)
-    edl->range_end = tot_frames-1;
-  process_frames (edl);
-  teardown ();
-  return 0;
+    switch (runmode)
+    {
+      case RUNMODE_UI: return gedl_ui_main (edl);
+      case RUNMODE_RENDER:
+        tot_frames  = gedl_get_duration (edl);
+        if (edl->range_end == 0)
+          edl->range_end = tot_frames-1;
+        process_frames (edl);
+        teardown ();
+        return 0;
+     }
+  }
+  return -1;
 }
 
 char *gedl_serialise (GeglEDL *edl)
