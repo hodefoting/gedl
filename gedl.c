@@ -315,6 +315,16 @@ Clip *gedl_get_clip (GeglEDL *edl, int frame, int *clip_frame_no)
 int cache_hits = 0;
 int cache_misses = 0;
 
+void gedl_set_use_proxies (GeglEDL *edl, int use_proxies)
+{
+  edl->use_proxies = use_proxies;
+
+  if (edl->use_proxies)
+    gedl_set_size (edl, edl->proxy_width, edl->proxy_height);
+  else
+    gedl_set_size (edl, edl->video_width, edl->video_height);
+}
+
 /*  calling this causes gedl to rig up its graphs for providing/rendering this frame
  */
 void gedl_set_frame (GeglEDL *edl, int frame)
@@ -922,10 +932,7 @@ GeglEDL *gedl_new_from_string (const char *string)
 
   gedl_update_video_size (edl);
 
-  if (edl->use_proxies)
-    gedl_set_size (edl, edl->proxy_width, edl->proxy_height);
-  else
-    gedl_set_size (edl, edl->video_width, edl->video_height);
+  gedl_set_use_proxies (edl, edl->use_proxies);
 
   return edl;
 }

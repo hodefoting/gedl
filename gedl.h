@@ -4,6 +4,7 @@
 typedef struct _GeglEDL GeglEDL;
 typedef struct _Clip    Clip;
 
+void gedl_set_use_proxies (GeglEDL *edl, int use_proxies);
 int         gegl_make_thumb_video (GeglEDL *edl, const char *path, const char *thumb_path);
 const char *compute_cache_path    (const char *path);
 
