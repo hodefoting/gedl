@@ -1152,7 +1152,7 @@ int gegl_make_thumb_image (GeglEDL *edl, const char *path, const char *icon_path
   GString *str = g_string_new ("");
 
   g_string_assign (str, "");
-  g_string_append_printf (str, "iconographer -p -h -f 'thumb 40' %s -a %s",
+  g_string_append_printf (str, "iconographer -p -h -f 'thumb 96' %s -a %s",
                           path, icon_path);
   system (str->str);
 
@@ -1295,8 +1295,7 @@ int main (int argc, char **argv)
      gedl_make_proxies (edl);
      return 0;
   }
-  if (edl->use_proxies)
-    gedl_make_proxies (edl);
+
 
   {
 #define RUNMODE_UI     0
@@ -1309,7 +1308,10 @@ int main (int argc, char **argv)
 
     switch (runmode)
     {
-      case RUNMODE_UI: return gedl_ui_main (edl);
+      case RUNMODE_UI: 
+  //if (edl->use_proxies)
+        gedl_make_proxies (edl);
+        return gedl_ui_main (edl);
       case RUNMODE_RENDER:
         tot_frames  = gedl_get_duration (edl);
         if (edl->range_end == 0)
