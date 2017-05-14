@@ -317,12 +317,20 @@ int cache_misses = 0;
 
 void gedl_set_use_proxies (GeglEDL *edl, int use_proxies)
 {
+  int frame;
   edl->use_proxies = use_proxies;
 
   if (edl->use_proxies)
     gedl_set_size (edl, edl->proxy_width, edl->proxy_height);
   else
     gedl_set_size (edl, edl->video_width, edl->video_height);
+
+  frame = edl->frame;
+  if (frame > 0)
+  {
+    edl->frame--;
+    gedl_set_frame (edl, frame);
+  }
 }
 
 /*  calling this causes gedl to rig up its graphs for providing/rendering this frame
@@ -360,6 +368,8 @@ void gedl_set_frame (GeglEDL *edl, int frame)
       edl->clip = clip;
 
       clip->clip_frame_no = (frame - clip_start) + clip_get_start (clip);
+      if (clip->clip_frame_no < 0)
+        clip->clip_frame_no = 0;
 
       clip_set_proxied (clip);
 

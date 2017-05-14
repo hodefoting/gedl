@@ -26,6 +26,9 @@ gegl-0.3.16  http://gegl.org/
 mrg          https://github.com/hodefoting/mrg/
 lyd          https://github.com/hodefoting/lyd/
 
+ffmpeg
+iconographer https://github.com/the-grid/iconographer
+
 
 An example gedl edl file is as follows:
 =============[ test.edl ]==================

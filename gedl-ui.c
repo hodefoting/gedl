@@ -446,6 +446,7 @@ static void use_proxies (MrgEvent *event, void *data1, void *data2)
 
   gedl_set_use_proxies (edl, edl->use_proxies?0:1);
   gedl_cache_invalid (edl);
+
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -1052,11 +1053,11 @@ void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, f
     cairo_t *cr = mrg_cr (mrg);
     if (clip->duration == 0)
        {
-	     GeglNode *gegl = gegl_node_new ();
-	     GeglNode *probe = gegl_node_new_child (gegl, "operation",
+         GeglNode *gegl = gegl_node_new ();
+         GeglNode *probe = gegl_node_new_child (gegl, "operation",
                           "gegl:ff-load", "path", clip->path, NULL);
-	     gegl_node_process (probe);
-	     gegl_node_get (probe, "frames", &clip->duration, NULL);
+         gegl_node_process (probe);
+         gegl_node_get (probe, "frames", &clip->duration, NULL);
          g_object_unref (gegl);
        }
 
