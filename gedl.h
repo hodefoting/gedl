@@ -93,6 +93,7 @@ struct _Clip
   GeglBuffer        *buffer;
   GeglAudioFragment *audio;
   GeglNode          *loader;
+  GeglNode          *proxy_loader;
   GeglNode          *store_buf;
   char              *cached_filter_graph;
 
@@ -132,6 +133,8 @@ struct _GeglEDL
   const char *output_path;
   const char *video_codec;
   const char *audio_codec;
+  int         proxy_width;
+  int         proxy_height;
   int         video_width;
   int         video_height;
   int         video_size_default;

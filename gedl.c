@@ -28,6 +28,8 @@ gegl_meta_get_audio (const char        *path,
 #define DEFAULT_audio_codec      "auto"
 #define DEFAULT_video_width       0
 #define DEFAULT_video_height      0
+#define DEFAULT_proxy_width       0
+#define DEFAULT_proxy_height      0
 #define DEFAULT_video_bufsize     0
 #define DEFAULT_video_bitrate     256
 #define DEFAULT_video_tolerance   -1
@@ -42,12 +44,29 @@ gegl_meta_get_audio (const char        *path,
 #define DEFAULT_range_end         0
 #define DEFAULT_use_proxies       0
 
+
+char *gedl_make_proxy_path (GeglEDL *edl, const char *clip_path);
+
+void clip_set_proxied (Clip *clip)
+{
+  if (clip->edl->use_proxies)
+    {
+      char *path = gedl_make_proxy_path (clip->edl, clip->path);
+      gegl_node_link_many (clip->proxy_loader, clip->store_buf, NULL);
+      gegl_node_set (clip->proxy_loader, "path", path, NULL);
+      g_free (path);
+    }
+  else
+    gegl_node_link_many (clip->loader, clip->store_buf, NULL);
+}
+
 Clip *clip_new (GeglEDL *edl)
 {
   Clip *clip = g_malloc0 (sizeof (Clip));
   clip->edl = edl;
   clip->gegl = gegl_node_new ();
   clip->loader = gegl_node_new_child (clip->gegl, "operation", "gegl:ff-load", NULL);
+  clip->proxy_loader = gegl_node_new_child (clip->gegl, "operation", "gegl:ff-load", NULL);
   clip->store_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:buffer-sink", "buffer", &clip->buffer, NULL);
   gegl_node_link_many (clip->loader, clip->store_buf, NULL);
   g_mutex_init (&clip->mutex);
@@ -82,7 +101,7 @@ char *gedl_make_thumb_path (GeglEDL *edl, const char *clip_path)
 
 char *gedl_make_proxy_path (GeglEDL *edl, const char *clip_path)
 {
-  return g_strdup_printf (".gedl/proxy/%s-%ix%i.mp4", clip_path, edl->video_width, edl->video_height);
+  return g_strdup_printf (".gedl/proxy/%s-%ix%i.mp4", clip_path, edl->proxy_width, edl->proxy_height);
 }
 
 void clip_set_path (Clip *clip, const char *path)
@@ -105,7 +124,8 @@ void clip_set_path (Clip *clip, const char *path)
   else
   {
     g_object_set (clip->loader, "operation", "gegl:ff-load", NULL);
-    gchar *path = clip->edl->use_proxies?gedl_make_proxy_path (clip->edl, clip->path):g_strdup (clip->path);
+    gchar *path = clip->path;
+    //clip->edl->use_proxies?gedl_make_proxy_path (clip->edl, clip->path):g_strdup (clip->path);
     gegl_node_set (clip->loader, "path", path, NULL);
   }
 }
@@ -141,7 +161,7 @@ void clip_set_start (Clip *clip, int start)
 {
   clip->start = start;
 
-  clip_prepare_for_playback (clip);
+  //clip_prepare_for_playback (clip);
 }
 void clip_set_end (Clip *clip, int end)
 {
@@ -195,6 +215,8 @@ GeglEDL *gedl_new           (void)
   edl->audio_codec      = DEFAULT_audio_codec;
   edl->video_width      = DEFAULT_video_width;
   edl->video_height     = DEFAULT_video_height;
+  edl->proxy_width      = DEFAULT_proxy_width;
+  edl->proxy_height     = DEFAULT_proxy_height;
   edl->video_size_default = 1;
   edl->video_bufsize    = DEFAULT_video_bufsize;
   edl->video_bitrate    = DEFAULT_video_bitrate;
@@ -295,10 +317,11 @@ int cache_misses = 0;
 
 /*  calling this causes gedl to rig up its graphs for providing/rendering this frame
  */
-void gedl_set_frame (GeglEDL *edl, int    frame)
+void gedl_set_frame (GeglEDL *edl, int frame)
 {
   GList *l;
   int clip_start = 0;
+
   if ((edl->frame) == frame && (frame != 0))
   {
     fprintf (stderr, "already done!\n");
@@ -328,10 +351,16 @@ void gedl_set_frame (GeglEDL *edl, int    frame)
 
       clip->clip_frame_no = (frame - clip_start) + clip_get_start (clip);
 
+      clip_set_proxied (clip);
+
       if (!clip->is_image)
         {
-          gegl_node_set (clip->loader, "frame", clip->clip_frame_no, NULL);
+          if (clip->edl->use_proxies)
+            gegl_node_set (clip->proxy_loader, "frame", clip->clip_frame_no, NULL);
+          else
+            gegl_node_set (clip->loader, "frame", clip->clip_frame_no, NULL);
         }
+
 #if 0
       frob_fade (edl, clip);
 
@@ -400,7 +429,7 @@ void gedl_set_frame (GeglEDL *edl, int    frame)
       if (clip->filter_graph)
         {
            GError *error = NULL;
-           gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip->clip_frame_no - clip->start/*, clip->clip_frame_no - clip->end, clip->end - clip->start */, edl->video_height, NULL, &error);
+           gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip->clip_frame_no - clip->start/*, clip->clip_frame_no - clip->end, clip->end - clip->start */, edl->height, NULL, &error);
            if (error)
              {
                /* should set error string */
@@ -411,7 +440,7 @@ void gedl_set_frame (GeglEDL *edl, int    frame)
         /**********************************************************************/
 
         frame_recipe = g_strdup_printf ("%s: %s %s %i %s %s %s %i %s %ix%i %f",
-          "gedl-pre-3", clip_path, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl) * 0, gegl_node_to_xml (edl->nop_transformed, NULL), gegl_node_to_xml (clip->loader, NULL), "aaa", 3, "bbb", edl->video_width, edl->video_height, 
+          "gedl-pre-3", clip_path, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl) * 0, gegl_node_to_xml (edl->nop_transformed, NULL), gegl_node_to_xml (clip->loader, NULL), "aaa", 3, "bbb", edl->width, edl->height, 
             0.0/*edl->mix*/);
 
         hash = g_checksum_new (G_CHECKSUM_MD5);
@@ -519,7 +548,8 @@ void gedl_set_frame (GeglEDL *edl, int    frame)
 #endif
 
           /* write cached render of this frame */
-          if (!strstr (frame_recipe, ".gedl/cache") && (edl->cache_flags & CACHE_MAKE_ALL))
+          //if (!strstr (frame_recipe, ".gedl/cache") && (edl->cache_flags & CACHE_MAKE_ALL))
+          if (!strstr (frame_recipe, ".gedl/cache") && (!edl->use_proxies))
             {
               gchar *cache_path = g_strdup_printf (".gedl/cache/%s~", g_checksum_get_string(hash));
               gchar *cache_path_final = g_strdup_printf (".gedl/cache/%s", g_checksum_get_string(hash));
@@ -714,6 +744,8 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
      if (!strcmp (key, "audio-bitrate"))     edl->audio_bitrate = g_strtod (value, NULL);
      if (!strcmp (key, "video-width"))       edl->video_width = g_strtod (value, NULL);
      if (!strcmp (key, "video-height"))      edl->video_height = g_strtod (value, NULL);
+     if (!strcmp (key, "proxy-width"))       edl->proxy_width = g_strtod (value, NULL);
+     if (!strcmp (key, "proxy-height"))      edl->proxy_height = g_strtod (value, NULL);
      if (!strcmp (key, "frame-start"))       edl->range_start = g_strtod (value, NULL);
      if (!strcmp (key, "frame-end"))         edl->range_end = g_strtod (value, NULL);
      if (!strcmp (key, "selection-start"))   edl->selection_start = g_strtod (value, NULL);
@@ -889,7 +921,11 @@ GeglEDL *gedl_new_from_string (const char *string)
   g_string_free (line, TRUE);
 
   gedl_update_video_size (edl);
-  gedl_set_size (edl, edl->video_width, edl->video_height);
+
+  if (edl->use_proxies)
+    gedl_set_size (edl, edl->proxy_width, edl->proxy_height);
+  else
+    gedl_set_size (edl, edl->video_width, edl->video_height);
 
   return edl;
 }
@@ -943,6 +979,11 @@ void gedl_update_video_size (GeglEDL *edl)
       edl->video_height = rect.height;
       g_object_unref (gegl);
     }
+  if ((edl->proxy_width == 0 || edl->proxy_height == 0) && edl->video_width)
+  {
+    edl->proxy_width = 320;
+    edl->proxy_height = edl->proxy_width * (1.0 * edl->video_height / edl->video_width);
+  }
 }
 
 GeglEDL *gedl_new_from_path (const char *path)
@@ -976,6 +1017,21 @@ const char *gedl_get_clip2_path          (GeglEDL *edl)
 int gedl_get_clip2_frame_no      (GeglEDL *edl)
 {
   return edl->clip2?edl->clip2->clip_frame_no:0;
+}
+static void update_size (GeglEDL *edl)
+{
+  gegl_node_set (edl->crop, "width", 1.0 * edl->width,
+                            "height", 1.0 * edl->height,
+                            NULL);
+  gegl_node_set (edl->crop2, "width", 1.0 * edl->width,
+                             "height", 1.0 * edl->height,
+                             NULL);
+  gegl_node_set (edl->nop_raw, "x", 1.0 * edl->width,
+                             "y", 0.0,
+                             NULL);
+  gegl_node_set (edl->scale_size2, "x", 1.0 * edl->width,
+                             "y", 1.0 * edl->height,
+                             NULL);
 }
 static void setup (GeglEDL *edl)
 {
@@ -1028,6 +1084,7 @@ static void setup (GeglEDL *edl)
   gegl_node_connect_to (edl->crop2, "output", edl->over, "aux");
   gegl_node_connect_to (edl->crop, "output", edl->over, "input");
   gegl_node_connect_to (edl->over, "output", edl->result, "input");
+  update_size (edl);
 }
 void rig_frame (GeglEDL *edl, int frame_no)
 {
@@ -1072,18 +1129,14 @@ static void process_frames (GeglEDL *edl)
   fprintf (stdout, "\n");
 }
 
-int gegl_make_thumb_video (GeglEDL *edl, const char *path, const char *thumb_path)
+
+int gegl_make_thumb_image (GeglEDL *edl, const char *path, const char *icon_path)
 {
   GString *str = g_string_new ("");
-  gchar *icon_path = gedl_make_thumb_path (edl, path);
-
-  g_string_assign (str, "");
-  g_string_append_printf (str, "ffmpeg -y -i %s -vf scale=%ix%i %s", path, edl->video_width, edl->video_height, thumb_path);
-  system (str->str);
 
   g_string_assign (str, "");
   g_string_append_printf (str, "iconographer -p -h -f 'thumb 40' %s -a %s",
-                thumb_path, icon_path);
+                          path, icon_path);
   system (str->str);
 
   g_string_free (str, TRUE);
@@ -1106,30 +1159,41 @@ int gegl_make_thumb_video (GeglEDL *edl, const char *path, const char *thumb_pat
 }
 
 
-int gedl_ui_main (GeglEDL *edl);
-
-#if 0
-static GThread *thread;
-static gpointer preloader (gpointer data)
+int gegl_make_thumb_video (GeglEDL *edl, const char *path, const char *thumb_path)
 {
-  GeglEDL *edl = data;
-  GList *l;
-  while (1)
-  {
-    for (l= edl->clips; l; l= l->next)
-    {
-      Clip *clip = l->data;
+  GString *str = g_string_new ("");
+  //gchar *icon_path = gedl_make_thumb_path (edl, path);
 
-      if (clip != edl->clip) // && clip!= edl->clip2)
-      /* XXX: should add a mutex to clip to avoid doing it in parallell,.. */
-        clip_prepare_for_playback (clip);
-    }
-    g_usleep (5000);
-  }
-  return NULL;
-}
+  g_string_assign (str, "");
+  g_string_append_printf (str, "ffmpeg -y -i %s -vf scale=%ix%i %s", path, edl->proxy_width, edl->proxy_height, thumb_path);
+  system (str->str);
+#if 0
+  g_string_assign (str, "");
+  g_string_append_printf (str, "iconographer -p -h -f 'thumb 40' %s -a %s",
+                thumb_path, icon_path);
+  system (str->str);
 #endif
+  g_string_free (str, TRUE);
 
+  return 0;
+#if 0  // much slower and worse for fps/audio than ffmpeg method for creating thumbs
+  int tot_frames; //
+  g_string_append_printf (str, "video-bitrate=100\n\noutput-path=%s\nvideo-width=256\nvideo-height=144\n\n%s\n", thumb_path, path);
+  edl = gedl_new_from_string (str->str);
+  setup (edl);
+  tot_frames = gedl_get_duration (edl);
+
+  if (edl->range_end == 0)
+    edl->range_end = tot_frames-1;
+  process_frames (edl);
+  teardown ();
+  g_string_free (str, TRUE);
+  return 0;
+#endif
+}
+
+
+int gedl_ui_main (GeglEDL *edl);
 
 int gegl_make_thumb_video (GeglEDL *edl, const char *path, const char *thumb_path);
 static void gedl_make_proxies (GeglEDL *eld);
@@ -1140,9 +1204,13 @@ static void gedl_make_proxies (GeglEDL *eld)
   {
     Clip *clip = l->data;
     char *proxy_path = gedl_make_proxy_path (edl, clip->path);
+    char *thumb_path = gedl_make_thumb_path (edl, clip->path);
     if (!g_file_test (proxy_path, G_FILE_TEST_IS_REGULAR))
        gegl_make_thumb_video (edl, clip->path, proxy_path);
+    if (!g_file_test (thumb_path, G_FILE_TEST_IS_REGULAR))
+       gegl_make_thumb_image(edl, proxy_path, thumb_path);
     g_free (proxy_path);
+    g_free (thumb_path);
   }
 }
 
@@ -1248,6 +1316,12 @@ char *gedl_serialise (GeglEDL *edl)
 
   if (edl->use_proxies != DEFAULT_use_proxies)
     g_string_append_printf (ser, "use-proxies=%i\n",  edl->use_proxies);
+
+  if (edl->proxy_width != DEFAULT_proxy_width)
+    g_string_append_printf (ser, "proxy-width=%i\n",  edl->proxy_width);
+  if (edl->proxy_height != DEFAULT_proxy_height)
+    g_string_append_printf (ser, "proxy-height=%i\n", edl->proxy_height);
+
   if (strcmp(edl->output_path, DEFAULT_output_path))
     g_string_append_printf (ser, "output-path=%s\n", edl->output_path);
   if (strcmp(edl->video_codec, DEFAULT_video_codec))
