@@ -1305,9 +1305,6 @@ int main (int argc, char **argv)
     for (int i = 0; argv[i]; i++)
     {
       if (!strcmp (argv[i], "render")) runmode = RUNMODE_RENDER;
-      {
-        return gedl_ui_main (edl);
-      }
     }
 
     switch (runmode)
