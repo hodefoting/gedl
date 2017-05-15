@@ -483,7 +483,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
             g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
             (edl->cache_flags & CACHE_TRY_ALL))
           {
-            if (1) { // make video dir
+            if (0) { // make video dir
               gchar *tmp = g_strdup_printf ("ln -sf ../cache/%s .gedl/video/%08i.%s", edl->script_hash, frame, "jpg");
               system (tmp);
               g_free (tmp);
