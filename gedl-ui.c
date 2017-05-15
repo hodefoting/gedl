@@ -13,6 +13,8 @@ frames appearing in timeline
 #include <mrg.h>
 #include <gegl.h>
 #include "gedl.h"
+#include <SDL.h>
+#include <gegl-audio-fragment.h>
 
 #define SPLIT_VER  0.4
 
@@ -39,6 +41,73 @@ static void gedl_cache_invalid (GeglEDL *edl)
   changed++;
 }
 
+static int audio_len    = 0;
+static int audio_pos    = 0;
+static int audio_post   = 0;
+
+#define AUDIO_BUF_LEN 819200000
+
+int16_t audio_data[AUDIO_BUF_LEN];
+
+static void sdl_audio_cb(void *udata, Uint8 *stream, int len)
+{
+  int audio_remaining = audio_len - audio_pos;
+  if (audio_remaining < 0)
+    return;
+
+  if (audio_remaining < len) len = audio_remaining;
+
+  //SDL_MixAudio(stream, (uint8_t*)&audio_data[audio_pos/2], len, SDL_MIX_MAXVOLUME);
+  memcpy (stream, (uint8_t*)&audio_data[audio_pos/2], len);
+  audio_pos += len;
+  audio_post += len;
+  if (audio_pos >= AUDIO_BUF_LEN)
+  {
+    audio_pos = 0;
+  }
+}
+
+static void sdl_add_audio_sample (int sample_pos, float left, float right)
+{
+   audio_data[audio_len/2 + 0] = left * 32767.0 * 0.46;
+   audio_data[audio_len/2 + 1] = right * 32767.0 * 0.46;
+   audio_len += 4;
+
+   if (audio_len >= AUDIO_BUF_LEN)
+   {
+     audio_len = 0;
+   }
+}
+
+static int audio_started = 0;
+
+static void open_audio (int frequency)
+{
+  SDL_AudioSpec spec = {0};
+  SDL_Init(SDL_INIT_AUDIO);
+  spec.freq = frequency;
+  spec.format = AUDIO_S16SYS;
+  spec.channels = 2;
+  spec.samples = 1024;
+  spec.callback = sdl_audio_cb;
+  SDL_OpenAudio(&spec, 0);
+
+  if (spec.format != AUDIO_S16SYS)
+   {
+      fprintf (stderr, "not getting format we wanted\n");
+   }
+  if (spec.freq != frequency)
+   {
+      fprintf (stderr, "not getting desires samplerate(%i) we wanted got %i instead\n", frequency, spec.freq);
+   }
+}
+
+static void end_audio (void)
+{
+}
+
+
+
 static gpointer renderer_thread (gpointer data)
 {
   /* XXX: the renderer thread should keep more soon to be useful frames available */
@@ -56,6 +125,7 @@ static gpointer renderer_thread (gpointer data)
         GeglRectangle ext = gegl_node_get_bounding_box (preview_loader);
         gegl_buffer_set_extent (edl->buffer, &ext);
         gegl_node_process (edl->source_store_buf);
+
         done_frame = rendering_frame;
 #if 0
         MrgRectangle rect = {mrg_width (edl->mrg)/2, 0,
@@ -71,7 +141,8 @@ static gpointer renderer_thread (gpointer data)
       if (edl->frame_no != done_frame)
       {
         rendering_frame = edl->frame_no;
-        GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
+        //GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
+        GeglRectangle ext = {0, 0, edl->width, edl->height }; //gegl_node_get_bounding_box (edl->result);
         gegl_buffer_set_extent (edl->buffer, &ext);
 
         rig_frame (edl, edl->frame_no); /* this does the frame-set */
@@ -1480,6 +1551,8 @@ if(0)  g_thread_new ("cachemaster", renderer_main, edl);
   mrg_main (mrg);
   gedl_free (edl);
   gegl_exit ();
+
+  end_audio ();
 
   return 0;
 }
