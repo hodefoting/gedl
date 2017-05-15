@@ -334,6 +334,7 @@ void gedl_set_use_proxies (GeglEDL *edl, int use_proxies)
     gedl_set_frame (edl, frame);
   }
 
+  update_size (edl);
 }
 
 /*  calling this causes gedl to rig up its graphs for providing/rendering this frame
@@ -1037,6 +1038,8 @@ int gedl_get_clip2_frame_no      (GeglEDL *edl)
 }
 static void update_size (GeglEDL *edl)
 {
+  if (!edl->crop)
+    return;
   gegl_node_set (edl->crop, "width", 1.0 * edl->width,
                             "height", 1.0 * edl->height,
                             NULL);
