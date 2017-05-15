@@ -900,7 +900,7 @@ static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
-#define VID_HEIGHT 40
+#define VID_HEIGHT 96
 #define PAD_DIM     8
 
 void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start, int clip_frames, double x, double y)

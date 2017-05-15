@@ -315,6 +315,7 @@ Clip *gedl_get_clip (GeglEDL *edl, int frame, int *clip_frame_no)
 int cache_hits = 0;
 int cache_misses = 0;
 
+static void update_size (GeglEDL *edl);
 void gedl_set_use_proxies (GeglEDL *edl, int use_proxies)
 {
   int frame;
@@ -331,6 +332,7 @@ void gedl_set_use_proxies (GeglEDL *edl, int use_proxies)
     edl->frame--;
     gedl_set_frame (edl, frame);
   }
+
 }
 
 /*  calling this causes gedl to rig up its graphs for providing/rendering this frame
@@ -941,7 +943,6 @@ GeglEDL *gedl_new_from_string (const char *string)
   g_string_free (line, TRUE);
 
   gedl_update_video_size (edl);
-
   gedl_set_use_proxies (edl, edl->use_proxies);
 
   return edl;
@@ -982,23 +983,19 @@ void gedl_update_video_size (GeglEDL *edl)
       GeglRectangle rect;
       // XXX: is ff-load good for pngs and jpgs as well?
       GeglNode *probe;
-      if (edl->use_proxies)
-      {
-         gchar *path = gedl_make_proxy_path (edl, clip->path);
-         probe = gegl_node_new_child (gegl, "operation", "gegl:ff-load", "path", path, NULL);
-         g_free (path);
-      }
-      else
-         probe = gegl_node_new_child (gegl, "operation", "gegl:ff-load", "path", clip->path, NULL);
+      probe = gegl_node_new_child (gegl, "operation", "gegl:ff-load", "path", clip->path, NULL);
       gegl_node_process (probe);
       rect = gegl_node_get_bounding_box (probe);
       edl->video_width = rect.width;
       edl->video_height = rect.height;
       g_object_unref (gegl);
     }
-  if ((edl->proxy_width == 0 || edl->proxy_height == 0) && edl->video_width)
+  if ((edl->proxy_width <= 0) && edl->video_width)
   {
     edl->proxy_width = 320;
+  }
+  if ((edl->proxy_height <= 0) && edl->video_width)
+  {
     edl->proxy_height = edl->proxy_width * (1.0 * edl->video_height / edl->video_width);
   }
 }
