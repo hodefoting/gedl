@@ -197,10 +197,11 @@ GeglEDL *gedl_new           (void)
 {
   GeglRectangle roi = {0,0,1024, 1024};
   GeglEDL *edl = g_malloc0(sizeof (GeglEDL));
-  system ("mkdir .gedl 2>/dev/null");  /* XXX: create cache dir */
-  system ("mkdir .gedl/cache 2>/dev/null");  /* XXX: create cache dir */
-  system ("mkdir .gedl/proxy 2>/dev/null");  /* XXX: create cache dir */
-  system ("mkdir .gedl/thumb 2>/dev/null");  /* XXX: create cache dir */
+  system ("mkdir .gedl 2>/dev/null");  /* XXX: create cache dir expected to exist in folder with edl files */
+  system ("mkdir .gedl/cache 2>/dev/null");
+  system ("mkdir .gedl/proxy 2>/dev/null");
+  system ("mkdir .gedl/thumb 2>/dev/null");
+  system ("mkdir .gedl/video 2>/dev/null");
   edl->gegl = gegl_node_new ();
   edl->cache_flags = 0;
   edl->cache_flags = CACHE_TRY_ALL;
@@ -336,6 +337,7 @@ void gedl_set_use_proxies (GeglEDL *edl, int use_proxies)
 
   update_size (edl);
 }
+int do_encode = 1;
 
 /*  calling this causes gedl to rig up its graphs for providing/rendering this frame
  */
@@ -481,6 +483,13 @@ void gedl_set_frame (GeglEDL *edl, int frame)
             g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
             (edl->cache_flags & CACHE_TRY_ALL))
           {
+            if (1) { // make video dir
+              gchar *tmp = g_strdup_printf ("ln -sf ../cache/%s .gedl/video/%08i.%s", edl->script_hash, frame, "jpg");
+              system (tmp);
+              g_free (tmp);
+            }
+            if (do_encode)
+            {
             gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
             gegl_node_link_many (edl->cache_loader, edl->result, NULL);
 #if 1
@@ -489,6 +498,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
             gegl_meta_get_audio (cache_path, clip->audio);
 #endif
             gegl_node_process (edl->store_buf);
+            }
 #if DEBUG_CACHE
             fprintf (stderr, "hit : %i\n", edl->frame);
 #endif
@@ -1115,7 +1125,6 @@ void rig_frame (GeglEDL *edl, int frame_no)
   gegl_node_set (edl->encode, "audio", gedl_get_audio (edl), NULL);
 }
 
-int do_encode = 1;
 static void teardown (void)
 {
   gedl_free (edl);
@@ -1305,10 +1314,12 @@ int main (int argc, char **argv)
   {
 #define RUNMODE_UI     0
 #define RUNMODE_RENDER 1
+#define RUNMODE_CACHE  2
     int runmode = RUNMODE_UI;
     for (int i = 0; argv[i]; i++)
     {
       if (!strcmp (argv[i], "render")) runmode = RUNMODE_RENDER;
+      if (!strcmp (argv[i], "cache")) runmode = RUNMODE_CACHE;
     }
 
     switch (runmode)
@@ -1318,6 +1329,14 @@ int main (int argc, char **argv)
         gedl_make_proxies (edl);
         return gedl_ui_main (edl);
       case RUNMODE_RENDER:
+        tot_frames  = gedl_get_duration (edl);
+        if (edl->range_end == 0)
+          edl->range_end = tot_frames-1;
+        process_frames (edl);
+        teardown ();
+        return 0;
+      case RUNMODE_CACHE:
+        do_encode = 0;
         tot_frames  = gedl_get_duration (edl);
         if (edl->range_end == 0)
           edl->range_end = tot_frames-1;

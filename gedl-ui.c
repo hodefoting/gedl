@@ -16,6 +16,7 @@ frames appearing in timeline
 
 #define SPLIT_VER  0.4
 
+static int exited = 0;
 static GThread *thread;
 long babl_ticks (void);
 
@@ -822,6 +823,7 @@ static void toggle_edit_source (MrgEvent *event, void *data1, void *data2)
 
 static void do_quit (MrgEvent *event, void *data1, void *data2)
 {
+  exited = 1;
   mrg_quit (event->mrg);
 }
 
@@ -1424,28 +1426,30 @@ static void renderer_set_range (int start, int end)
   renderer_end = end;
   renderer_pos = 0;
 }
+#endif
 
 gpointer renderer_main (gpointer data)
 {
   GeglEDL *edl = data;
-  while (1)
+  while (!exited)
   {
-    if (renderer_pos < renderer_end)
-    {
-      char *cmd = g_strdup_printf ("./gedl %s /tmp/foo.mp4 -c -s %i -e %i", edl->path, renderer_start, renderer_end);
-      system (cmd);
-      renderer_pos = renderer_end;
-    }
-    else
-    {
-      g_usleep (100);
-    }
+    //if (renderer_pos < renderer_end)
+    //{
+      char *cmd = g_strdup_printf ("gedl %s cache", edl->path);
+      g_usleep (1000 * 5.0);
+      if (!playing)
+      {
+        save_edl (edl);
+        system (cmd);
+      }
+      //renderer_pos = renderer_end;
+    //}
+    //else
+    //{
+    //}
   }
   return NULL;
 }
-
-#endif
-
 
 int gedl_ui_main (GeglEDL *edl);
 int gedl_ui_main (GeglEDL *edl)
@@ -1469,6 +1473,7 @@ int gedl_ui_main (GeglEDL *edl)
   g_timeout_add (1000, save_idle, edl);
 
   thread = g_thread_new ("renderer", renderer_thread, edl);
+if(0)  g_thread_new ("cachemaster", renderer_main, edl);
 
   gedl_get_duration (edl);
 
