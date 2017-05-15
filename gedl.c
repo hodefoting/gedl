@@ -42,7 +42,6 @@ gegl_meta_get_audio (const char        *path,
 #define DEFAULT_selection_end     0
 #define DEFAULT_range_start       0
 #define DEFAULT_range_end         0
-#define DEFAULT_use_proxies       0
 
 
 char *gedl_make_proxy_path (GeglEDL *edl, const char *clip_path);
@@ -231,7 +230,7 @@ GeglEDL *gedl_new           (void)
   edl->buffer = gegl_buffer_new (&roi, babl_format ("R'G'B'A u8"));
 
   edl->clip_query = strdup ("");
-  edl->use_proxies = DEFAULT_use_proxies;
+  edl->use_proxies = 0;
 
   return edl;
 }
@@ -347,6 +346,8 @@ void gedl_set_frame (GeglEDL *edl, int frame)
     fprintf (stderr, "already done!\n");
     return;
   }
+
+
   edl->frame = frame;
   edl->mix = 0.0;
 
@@ -511,6 +512,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
               fprintf (stderr, "miss : %i (%s)\n", edl->frame, frame_recipe);
 #endif
             }
+
             g_mutex_lock (&clip->mutex);
 
             if ((clip->is_image && clip->buffer == NULL) ||
@@ -776,7 +778,6 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
      if (!strcmp (key, "range-end"))         edl->range_end = g_strtod (value, NULL);
      if (!strcmp (key, "frame-no"))          edl->frame_no = g_strtod (value, NULL);
      if (!strcmp (key, "frame-scale"))       edl->scale = g_strtod (value, NULL);
-     if (!strcmp (key, "use-proxies"))       edl->use_proxies = g_strtod (value, NULL);
      if (!strcmp (key, "t0"))                edl->t0 = g_strtod (value, NULL);
 
      g_free (key);
@@ -1130,14 +1131,16 @@ static void process_frames (GeglEDL *edl)
     edl->frame_no = frame_no;
     rig_frame (edl, edl->frame_no);
 
-    fprintf (stdout, "\n%1.2f%% %04d / %04d [%s]  ",
+    fprintf (stdout, "\r%1.2f%% %04d / %04d [%s]    ",
      100.0 * (frame_no-edl->range_start) * 1.0 / (edl->range_end - edl->range_start),
      frame_no, edl->range_end,
 
      edl->script_hash);
 
     if (do_encode)
+    {
       gegl_node_process (edl->encode);
+    }
     fflush (0);
   }
   fprintf (stdout, "\n");
@@ -1149,7 +1152,8 @@ int gegl_make_thumb_image (GeglEDL *edl, const char *path, const char *icon_path
   GString *str = g_string_new ("");
 
   g_string_assign (str, "");
-  g_string_append_printf (str, "iconographer -p -h -f 'thumb 96' %s -a %s",
+  g_string_append_printf (str, "iconographer -p -h -f 'mid-col 96' %s -a %s",
+  //g_string_append_printf (str, "iconographer -p -h -f 'thumb 96' %s -a %s",
                           path, icon_path);
   system (str->str);
 
@@ -1249,9 +1253,6 @@ int main (int argc, char **argv)
     argc--;
   }
 
-  //if (argv[1] && argv[2] && argv[3] && !strcmp (argv[1], "genprox"))
-  //   return gegl_make_thumb_video (argv[2], argv[3]);
-
   edl_path = argv[1];
 
   if (g_str_has_suffix (edl_path, ".mp4") ||
@@ -1283,8 +1284,10 @@ int main (int argc, char **argv)
   {
     edl = gedl_new_from_path (edl_path);
   }
+/*
   if (argv[2] && argv[2][0]!='-')
     edl->output_path = argv[2];
+    */
   setup (edl);
 
   if (make_proxies)
@@ -1327,8 +1330,6 @@ char *gedl_serialise (GeglEDL *edl)
   char *ret;
   GString *ser = g_string_new ("");
 
-  if (edl->use_proxies != DEFAULT_use_proxies)
-    g_string_append_printf (ser, "use-proxies=%i\n",  edl->use_proxies);
 
   if (edl->proxy_width != DEFAULT_proxy_width)
     g_string_append_printf (ser, "proxy-width=%i\n",  edl->proxy_width);
