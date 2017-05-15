@@ -649,7 +649,6 @@ double gedl_get_time (GeglEDL *edl)
 }
 GeglAudioFragment *gedl_get_audio  (GeglEDL *edl)
 {
-
   return edl->clip?edl->clip->audio:NULL;
 }
 GeglBuffer *gedl_get_buffer (GeglEDL *edl)
@@ -1122,7 +1121,8 @@ void rig_frame (GeglEDL *edl, int frame_no)
     return;
   gedl_set_frame (edl, frame_no);
 
-  gegl_node_set (edl->encode, "audio", gedl_get_audio (edl), NULL);
+  if (do_encode)
+    gegl_node_set (edl->encode, "audio", gedl_get_audio (edl), NULL);
 }
 
 static void teardown (void)
