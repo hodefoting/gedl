@@ -171,15 +171,6 @@ foo++;
 
 }
 
-int renderer_pos   = 0;
-int renderer_start = 0;
-int renderer_end   = 0;
-static void renderer_set_range (int start, int end)
-{
-  renderer_start = start;
-  renderer_end = end;
-  renderer_pos = 0;
-}
 
 typedef struct _State State;
 
@@ -299,14 +290,6 @@ static void released_clip (MrgEvent *e, void *data1, void *data2)
 static void stop_playing (MrgEvent *event, void *data1, void *data2)
 {
   playing = 0;
-  mrg_event_stop_propagate (event);
-  mrg_queue_draw (event->mrg, NULL);
-  changed++;
-}
-
-static void toggle_playing (MrgEvent *event, void *data1, void *data2)
-{
-  playing =  !playing;
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
@@ -914,7 +897,7 @@ void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start,
   int width, height;
   MrgImage *img = mrg_query_image (mrg, thumb_path, &width, &height);
   g_free (thumb_path);
-  if (img && width > 0)
+  if (!playing && img && width > 0)
   {
     cairo_surface_t *surface = mrg_image_get_surface (img);
     cairo_matrix_t   matrix;
@@ -1172,13 +1155,32 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
 
 static long prev_ticks = 0;
 
+static inline void skipped_frames (int count)
+{
+  //fprintf (stderr, "[%i]", count);
+}
+
+static inline void wait_for_frame ()
+{
+  //fprintf (stderr, ".");
+}
+
+static void toggle_playing (MrgEvent *event, void *data1, void *data2)
+{
+  playing =  !playing;
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+  prev_ticks = babl_ticks ();
+  changed++;
+}
+
+
 void playing_iteration (Mrg *mrg, GeglEDL *edl)
 {
   long ticks = 0;
   double delta = 1;
   ticks = babl_ticks ();
   if (prev_ticks == 0) prev_ticks = ticks;
-
 
   if (playing)
     {
@@ -1188,9 +1190,15 @@ void playing_iteration (Mrg *mrg, GeglEDL *edl)
 #endif
       delta = (((ticks - prev_ticks) / 1000000.0) * ( edl->fps ));
       //fprintf (stderr, "%f\n", delta);
-      if (delta < 1)
-        delta = 0;
+      if (delta < 1.0)
       {
+        wait_for_frame ();
+        mrg_queue_draw (mrg, NULL);
+        return;
+      }
+        //delta = 0;
+      {
+#if 0
         static int frameskip = -1;
         if (frameskip < 0)
         {
@@ -1201,6 +1209,22 @@ void playing_iteration (Mrg *mrg, GeglEDL *edl)
         }
         if (!frameskip)
           delta = 1;
+#else
+        if (edl->framedrop)
+        {
+          if (delta >= 2.0)
+            {
+              skipped_frames ( (int)(delta)-1 );
+            }
+        }
+        else
+        {
+          if (delta > 1.0)
+            delta = 1;
+          else
+            delta = 0;
+        }
+#endif
       }
       if (rendering_frame != done_frame)
         return;
@@ -1229,7 +1253,7 @@ void playing_iteration (Mrg *mrg, GeglEDL *edl)
         edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
         prev_ticks = ticks;
       }
-   //   mrg_queue_draw (mrg, NULL);
+      //mrg_queue_draw (mrg, NULL);
     }
 }
 
@@ -1386,6 +1410,18 @@ void gedl_ui (Mrg *mrg, void *data)
 
 }
 
+
+#if 0
+int renderer_pos   = 0;
+int renderer_start = 0;
+int renderer_end   = 0;
+static void renderer_set_range (int start, int end)
+{
+  renderer_start = start;
+  renderer_end = end;
+  renderer_pos = 0;
+}
+
 gpointer renderer_main (gpointer data)
 {
   GeglEDL *edl = data;
@@ -1405,6 +1441,8 @@ gpointer renderer_main (gpointer data)
   return NULL;
 }
 
+#endif
+
 
 int gedl_ui_main (GeglEDL *edl);
 int gedl_ui_main (GeglEDL *edl)
@@ -1423,7 +1461,7 @@ int gedl_ui_main (GeglEDL *edl)
   edl->cache_flags = CACHE_TRY_ALL;// | CACHE_MAKE_ALL;
 //  if (!edl->use_proxies)
 //   edl->cache_flags |= CACHE_MAKE_ALL;
-  renderer_set_range (0, 50);
+//renderer_set_range (0, 50);
   mrg_set_ui (mrg, gedl_ui, &o);
   g_timeout_add (1000, save_idle, edl);
 

@@ -42,6 +42,7 @@ gegl_meta_get_audio (const char        *path,
 #define DEFAULT_selection_end     0
 #define DEFAULT_range_start       0
 #define DEFAULT_range_end         0
+#define DEFAULT_framedrop         0
 
 
 char *gedl_make_proxy_path (GeglEDL *edl, const char *clip_path);
@@ -223,6 +224,7 @@ GeglEDL *gedl_new           (void)
   edl->audio_bitrate    = DEFAULT_audio_bitrate;
   edl->audio_samplerate = DEFAULT_audio_samplerate;
   edl->fade_duration    = DEFAULT_fade_duration;
+  edl->framedrop        = DEFAULT_framedrop;
   edl->frame_no         = 0;  /* frame-no in ui shell */
   edl->frame = -1;            /* frame-no in renderer thread */
   edl->scale = 1.0;
@@ -346,7 +348,6 @@ void gedl_set_frame (GeglEDL *edl, int frame)
     fprintf (stderr, "already done!\n");
     return;
   }
-
 
   edl->frame = frame;
   edl->mix = 0.0;
@@ -759,6 +760,7 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
             value[strlen(value)-1]='\0';
      if (!strcmp (key, "fade-duration"))     edl->fade_duration = g_strtod (value, NULL);
      if (!strcmp (key, "fps"))               gedl_set_fps (edl, g_strtod (value, NULL));
+     if (!strcmp (key, "framedrop"))         edl->framedrop     = g_strtod (value, NULL);
      if (!strcmp (key, "output-path"))       edl->output_path = g_strdup (value);
      if (!strcmp (key, "video-codec"))       edl->video_codec = g_strdup (value);
      if (!strcmp (key, "audio-codec"))       edl->audio_codec = g_strdup (value);
@@ -1335,6 +1337,8 @@ char *gedl_serialise (GeglEDL *edl)
     g_string_append_printf (ser, "proxy-width=%i\n",  edl->proxy_width);
   if (edl->proxy_height != DEFAULT_proxy_height)
     g_string_append_printf (ser, "proxy-height=%i\n", edl->proxy_height);
+  if (edl->framedrop != DEFAULT_framedrop)
+    g_string_append_printf (ser, "framedrop=%i\n", edl->framedrop);
 
   if (strcmp(edl->output_path, DEFAULT_output_path))
     g_string_append_printf (ser, "output-path=%s\n", edl->output_path);

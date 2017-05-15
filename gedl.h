@@ -148,6 +148,7 @@ struct _GeglEDL
   int         frame_no;
   int         source_frame_no;
   int         use_proxies;
+  int         framedrop;
 
   GeglNode   *nop_raw;
   GeglNode   *nop_transformed;
