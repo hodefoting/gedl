@@ -2,6 +2,8 @@ gedl: *.c *.h Makefile
 	gcc *.c `pkg-config gegl-0.3 lyd-0.0 mrg gexiv2 --cflags --libs` -O2 -Wall -g -o gedl
 clean:
 	rm gedl
+install: gedl
+	install gedl /usr/local/bin
 
 SOUNDTRACK=TheBlackGoat_64kb.mp3
 #SOUNDTRACK=HamboCorvette-Sweden-ViolaTurpeinensEnsStandardF5002b78-Couple-Advanced.mp3

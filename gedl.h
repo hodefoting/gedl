@@ -68,7 +68,6 @@ typedef struct SourceClip
 
 struct _Clip
 {
-  GeglEDL *edl;
   char  *path;  /*path to media file */
   int    start; /*frame number starting with 0 */
   int    end;   /*last frame, inclusive fro single frame, make equal to start */
@@ -76,6 +75,7 @@ struct _Clip
   int    duration;
   int    editing;
   /* start of this must match start of clip */
+  GeglEDL *edl;
 
   double fps;
   char   sha256sum[20]; /*< would also be the filename of thumbtrack */
