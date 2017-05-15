@@ -423,12 +423,15 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
-static void use_proxies (MrgEvent *event, void *data1, void *data2)
+static void toggle_use_proxies (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
 
-  gedl_set_use_proxies (edl, edl->use_proxies?0:1);
-  gedl_cache_invalid (edl);
+  if (!playing) // disallowing - to avoid some races
+  {
+    gedl_set_use_proxies (edl, edl->use_proxies?0:1);
+    gedl_cache_invalid (edl);
+  }
 
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -1385,7 +1388,7 @@ void gedl_ui (Mrg *mrg, void *data)
     mrg_add_binding (mrg, "q", NULL, NULL, (void*)do_quit, mrg);
     mrg_add_binding (mrg, "space", NULL, NULL, toggle_playing, edl);
 
-    mrg_add_binding (mrg, "p", NULL, NULL, use_proxies, edl);
+    mrg_add_binding (mrg, "p", NULL, NULL, toggle_use_proxies, edl);
 
     mrg_add_binding (mrg, "control-left", NULL, NULL, nav_left, edl);
     mrg_add_binding (mrg, "control-right", NULL, NULL, nav_right, edl);
