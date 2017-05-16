@@ -403,7 +403,7 @@ static void select_all (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
-static void extend_right (MrgEvent *event, void *data1, void *data2)
+static void extend_selection_to_the_right (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
   int sel_start, sel_end;
@@ -456,7 +456,7 @@ static void insert (MrgEvent *event, void *data1, void *data2)
   }
 }
 
-static void extend_left (MrgEvent *event, void *data1, void *data2)
+static void extend_selection_to_the_left (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
   int sel_start, sel_end;
@@ -642,6 +642,15 @@ static void nav_right (MrgEvent *event, void *data1, void *data2)
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
+}
+
+static int help = 0;
+
+static void toggle_help (MrgEvent *event, void *data1, void *data2)
+{
+  //GeglEDL *edl = data1;
+  help = help ? 0 : 1;
+  mrg_queue_draw (event->mrg, NULL);
 }
 
 static void toggle_fade (MrgEvent *event, void *data1, void *data2)
@@ -1484,6 +1493,7 @@ void gedl_ui (Mrg *mrg, void *data)
     mrg_add_binding (mrg, "d", NULL, NULL, duplicate_clip, edl);
     mrg_add_binding (mrg, "v", NULL, NULL, split_clip, edl);
     mrg_add_binding (mrg, "f", NULL, NULL, toggle_fade, edl);
+    mrg_add_binding (mrg, "F1", NULL, NULL, toggle_help, edl);
     mrg_add_binding (mrg, "s", NULL, NULL, save, edl);
     mrg_add_binding (mrg, "a", NULL, NULL, select_all, edl);
     mrg_add_binding (mrg, "r", NULL, NULL, set_range, edl);
@@ -1498,8 +1508,8 @@ void gedl_ui (Mrg *mrg, void *data)
     mrg_add_binding (mrg, ",", NULL, NULL, clip_end_dec, edl);
     mrg_add_binding (mrg, "alt-left", NULL, NULL, clip_start_inc, edl);
     mrg_add_binding (mrg, "alt-right", NULL, NULL, clip_start_dec, edl);
-    mrg_add_binding (mrg, "shift-right", NULL, NULL, extend_right, edl);
-    mrg_add_binding (mrg, "shift-left", NULL, NULL, extend_left, edl);
+    mrg_add_binding (mrg, "shift-right", NULL, NULL, extend_selection_to_the_right, edl);
+    mrg_add_binding (mrg, "shift-left", NULL, NULL, extend_selection_to_the_left, edl);
 
     mrg_add_binding (mrg, "right", NULL, NULL, step_frame, edl);
     mrg_add_binding (mrg, "left", NULL, NULL, step_frame_back, edl);
@@ -1512,6 +1522,35 @@ void gedl_ui (Mrg *mrg, void *data)
   else //if (edl->filter_edited)
     mrg_add_binding (mrg, "return", NULL, NULL, edit_filter_graph, edl);
 
+  if (help)
+  {
+    mrg_printf (mrg, "\n"
+    "F1 toggle_help\n"
+    "space toggle_playing\n"
+    "p toggle_use_proxies\n"
+    "left/right step_frame\n"
+    "shift-left/right extend_selection\n"
+    "v split_clip\n"
+    "del/x remove_clip\n"
+    "d duplicate_clip\n"
+    "i insert\n"
+    "s save\n"
+    "a select_all\n"
+    "r set_range\n"
+    "control-left nav_left\n"
+    "control-right nav_right\n"
+    ". clip_end_inc\n"
+    ", clip_end_dec\n"
+    "alt-left clip_start_inc\n"
+    "alt-right clip_start_dec\n"
+    "f toggle_fade\n"
+
+    "q quit\n");
+  }
+  else
+  {
+    mrg_printf (mrg, "\nF1 toggle help");
+  }
 
 }
 
