@@ -495,7 +495,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
             gegl_node_link_many (edl->cache_loader, edl->result, NULL);
 #if 1
             if (!clip->audio)
-              clip->audio = gegl_audio_fragment_new (44100, 2, 0, 4000);
+              clip->audio = gegl_audio_fragment_new (44100, 2, 0, 40000);
             gegl_meta_get_audio (cache_path, clip->audio);
 #endif
             gegl_node_process (edl->store_buf);
@@ -595,7 +595,6 @@ void gedl_set_frame (GeglEDL *edl, int frame)
             {
               gchar *cache_path = g_strdup_printf (".gedl/cache/%s~", g_checksum_get_string(hash));
               gchar *cache_path_final = g_strdup_printf (".gedl/cache/%s", g_checksum_get_string(hash));
-              fprintf (stderr, "[%s]\n", cache_path_final);
 
               if ( //!g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
                   !g_file_test (cache_path_final, G_FILE_TEST_IS_REGULAR))
