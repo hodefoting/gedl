@@ -107,6 +107,7 @@ static void end_audio (void)
 }
 
 
+void playing_iteration (Mrg *mrg, GeglEDL *edl);
 
 static gpointer renderer_thread (gpointer data)
 {
@@ -115,6 +116,7 @@ static gpointer renderer_thread (gpointer data)
   GeglEDL *edl = data;
   for (;;)
   {
+    playing_iteration (edl->mrg, edl);
     if (edl->active_source)
     {
       if (edl->source_frame_no != done_frame)
@@ -140,12 +142,11 @@ static gpointer renderer_thread (gpointer data)
     {
       if (edl->frame_no != done_frame)
       {
-        rendering_frame = edl->frame_no;
-        //GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
         GeglRectangle ext = {0, 0, edl->width, edl->height }; //gegl_node_get_bounding_box (edl->result);
+        rendering_frame = edl->frame_no;
         gegl_buffer_set_extent (edl->buffer, &ext);
 
-        rig_frame (edl, edl->frame_no); /* this does the frame-set */
+        rig_frame (edl, edl->frame_no); /* this does the frame-set, which causes render  */
 
         {
           GeglAudioFragment *audio = gedl_get_audio (edl);
@@ -165,10 +166,9 @@ if (audio)
          {
            sdl_add_audio_sample (0, audio->data[0][i], audio->data[1][i]);
          }
-         while (audio_len > audio_pos + 5000)
-           g_usleep (50);
+        // while (audio_len > audio_pos + 5000)
+        //   g_usleep (50);
        }
-       //g_object_unref (audio);
 }
         }
 
@@ -181,7 +181,9 @@ if (audio)
         mrg_queue_draw (edl->mrg, &rect);
       }
       else
+      {
         g_usleep (50);
+      }
     }
   }
   return NULL;
@@ -1330,6 +1332,8 @@ void playing_iteration (Mrg *mrg, GeglEDL *edl)
       }
       if (rendering_frame != done_frame)
         return;
+      if (delta >= 1.0)
+      {
       if (edl->active_source)
       {
         edl->source_frame_no += delta;
@@ -1355,7 +1359,7 @@ void playing_iteration (Mrg *mrg, GeglEDL *edl)
         edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
         prev_ticks = ticks;
       }
-      //mrg_queue_draw (mrg, NULL);
+      }
     }
 }
 
@@ -1377,7 +1381,7 @@ void gedl_ui (Mrg *mrg, void *data)
                       (int)(mrg_width (mrg) * 0.75), mrg_height (mrg) * SPLIT_VER,
                       o->edl->cached_result, 0,0,
                       
-                      edl->frame_no == done_frame?1.0:0.5
+                      1.0 //edl->frame_no == done_frame?1.0:0.5
                       
                       );
 
@@ -1395,7 +1399,7 @@ void gedl_ui (Mrg *mrg, void *data)
   }
 #endif
 
-#if 0
+#if 1
   mrg_printf (mrg, "cache hit: %2.2f%% of %i\n", 100.0 * cache_hits / (cache_hits + cache_misses), cache_hits + cache_misses);
 #endif
 
@@ -1467,7 +1471,6 @@ void gedl_ui (Mrg *mrg, void *data)
            edl->frame_no != rendering_frame)
     mrg_printf (mrg, ".:");
 
-  playing_iteration (mrg, edl);
 
   if (!edl->clip_query_edited &&
       !edl->filter_edited 
@@ -1573,7 +1576,7 @@ int gedl_ui_main (GeglEDL *edl)
 if(0)  g_thread_new ("cachemaster", renderer_main, edl);
 
   gedl_get_duration (edl);
-
+  mrg_set_target_fps (mrg, -1);
   mrg_main (mrg);
   gedl_free (edl);
   gegl_exit ();

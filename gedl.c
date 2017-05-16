@@ -479,7 +479,8 @@ void gedl_set_frame (GeglEDL *edl, int frame)
 
         /*************************************************************************/
 
-        if (!strstr (frame_recipe, ".gedl/cache/") &&
+        if (!edl->use_proxies &&
+            !strstr (frame_recipe, ".gedl/cache/") &&
             g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
             (edl->cache_flags & CACHE_TRY_ALL))
           {
@@ -519,9 +520,10 @@ void gedl_set_frame (GeglEDL *edl, int frame)
 
             if (!strstr (frame_recipe, ".gedl/cache"))
             {
-              cache_misses ++;
+              if (!edl->use_proxies)
+                cache_misses ++;
 #if DEBUG_CACHE
-              fprintf (stderr, "miss : %i (%s)\n", edl->frame, frame_recipe);
+              fprintf (stderr, "miss : %i (%s)\n", edl->frame, edl->script_hash);//frame_recipe);
 #endif
             }
 
@@ -555,10 +557,14 @@ void gedl_set_frame (GeglEDL *edl, int frame)
 
             if (clip->is_image)
               clip->audio = NULL;
-#if 1
             else
-              gegl_node_get (clip->loader, "audio", &clip->audio, NULL);
-#endif
+            {
+              if (edl->use_proxies)
+                gegl_node_get (clip->proxy_loader, "audio", &clip->audio, NULL);
+              else
+                gegl_node_get (clip->loader, "audio", &clip->audio, NULL);
+            }
+
 #if 0
             if (edl->mix != 0.0 && clip2)
               {
@@ -589,7 +595,9 @@ void gedl_set_frame (GeglEDL *edl, int frame)
             {
               gchar *cache_path = g_strdup_printf (".gedl/cache/%s~", g_checksum_get_string(hash));
               gchar *cache_path_final = g_strdup_printf (".gedl/cache/%s", g_checksum_get_string(hash));
-              if (!g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
+              fprintf (stderr, "[%s]\n", cache_path_final);
+
+              if ( //!g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
                   !g_file_test (cache_path_final, G_FILE_TEST_IS_REGULAR))
                 {
                   GeglNode *save_graph = gegl_node_new ();
