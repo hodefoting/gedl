@@ -1054,11 +1054,11 @@ void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start,
 
 static void scroll_to_fit (GeglEDL *edl, Mrg *mrg)
 {
-    /* scroll to fit playhead */
-    if ( (edl->frame_no - edl->t0) / fpx < mrg_width (mrg) * 0.2)
-      edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.2) * fpx;
-    if ( (edl->frame_no - edl->t0) / fpx > mrg_width (mrg) * 0.8)
-      edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.8) * fpx;
+  /* scroll to fit playhead */
+  if ( (edl->frame_no - edl->t0) / edl->scale > mrg_width (mrg) * 0.8)
+    edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.8) * edl->scale;
+  else if ( (edl->frame_no - edl->t0) / edl->scale < mrg_width (mrg) * 0.2)
+    edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.2) * edl->scale;
 }
 
 void gedl_draw (Mrg     *mrg,
@@ -1074,10 +1074,10 @@ void gedl_draw (Mrg     *mrg,
   double t;
  
   VID_HEIGHT = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.8;
+  int scroll_height = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.2;
   t = 0;
 
   cairo_set_source_rgba (cr, 1, 1,1, 1);
-  //y += PAD_DIM * 2;
 
   if (playing)
   {
@@ -1091,7 +1091,9 @@ void gedl_draw (Mrg     *mrg,
     cairo_scale (cr, 1.0 / duration * mrg_width (mrg), 1.0);
   }
 
-  cairo_rectangle (cr, t0, y-10, mrg_width(mrg)*fpx, 10);
+  y += VID_HEIGHT;
+
+  cairo_rectangle (cr, t0, y, mrg_width(mrg)*fpx, scroll_height);
   mrg_listen (mrg, MRG_DRAG, drag_t0, edl, edl);
   cairo_set_source_rgba (cr, 1, 1, 0.5, 0.25);
   if (playing)
@@ -1099,8 +1101,7 @@ void gedl_draw (Mrg     *mrg,
   else
   cairo_fill (cr);
 
-
-  cairo_rectangle (cr, t0 + mrg_width(mrg)*fpx*0.9, y-10, mrg_width(mrg)*fpx * 0.1, 10);
+  cairo_rectangle (cr, t0 + mrg_width(mrg)*fpx*0.9, y, mrg_width(mrg)*fpx * 0.1, scroll_height);
   mrg_listen (mrg, MRG_DRAG, drag_fpx, edl, edl);
   cairo_fill (cr);
 
@@ -1113,25 +1114,33 @@ void gedl_draw (Mrg     *mrg,
     //  cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
     //else
     //  cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
-    cairo_rectangle (cr, t, y-10, frames, 10);
+    cairo_rectangle (cr, t, y, frames, scroll_height);
 
     cairo_stroke (cr);
     t += frames;
   }
 
+  int start = 0, end = 0;
+  gedl_get_range (edl, &start, &end);
+  cairo_rectangle (cr, start, y, end - start, scroll_height);
+  cairo_set_source_rgba (cr, 0, 0.11, 0.0, 0.5);
+  cairo_fill_preserve (cr);
+  cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
+  cairo_stroke (cr);
+
   {
   double frame = edl->frame_no;
   if (fpx < 1.0)
-    cairo_rectangle (cr, frame, y-15, 1.0, 15);
+    cairo_rectangle (cr, frame, y-5, 1.0, 5 + scroll_height);
   else
-    cairo_rectangle (cr, frame, y-15, fpx, 15);
+    cairo_rectangle (cr, frame, y-5, fpx, 5 + scroll_height);
   cairo_set_source_rgba (cr,1,0,0,0.85);
   cairo_fill (cr);
   }
 
 
   cairo_restore (cr);
-  y+=10;
+  y -= VID_HEIGHT;
   t = 0;
 
   cairo_move_to (cr, x0 + PAD_DIM, y + VID_HEIGHT + PAD_DIM * 3);
@@ -1143,7 +1152,6 @@ void gedl_draw (Mrg     *mrg,
   cairo_scale (cr, 1.0/fpx, 1);
   cairo_translate (cr, -t0, 0);
 
-  int start = 0, end = 0;
   gedl_get_selection (edl, &start, &end);
   cairo_rectangle (cr, start + 0.5, y - PAD_DIM, end - start, VID_HEIGHT + PAD_DIM * 2);
   cairo_set_source_rgba (cr, 1, 0, 0, 0.75);
@@ -1168,13 +1176,6 @@ void gedl_draw (Mrg     *mrg,
   }
 
 
-  gedl_get_range (edl, &start, &end);
-
-  cairo_rectangle (cr, start, y + VID_HEIGHT + PAD_DIM * 1.5, end - start, PAD_DIM);
-  cairo_set_source_rgba (cr, 0, 0.11, 0.0, 0.5);
-  cairo_fill_preserve (cr);
-  cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
-  cairo_stroke (cr);
 
   double frame = edl->frame_no;
   if (fpx < 1.0)
