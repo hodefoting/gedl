@@ -122,6 +122,7 @@ typedef struct SourceVid
 struct _GeglEDL
 {
   char       *path;
+  char       *parent_path;
   GList      *clip_db;
   GList      *clips;
   int         frame; /* render thread, frame_no is ui side */

@@ -1697,7 +1697,7 @@ gboolean renderer_main (gpointer data)
   GeglEDL *edl = data;
   if (!playing)
     {
-      char *cmd = g_strdup_printf ("test -f lock || (touch lock;gedl %s cache;rm lock;) &", edl->path);
+      char *cmd = g_strdup_printf ("test -f lock || ( touch lock;gedl %s cache;rm lock ) &", edl->path);
       save_edl (edl);
       system (cmd);
     }

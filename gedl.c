@@ -43,7 +43,6 @@ gegl_meta_get_audio (const char        *path,
 #define DEFAULT_range_start       0
 #define DEFAULT_range_end         0
 #define DEFAULT_framedrop         0
-static int make_video_dir = 1;
 static int max_frames = 0;
 
 char *gedl_make_proxy_path (GeglEDL *edl, const char *clip_path);
@@ -97,38 +96,49 @@ const char *clip_get_path (Clip *clip)
 
 char *gedl_make_thumb_path (GeglEDL *edl, const char *clip_path)
 {
-  return g_strdup_printf (".gedl/thumb/%s.png", clip_path);
+  return g_strdup_printf ("%s.gedl/thumb/%s.png", edl->parent_path, basename (clip_path));
 }
 
 char *gedl_make_proxy_path (GeglEDL *edl, const char *clip_path)
 {
-  return g_strdup_printf (".gedl/proxy/%s-%ix%i.mp4", clip_path, edl->proxy_width, edl->proxy_height);
+  return g_strdup_printf ("%s.gedl/proxy/%s-%ix%i.mp4", edl->parent_path, basename (clip_path), edl->proxy_width, edl->proxy_height);
 }
 
-void clip_set_path (Clip *clip, const char *path)
+void clip_set_path (Clip *clip, const char *in_path)
 {
-#if 1
+  char *path = NULL;
+  if (in_path[0] == '/')
+  {
+    path = g_strdup (in_path);
+  }
+  else
+  {
+    if (clip->edl->parent_path)
+    path = g_strdup_printf ("%s%s", clip->edl->parent_path, in_path);
+    else
+    path = g_strdup_printf ("%s", in_path);
+  }
+
   if (clip->path && !strcmp (clip->path, path))
   {
+    g_free (path);
     return;
   }
-#endif
+
   if (clip->path)
     g_free (clip->path);
-  clip->path = g_strdup (path);
+  clip->path = path;
+
   if (strstr (path, "jpg") ||
       strstr (path, "png"))
   {
     g_object_set (clip->loader, "operation", "gegl:load", NULL);
-    gegl_node_set (clip->loader, "path", path, NULL);
   }
   else
   {
     g_object_set (clip->loader, "operation", "gegl:ff-load", NULL);
-    gchar *path = clip->path;
-    //clip->edl->use_proxies?gedl_make_proxy_path (clip->edl, clip->path):g_strdup (clip->path);
-    gegl_node_set (clip->loader, "path", path, NULL);
   }
+  gegl_node_set (clip->loader, "path", path, NULL);
 }
 int clip_get_start (Clip *clip)
 {
@@ -145,24 +155,9 @@ int clip_get_frames (Clip *clip)
   return frames;
 }
 
-void clip_prepare_for_playback (Clip *clip)
-{
-  if (g_mutex_trylock (&clip->mutex))
-  {
-    int start = clip->start - clip->fade_pad_start;
-    if (start < 0) start = 0;
-
-    gegl_node_set (clip->loader, "frame", start, NULL);
-    gegl_node_process (clip->loader);
-    g_mutex_unlock (&clip->mutex);
-  }
-}
-
 void clip_set_start (Clip *clip, int start)
 {
   clip->start = start;
-
-  //clip_prepare_for_playback (clip);
 }
 void clip_set_end (Clip *clip, int end)
 {
@@ -198,11 +193,8 @@ GeglEDL *gedl_new           (void)
 {
   GeglRectangle roi = {0,0,1024, 1024};
   GeglEDL *edl = g_malloc0(sizeof (GeglEDL));
-  system ("mkdir .gedl 2>/dev/null");  /* XXX: create cache dir expected to exist in folder with edl files */
-  system ("mkdir .gedl/cache 2>/dev/null");
-  system ("mkdir .gedl/proxy 2>/dev/null");
-  system ("mkdir .gedl/thumb 2>/dev/null");
-  system ("mkdir .gedl/video 2>/dev/null");
+
+
   edl->gegl = gegl_node_new ();
   edl->cache_flags = 0;
   edl->cache_flags = CACHE_TRY_ALL;
@@ -255,6 +247,8 @@ void     gedl_free          (GeglEDL *edl)
   }
   if (edl->path)
     g_free (edl->path);
+  if (edl->parent_path)
+    g_free (edl->parent_path);
 
   g_object_unref (edl->gegl);
   g_object_unref (edl->buffer);
@@ -473,7 +467,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
 
         hash = g_checksum_new (G_CHECKSUM_MD5);
         g_checksum_update (hash, (void*)frame_recipe, -1);
-        cache_path  = g_strdup_printf (".gedl/cache/%s", g_checksum_get_string(hash));
+        cache_path  = g_strdup_printf ("%s.gedl/cache/%s", edl->parent_path, g_checksum_get_string(hash));
         if (edl->script_hash)
           g_free (edl->script_hash);
         edl->script_hash = g_strdup (g_checksum_get_string(hash));
@@ -485,11 +479,13 @@ void gedl_set_frame (GeglEDL *edl, int frame)
             g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
             (edl->cache_flags & CACHE_TRY_ALL))
           {
-            if (make_video_dir) { // make video dir
+#if 0
+             // make a folder of symlinks to images, as a quick image folder hack export
               gchar *tmp = g_strdup_printf ("ln -sf ../cache/%s .gedl/video/%08i.%s", edl->script_hash, frame, "jpg");
               system (tmp);
               g_free (tmp);
             }
+#endif
             if (do_encode)
             {
             gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
@@ -597,8 +593,8 @@ void gedl_set_frame (GeglEDL *edl, int frame)
           if (!strstr (frame_recipe, ".gedl/cache") && (!edl->use_proxies))
           // XXX: some proxy renders sneak in!!!!!!
             {
-              gchar *cache_path = g_strdup_printf (".gedl/cache/%s~", g_checksum_get_string(hash));
-              gchar *cache_path_final = g_strdup_printf (".gedl/cache/%s", g_checksum_get_string(hash));
+              gchar *cache_path = g_strdup_printf ("%s.gedl/cache/%s~", edl->parent_path, g_checksum_get_string(hash));
+              gchar *cache_path_final = g_strdup_printf ("%s.gedl/cache/%s", edl->parent_path, g_checksum_get_string(hash));
 
               if ( //!g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
                   !g_file_test (cache_path_final, G_FILE_TEST_IS_REGULAR))
@@ -666,7 +662,7 @@ double gedl_get_time (GeglEDL *edl)
 {
   return edl->frame / edl->fps;
 }
-GeglAudioFragment *gedl_get_audio  (GeglEDL *edl)
+GeglAudioFragment *gedl_get_audio (GeglEDL *edl)
 {
   return edl->clip?edl->clip->audio:NULL;
 }
@@ -853,18 +849,18 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
          edl->active_clip = clip;
        }
      {
-        GList *self = g_list_find (edl->clips, clip);
-        GList *prev = self?self->prev: NULL;
-        Clip *prev_clip = prev?prev->data:NULL;
-        if (prev_clip && prev_clip->fade_out)
-        {
-          clip->fade_in = 1;
-          ff_probe = 1;
-        }
-        else
-        {
-          clip->fade_in = 0;
-        }
+       GList *self = g_list_find (edl->clips, clip);
+       GList *prev = self?self->prev: NULL;
+       Clip *prev_clip = prev?prev->data:NULL;
+       if (prev_clip && prev_clip->fade_out)
+       {
+         clip->fade_in = 1;
+         ff_probe = 1;
+       }
+       else
+       {
+         clip->fade_in = 0;
+       }
      }
 
      if (clip == edl->clips->data)
@@ -912,13 +908,14 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
 #include <string.h>
 
 void gedl_update_video_size (GeglEDL *edl);
-GeglEDL *gedl_new_from_string (const char *string);
-GeglEDL *gedl_new_from_string (const char *string)
+GeglEDL *gedl_new_from_string (const char *string, const char *parent_path);
+GeglEDL *gedl_new_from_string (const char *string, const char *parent_path)
 {
   GString *line = g_string_new ("");
   GeglEDL *edl = gedl_new ();
   int clips_done = 0;
   int newlines = 0;
+  edl->parent_path = g_strdup (parent_path);
 
   for (const char *p = string; p==string || *(p-1); p++)
   {
@@ -1032,6 +1029,13 @@ void gedl_update_video_size (GeglEDL *edl)
   }
 }
 
+static void generate_gedl_dir (GeglEDL *edl)
+{
+  char *tmp = g_strdup_printf ("cd %s; mkdir .gedl 2>/dev/null ; mkdir .gedl/cache 2>/dev/null mkdir .gedl/proxy 2>/dev/null mkdir .gedl/thumb 2>/dev/null mkdir .gedl/video 2>/dev/null", edl->parent_path);
+  system (tmp);
+  g_free (tmp);
+}
+
 GeglEDL *gedl_new_from_path (const char *path)
 {
   GeglEDL *edl = NULL;
@@ -1040,11 +1044,17 @@ GeglEDL *gedl_new_from_path (const char *path)
   g_file_get_contents (path, &string, NULL, NULL);
   if (string)
   {
-    edl = gedl_new_from_string (string);
+    char *rpath = realpath (path, NULL);
+    char *parent = g_strdup (rpath);
+    strrchr(parent, '/')[1]='\0';
+
+    edl = gedl_new_from_string (string, parent);
+    g_free (parent);
     g_free (string);
     if (!edl->path)
-      edl->path = g_strdup (path);
+      edl->path = g_strdup (realpath (path, NULL)); // XXX: leak
   }
+  generate_gedl_dir (edl);
 
   return edl;
 }
@@ -1304,7 +1314,7 @@ int main (int argc, char **argv)
     return -1;
   }
 
-  edl_path = realpath (argv[1], NULL);
+  edl_path = argv[1]; //realpath (argv[1], NULL);
 
   if (g_str_has_suffix (edl_path, ".mp4") ||
       g_str_has_suffix (edl_path, ".ogv") ||
@@ -1329,13 +1339,23 @@ int main (int argc, char **argv)
     g_object_unref (gegl);
 
     sprintf (str, "%s 0 %i\n", edl_path, duration);
-    edl = gedl_new_from_string (str);
-    edl->path = g_strdup_printf ("%s.edl", edl_path);
+    {
+      char * path = g_strdup_printf ("%s.edl", edl_path);
+      char * rpath = realpath (path, NULL);
+      char * parent = g_strdup (rpath);
+      strrchr(parent, '/')[1]='\0';
+
+    edl = gedl_new_from_string (str, parent);
+    }
+    generate_gedl_dir (edl);
   }
   else
   {
     edl = gedl_new_from_path (edl_path);
   }
+
+  chdir (edl->parent_path); /* we try as good as we can to deal with absolute
+                               paths correctly,  */
 /*
   if (argv[2] && argv[2][0]!='-')
     edl->output_path = argv[2];
