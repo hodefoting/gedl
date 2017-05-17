@@ -1299,7 +1299,7 @@ int main (int argc, char **argv)
 
     sprintf (str, "%s 0 %i\n", edl_path, duration);
     edl = gedl_new_from_string (str);
-    edl->path = g_strdup (edl_path);
+    edl->path = g_strdup_printf ("%s.edl", edl_path);
   }
   else
   {

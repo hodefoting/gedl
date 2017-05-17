@@ -1697,20 +1697,13 @@ gpointer renderer_main (gpointer data)
   GeglEDL *edl = data;
   while (!exited)
   {
-    //if (renderer_pos < renderer_end)
-    //{
-      char *cmd = g_strdup_printf ("gedl %s cache", edl->path);
-      g_usleep (1000 * 5.0);
-      if (!playing)
+    char *cmd = g_strdup_printf ("gedl %s cache", edl->path);
+    g_usleep (1000 * 5.0);
+    if (!playing)
       {
         save_edl (edl);
         system (cmd);
       }
-      //renderer_pos = renderer_end;
-    //}
-    //else
-    //{
-    //}
   }
   return NULL;
 }
