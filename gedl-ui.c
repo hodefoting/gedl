@@ -1112,6 +1112,16 @@ void gedl_draw (Mrg     *mrg,
     t += frames;
   }
 
+  {
+  double frame = edl->frame_no;
+  if (fpx < 1.0)
+    cairo_rectangle (cr, frame, y-15, 1.0, 15);
+  else
+    cairo_rectangle (cr, frame, y-15, fpx, 15);
+  cairo_set_source_rgba (cr,1,0,0,0.85);
+  cairo_fill (cr);
+  }
+
 
   cairo_restore (cr);
   y+=10;
@@ -1668,8 +1678,8 @@ void gedl_ui (Mrg *mrg, void *data)
     mrg_add_binding (mrg, "right", NULL, NULL, step_frame, edl);
     mrg_add_binding (mrg, "left", NULL, NULL, step_frame_back, edl);
   }
-  mrg_add_binding (mrg, "up", NULL, NULL, up, edl);
-  mrg_add_binding (mrg, "down", NULL, NULL, down, edl);
+  //mrg_add_binding (mrg, "up", NULL, NULL, up, edl);
+  //mrg_add_binding (mrg, "down", NULL, NULL, down, edl);
 
   if (edl->active_source)
     mrg_add_binding (mrg, "return", NULL, NULL, toggle_edit_source, edl);
