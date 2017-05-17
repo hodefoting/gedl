@@ -1459,7 +1459,10 @@ char *gedl_serialise (GeglEDL *edl)
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
-    g_string_append_printf (ser, "%s %d %d%s%s%s%s%s\n", clip->path, clip->start, clip->end,
+    gchar *path = clip->path;
+    if (!strncmp (path, edl->parent_path, strlen(edl->parent_path)))
+      path += strlen (edl->parent_path);
+    g_string_append_printf (ser, "%s %d %d%s%s%s%s%s\n", path, clip->start, clip->end,
         clip->fade_out?" [fade]":"",
         (edl->active_clip == clip)?" [active]":"",
         clip->filter_graph?" -- ":"",clip->filter_graph?clip->filter_graph:"",
