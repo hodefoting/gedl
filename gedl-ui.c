@@ -729,8 +729,7 @@ static void set_range (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
-
-
+#if 0
 static void up (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -789,7 +788,9 @@ static void up (MrgEvent *event, void *data1, void *data2)
   mrg_event_stop_propagate (event);
   changed++;
 }
+#endif
 
+#if 0
 static void down (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -831,6 +832,7 @@ static void down (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
   changed++;
 }
+#endif
 
 static void step_frame_back (MrgEvent *event, void *data1, void *data2)
 {
@@ -1050,6 +1052,15 @@ void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start,
   }
 }
 
+static void scroll_to_fit (GeglEDL *edl, Mrg *mrg)
+{
+    /* scroll to fit playhead */
+    if ( (edl->frame_no - edl->t0) / fpx < mrg_width (mrg) * 0.2)
+      edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.2) * fpx;
+    if ( (edl->frame_no - edl->t0) / fpx > mrg_width (mrg) * 0.8)
+      edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.8) * fpx;
+}
+
 void gedl_draw (Mrg     *mrg,
                 GeglEDL *edl,
                 double   x0,
@@ -1070,11 +1081,7 @@ void gedl_draw (Mrg     *mrg,
 
   if (playing)
   {
-    /* scroll to fit playhead */
-    if ( (edl->frame_no - t0) / fpx < mrg_width (mrg) * 0.2)
-      edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.2) * fpx;
-    if ( (edl->frame_no - t0) / fpx > mrg_width (mrg) * 0.8)
-      edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.8) * fpx;
+    scroll_to_fit (edl, mrg);
     t0 = edl->t0;
   }
 
@@ -1514,7 +1521,7 @@ void gedl_ui (Mrg *mrg, void *data)
   {
      case GEDL_UI_MODE_FULL:
      case GEDL_UI_MODE_PART:
-  gedl_draw (mrg, edl, 0, mrg_height (mrg) * SPLIT_VER, edl->scale, edl->t0);
+     gedl_draw (mrg, edl, 0, mrg_height (mrg) * SPLIT_VER, edl->scale, edl->t0);
   break;
      case GEDL_UI_MODE_NONE:
         break;
@@ -1538,7 +1545,7 @@ void gedl_ui (Mrg *mrg, void *data)
   }
 #endif
 
-#if 1
+#if 0
   mrg_printf (mrg, "cache hit: %2.2f%% of %i\n", 100.0 * cache_hits / (cache_hits + cache_misses), cache_hits + cache_misses);
 #endif
 
