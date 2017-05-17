@@ -366,9 +366,8 @@ static void drag_clip (MrgEvent *e, void *data1, void *data2)
   changed++;
 }
 
-
 static void drag_t0 (MrgEvent *e, void *data1, void *data2)
-{
+        {
   GeglEDL *edl = data2;
   edl->t0 += e->delta_x;
   mrg_queue_draw (e->mrg, NULL);
@@ -1069,6 +1068,16 @@ void gedl_draw (Mrg     *mrg,
   cairo_set_source_rgba (cr, 1, 1,1, 1);
   //y += PAD_DIM * 2;
 
+  if (playing)
+  {
+    /* scroll to fit playhead */
+    if ( (edl->frame_no - t0) / fpx < mrg_width (mrg) * 0.2)
+      edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.2) * fpx;
+    if ( (edl->frame_no - t0) / fpx > mrg_width (mrg) * 0.8)
+      edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.8) * fpx;
+    t0 = edl->t0;
+  }
+
   cairo_save (cr);
   {
     int duration = gedl_get_duration (edl);
@@ -1083,6 +1092,7 @@ void gedl_draw (Mrg     *mrg,
   else
   cairo_fill (cr);
 
+
   cairo_rectangle (cr, t0 + mrg_width(mrg)*fpx*0.9, y-10, mrg_width(mrg)*fpx * 0.1, 10);
   mrg_listen (mrg, MRG_DRAG, drag_fpx, edl, edl);
   cairo_fill (cr);
@@ -1096,9 +1106,7 @@ void gedl_draw (Mrg     *mrg,
     //  cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
     //else
     //  cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
-    cairo_rectangle (cr, t, y-10,
-                         frames, 10);
-
+    cairo_rectangle (cr, t, y-10, frames, 10);
 
     cairo_stroke (cr);
     t += frames;
