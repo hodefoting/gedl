@@ -16,7 +16,7 @@ frames appearing in timeline
 #include <SDL.h>
 #include <gegl-audio-fragment.h>
 
-#define SPLIT_VER  0.4
+#define SPLIT_VER  0.8
 
 static int exited = 0;
 static GThread *thread;
@@ -363,6 +363,25 @@ static void drag_clip (MrgEvent *e, void *data1, void *data2)
     edl->selection_start = e->x;
   }
   mrg_queue_draw (e->mrg, NULL);
+  changed++;
+}
+
+
+static void drag_t0 (MrgEvent *e, void *data1, void *data2)
+{
+  GeglEDL *edl = data2;
+  edl->t0 += e->delta_x;
+  mrg_queue_draw (e->mrg, NULL);
+  mrg_event_stop_propagate (e);
+  changed++;
+}
+
+static void drag_fpx (MrgEvent *e, void *data1, void *data2)
+{
+  GeglEDL *edl = data2;
+  edl->scale = (mrg_width(e->mrg)*edl->scale + e->delta_x) / mrg_width(e->mrg);
+  mrg_queue_draw (e->mrg, NULL);
+  mrg_event_stop_propagate (e);
   changed++;
 }
 
@@ -996,8 +1015,8 @@ static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
-#define VID_HEIGHT 96
 #define PAD_DIM     8
+int VID_HEIGHT=96; // XXX: ugly global
 
 void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start, int clip_frames, double x, double y)
 {
@@ -1005,7 +1024,6 @@ void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start,
 
   cairo_t *cr = mrg_cr (mrg);
   cairo_rectangle (cr, x, y, clip_frames, VID_HEIGHT);
-  cairo_set_source_rgba (cr, 0.1, 0.1, 0.1, 0.5);
 
   int width, height;
   MrgImage *img = mrg_query_image (mrg, thumb_path, &width, &height);
@@ -1028,7 +1046,8 @@ void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start,
   }
   else
   {
-    cairo_fill_preserve (cr);
+    //cairo_set_source_rgba (cr, 0.1, 0.1, 0.1, 0.5);
+    //cairo_fill_preserve (cr);
   }
 }
 
@@ -1044,11 +1063,55 @@ void gedl_draw (Mrg     *mrg,
   cairo_t *cr = mrg_cr (mrg);
   double t;
  
+  VID_HEIGHT = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.8;
   t = 0;
 
   cairo_set_source_rgba (cr, 1, 1,1, 1);
-  y += PAD_DIM * 2;
+  //y += PAD_DIM * 2;
+
+  cairo_save (cr);
+  {
+    int duration = gedl_get_duration (edl);
+    cairo_scale (cr, 1.0 / duration * mrg_width (mrg), 1.0);
+  }
+
+  cairo_rectangle (cr, t0, y-10, mrg_width(mrg)*fpx, 10);
+  mrg_listen (mrg, MRG_DRAG, drag_t0, edl, edl);
+  cairo_set_source_rgba (cr, 1, 1, 0.5, 0.25);
+  if (playing)
+  cairo_stroke (cr);
+  else
+  cairo_fill (cr);
+
+  cairo_rectangle (cr, t0 + mrg_width(mrg)*fpx*0.9, y-10, mrg_width(mrg)*fpx * 0.1, 10);
+  mrg_listen (mrg, MRG_DRAG, drag_fpx, edl, edl);
+  cairo_fill (cr);
+
+  for (l = edl->clips; l; l = l->next)
+  {
+    Clip *clip = l->data;
+    int frames = clip_get_frames (clip);
+
+    //if (clip == edl->active_clip)
+    //  cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
+    //else
+    //  cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
+    cairo_rectangle (cr, t, y-10,
+                         frames, 10);
+
+
+    cairo_stroke (cr);
+    t += frames;
+  }
+
+
+  cairo_restore (cr);
+  y+=10;
+  t = 0;
+
   cairo_move_to (cr, x0 + PAD_DIM, y + VID_HEIGHT + PAD_DIM * 3);
+
+
   //cairo_show_text (cr, edl->path);
   cairo_save (cr);
   cairo_translate (cr,  x0, 0);
@@ -1058,14 +1121,15 @@ void gedl_draw (Mrg     *mrg,
   int start = 0, end = 0;
   gedl_get_selection (edl, &start, &end);
   cairo_rectangle (cr, start + 0.5, y - PAD_DIM, end - start, VID_HEIGHT + PAD_DIM * 2);
-  cairo_set_source_rgba (cr, 1, 0, 0, 0.5);
+  cairo_set_source_rgba (cr, 1, 0, 0, 0.75);
   cairo_fill (cr);
+
 
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
-
-    render_clip (mrg, edl, clip->path, clip->start, clip_get_frames (clip), t, y);
+    int frames = clip_get_frames (clip);
+    render_clip (mrg, edl, clip->path, clip->start, frames, t, y);
     if (clip == edl->active_clip)
       cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
     else
@@ -1075,7 +1139,7 @@ void gedl_draw (Mrg     *mrg,
     mrg_listen (mrg, MRG_RELEASE, released_clip, clip, edl);
     cairo_stroke (cr);
 
-    t += clip_get_frames (clip);
+    t += frames;
   }
 
 
@@ -1278,6 +1342,18 @@ static inline void wait_for_frame ()
   //fprintf (stderr, ".");
 }
 
+static void toggle_ui_mode  (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  edl->ui_mode ++;
+  if (edl->ui_mode > GEDL_LAST_UI_MODE)
+    edl->ui_mode = 0;
+
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+  changed++;
+}
+
 static void toggle_playing (MrgEvent *event, void *data1, void *data2)
 {
   playing =  !playing;
@@ -1383,19 +1459,55 @@ void gedl_ui (Mrg *mrg, void *data)
 
   mrg_stylesheet_add (mrg, css, NULL, 0, NULL);
   mrg_set_style (mrg, "font-size: 11px");
+#if 0
   cairo_set_source_rgb (mrg_cr (mrg), 0,0,0);
   cairo_paint (mrg_cr (mrg));
+#endif
 
-  mrg_gegl_blit (mrg, (int)(mrg_width (mrg) * 0.25), 0,
-                      (int)(mrg_width (mrg) * 0.75), mrg_height (mrg) * SPLIT_VER,
-                      o->edl->cached_result, 0,0,
-                      
-                      1.0 //edl->frame_no == done_frame?1.0:0.5
-                      
+  switch (edl->ui_mode)
+  {
+     case GEDL_UI_MODE_FULL:
+     case GEDL_UI_MODE_NONE:
+
+  mrg_gegl_blit (mrg, (int)(mrg_width (mrg) * 0.0), 0,
+                      (int)(mrg_width (mrg) * 1.0),
+                      mrg_height (mrg),// * SPLIT_VER,
+
+                      o->edl->cached_result,
+                      0, 0,
+        /* opacity */ 1.0 //edl->frame_no == done_frame?1.0:0.5
                       );
+        break;
+     case GEDL_UI_MODE_PART:
+  mrg_gegl_blit (mrg, (int)(mrg_width (mrg) * 0.2), 0,
+                      (int)(mrg_width (mrg) * 0.8),
+                      mrg_height (mrg) * SPLIT_VER,
 
-  gedl_draw (mrg, edl, mrg_width(mrg)/2, mrg_height (mrg) * SPLIT_VER, edl->scale, edl->t0);
-  draw_clips (mrg, edl, 10, mrg_height(mrg) * SPLIT_VER + VID_HEIGHT + PAD_DIM * 5, mrg_width(mrg) - 20, mrg_height(mrg) * SPLIT_VER - VID_HEIGHT + PAD_DIM * 5);
+                      o->edl->cached_result,
+                      0, 0,
+        /* opacity */ 1.0 //edl->frame_no == done_frame?1.0:0.5
+                      );
+        break;
+
+  }
+
+
+  switch (edl->ui_mode)
+  {
+     case GEDL_UI_MODE_FULL:
+     case GEDL_UI_MODE_PART:
+  gedl_draw (mrg, edl, 0, mrg_height (mrg) * SPLIT_VER, edl->scale, edl->t0);
+  break;
+     case GEDL_UI_MODE_NONE:
+        break;
+     break;
+  }
+
+  if(0)draw_clips (mrg, edl, 10, mrg_height(mrg) * SPLIT_VER + VID_HEIGHT + PAD_DIM * 5, mrg_width(mrg) - 20, mrg_height(mrg) * SPLIT_VER - VID_HEIGHT + PAD_DIM * 5);
+
+
+  if (edl->ui_mode != GEDL_UI_MODE_NONE)
+  {
 
   mrg_set_xy (mrg, 0, 40);
   mrg_set_edge_right (mrg, mrg_width (mrg) * 0.25 - 8);
@@ -1481,6 +1593,38 @@ void gedl_ui (Mrg *mrg, void *data)
     mrg_printf (mrg, ".:");
 
 
+  if (help)
+  {
+    mrg_printf (mrg, "\n"
+    "F1 toggle_help\n"
+    "space toggle_playing\n"
+    "p toggle_use_proxies\n"
+    "left/right step_frame\n"
+    "shift-left/right extend_selection\n"
+    "v split_clip\n"
+    "del/x remove_clip\n"
+    "d duplicate_clip\n"
+    "i insert\n"
+    "s save\n"
+    "a select_all\n"
+    "r set_range\n"
+    "control-left nav_left\n"
+    "control-right nav_right\n"
+    ". clip_end_inc\n"
+    ", clip_end_dec\n"
+    "alt-left clip_start_inc\n"
+    "alt-right clip_start_dec\n"
+    "f toggle_fade\n"
+
+    "q quit\n");
+  }
+  else
+  {
+    mrg_printf (mrg, "\nF1 toggle help");
+  }
+
+  }
+
   if (!edl->clip_query_edited &&
       !edl->filter_edited 
                   && (
@@ -1488,6 +1632,7 @@ void gedl_ui (Mrg *mrg, void *data)
       edl->active_source->editing == 0))
   {
     mrg_add_binding (mrg, "delete", NULL, NULL, remove_clip, edl);
+    mrg_add_binding (mrg, "tab", NULL, NULL, toggle_ui_mode, edl);
     mrg_add_binding (mrg, "i", NULL, NULL, insert, edl);
     mrg_add_binding (mrg, "x", NULL, NULL, remove_clip, edl);
     mrg_add_binding (mrg, "d", NULL, NULL, duplicate_clip, edl);
@@ -1522,35 +1667,6 @@ void gedl_ui (Mrg *mrg, void *data)
   else //if (edl->filter_edited)
     mrg_add_binding (mrg, "return", NULL, NULL, edit_filter_graph, edl);
 
-  if (help)
-  {
-    mrg_printf (mrg, "\n"
-    "F1 toggle_help\n"
-    "space toggle_playing\n"
-    "p toggle_use_proxies\n"
-    "left/right step_frame\n"
-    "shift-left/right extend_selection\n"
-    "v split_clip\n"
-    "del/x remove_clip\n"
-    "d duplicate_clip\n"
-    "i insert\n"
-    "s save\n"
-    "a select_all\n"
-    "r set_range\n"
-    "control-left nav_left\n"
-    "control-right nav_right\n"
-    ". clip_end_inc\n"
-    ", clip_end_dec\n"
-    "alt-left clip_start_inc\n"
-    "alt-right clip_start_dec\n"
-    "f toggle_fade\n"
-
-    "q quit\n");
-  }
-  else
-  {
-    mrg_printf (mrg, "\nF1 toggle help");
-  }
 
 }
 
@@ -1593,8 +1709,8 @@ gpointer renderer_main (gpointer data)
 int gedl_ui_main (GeglEDL *edl);
 int gedl_ui_main (GeglEDL *edl)
 {
-  Mrg *mrg = mrg_new (800, 600, NULL);
-  //Mrg *mrg = mrg_new (-1, -1, NULL);
+  // Mrg *mrg = mrg_new (800, 600, NULL);
+  Mrg *mrg = mrg_new (-1, -1, NULL);
   State o = {NULL,};
   o.mrg = mrg;
   o.edl = edl;

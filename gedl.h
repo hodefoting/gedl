@@ -17,6 +17,14 @@ const char *compute_cache_path    (const char *path);
 #define CACHE_MAKE_MIX      (1<<5)
 #define CACHE_MAKE_ALL      (CACHE_MAKE_SIMPLE|CACHE_MAKE_MIX|CACHE_MAKE_FILTERED)
 
+enum {
+  GEDL_UI_MODE_FULL = 0,
+  GEDL_UI_MODE_NONE = 1,
+  GEDL_UI_MODE_PART = 2,
+};
+
+#define GEDL_LAST_UI_MODE 1
+
 GeglEDL    *gedl_new                (void);
 void        gedl_free               (GeglEDL    *edl);
 void        gedl_set_fps            (GeglEDL    *edl,
@@ -149,6 +157,7 @@ struct _GeglEDL
   int         source_frame_no;
   int         use_proxies;
   int         framedrop;
+  int         ui_mode;
 
   GeglNode   *nop_raw;
   GeglNode   *nop_transformed;

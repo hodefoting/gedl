@@ -1263,7 +1263,7 @@ int main (int argc, char **argv)
   init (argc, argv);
   if (!argv[1])
   {
-    fprintf (stderr, "usage: %s <input.edl> [output.mp4]\n", argv[0]);
+    fprintf (stderr, "usage: %s <project.edl>\n", argv[0]);
     return -1;
   }
 
