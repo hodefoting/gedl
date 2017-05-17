@@ -988,6 +988,19 @@ void gedl_save_path (GeglEDL *edl, const char *path)
       g_str_has_suffix (path, ".ogv") ||
       g_str_has_suffix (path, ".avi"))
     return;
+  if (g_file_test (path, G_FILE_TEST_IS_REGULAR))
+  {
+     char backup_path[4096];
+     struct tm *tim;
+     sprintf (backup_path, "%s.gedl/history/%s-", edl->parent_path, basename(edl->path));
+
+     time_t now = time(NULL);
+     tim = gmtime(&now);
+
+     strftime(backup_path + strlen(backup_path), sizeof(backup_path)-strlen(backup_path), "%Y-%m-%d_%H:%M:%S", tim);
+     rename (path, backup_path);
+  }
+
   FILE *file = fopen (path, "w");
   if (!file)
     return;
@@ -1031,7 +1044,7 @@ void gedl_update_video_size (GeglEDL *edl)
 
 static void generate_gedl_dir (GeglEDL *edl)
 {
-  char *tmp = g_strdup_printf ("cd %s; mkdir .gedl 2>/dev/null ; mkdir .gedl/cache 2>/dev/null mkdir .gedl/proxy 2>/dev/null mkdir .gedl/thumb 2>/dev/null mkdir .gedl/video 2>/dev/null", edl->parent_path);
+  char *tmp = g_strdup_printf ("cd %s; mkdir .gedl 2>/dev/null ; mkdir .gedl/cache 2>/dev/null mkdir .gedl/proxy 2>/dev/null mkdir .gedl/thumb 2>/dev/null mkdir .gedl/video 2>/dev/null; mkdir .gedl/history 2>/dev/null", edl->parent_path);
   system (tmp);
   g_free (tmp);
 }
