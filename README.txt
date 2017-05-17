@@ -23,10 +23,9 @@ Dependencies:
 
 gegl-0.3.16  http://gegl.org/
 mrg          https://github.com/hodefoting/mrg/
-lyd          https://github.com/hodefoting/lyd/
-
-ffmpeg
 iconographer https://github.com/the-grid/iconographer
+SDL-1.2
+ffmpeg
 
 
 An example gedl edl file is as follows:
@@ -50,7 +49,8 @@ if you just run:
 
 gedl test.edl
 
-gedl will launch in UI editing mode
+gedl will launch in UI mode, importing clips is currently most easily
+done by editing the text file.
 
 when quitting gedl will have overwritten the original file
 with something like the following:
@@ -121,5 +121,9 @@ t0
 frame-scale
 frame-no
 
-
 -------------------------------------
+
+gedl keeps temporary files in the .gedl folder this folder contains subdirs
+with cached frames, proxy videos and thumbtrack images. To save disk space this
+folder can be removed and it will be regenerated, for now gedl works best if
+launched from the folder containing the edl file.
