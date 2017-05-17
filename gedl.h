@@ -124,7 +124,7 @@ struct _GeglEDL
   char       *path;
   GList      *clip_db;
   GList      *clips;
-  int         frame;
+  int         frame; /* render thread, frame_no is ui side */
   double      fps;
   GeglBuffer *buffer;
   GeglNode   *gegl;

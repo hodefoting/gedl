@@ -1692,27 +1692,23 @@ static void renderer_set_range (int start, int end)
 }
 #endif
 
-gpointer renderer_main (gpointer data)
+gboolean renderer_main (gpointer data)
 {
   GeglEDL *edl = data;
-  while (!exited)
-  {
-    char *cmd = g_strdup_printf ("gedl %s cache", edl->path);
-    g_usleep (1000 * 5.0);
-    if (!playing)
-      {
-        save_edl (edl);
-        system (cmd);
-      }
-  }
-  return NULL;
+  if (!playing)
+    {
+      char *cmd = g_strdup_printf ("test -f lock || (touch lock;gedl %s cache;rm lock;) &", edl->path);
+      save_edl (edl);
+      system (cmd);
+    }
+  return TRUE;
 }
 
 int gedl_ui_main (GeglEDL *edl);
 int gedl_ui_main (GeglEDL *edl)
 {
-  // Mrg *mrg = mrg_new (800, 600, NULL);
-  Mrg *mrg = mrg_new (-1, -1, NULL);
+  Mrg *mrg = mrg_new (800, 600, NULL);
+  //Mrg *mrg = mrg_new (-1, -1, NULL);
   State o = {NULL,};
   o.mrg = mrg;
   o.edl = edl;
@@ -1727,10 +1723,12 @@ int gedl_ui_main (GeglEDL *edl)
 //   edl->cache_flags |= CACHE_MAKE_ALL;
 //renderer_set_range (0, 50);
   mrg_set_ui (mrg, gedl_ui, &o);
-  g_timeout_add (1000, save_idle, edl);
+  g_timeout_add (3000, save_idle, edl);
+
+  g_timeout_add (1000, renderer_main, edl);
 
   thread = g_thread_new ("renderer", renderer_thread, edl);
-if(0)  g_thread_new ("cachemaster", renderer_main, edl);
+//if(0)  g_thread_new ("cachemaster", renderer_main, edl);
 
   gedl_get_duration (edl);
   mrg_set_target_fps (mrg, -1);

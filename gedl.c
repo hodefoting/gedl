@@ -43,7 +43,8 @@ gegl_meta_get_audio (const char        *path,
 #define DEFAULT_range_start       0
 #define DEFAULT_range_end         0
 #define DEFAULT_framedrop         0
-
+static int make_video_dir = 1;
+static int max_frames = 0;
 
 char *gedl_make_proxy_path (GeglEDL *edl, const char *clip_path);
 
@@ -484,7 +485,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
             g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
             (edl->cache_flags & CACHE_TRY_ALL))
           {
-            if (0) { // make video dir
+            if (make_video_dir) { // make video dir
               gchar *tmp = g_strdup_printf ("ln -sf ../cache/%s .gedl/video/%08i.%s", edl->script_hash, frame, "jpg");
               system (tmp);
               g_free (tmp);
@@ -591,7 +592,10 @@ void gedl_set_frame (GeglEDL *edl, int frame)
 
           /* write cached render of this frame */
           //if (!strstr (frame_recipe, ".gedl/cache") && (edl->cache_flags & CACHE_MAKE_ALL))
+
+
           if (!strstr (frame_recipe, ".gedl/cache") && (!edl->use_proxies))
+          // XXX: some proxy renders sneak in!!!!!!
             {
               gchar *cache_path = g_strdup_printf (".gedl/cache/%s~", g_checksum_get_string(hash));
               gchar *cache_path_final = g_strdup_printf (".gedl/cache/%s", g_checksum_get_string(hash));
@@ -615,6 +619,14 @@ void gedl_set_frame (GeglEDL *edl, int frame)
                     gegl_meta_set_audio (cache_path, clip->audio);
                   rename (cache_path, cache_path_final);
                   g_object_unref (save_graph);
+
+    if (max_frames)
+    {
+      max_frames --;
+      if (max_frames == 0)
+        exit(0);
+    }
+
                 }
               g_free (cache_path);
               g_free (cache_path_final);
@@ -1168,6 +1180,32 @@ static void process_frames (GeglEDL *edl)
 }
 
 
+static void process_frames_cache (GeglEDL *edl)
+{
+  int frame_no = edl->frame_no;
+  int i;
+  int duration;
+  for (i = -4; i < 4; i++)
+  {
+    edl->frame_no = frame_no + i;
+    rig_frame (edl, frame_no + i);
+  }
+  for (frame_no = edl->range_start; frame_no <= edl->range_end; frame_no++)
+  {
+    edl->frame_no = frame_no;
+    rig_frame (edl, edl->frame_no);
+  }
+  duration = gedl_get_duration (edl);
+  for (frame_no = 0; frame_no <= duration; frame_no++)
+  {
+    edl->frame_no = frame_no;
+    rig_frame (edl, edl->frame_no);
+  }
+  fprintf (stdout, "\n");
+}
+
+
+
 int gegl_make_thumb_image (GeglEDL *edl, const char *path, const char *icon_path)
 {
   GString *str = g_string_new ("");
@@ -1256,7 +1294,6 @@ static void gedl_make_proxies (GeglEDL *eld)
 int main (int argc, char **argv)
 {
   int tot_frames;
-  int make_proxies = 0;
   setenv ("GEGL_USE_OPENCL", "no", 1);
   setenv ("GEGL_MIPMAP_RENDERING", "1", 1);
 
@@ -1267,14 +1304,7 @@ int main (int argc, char **argv)
     return -1;
   }
 
-  if (argv[1] && !strcmp (argv[1], "proxies") && argv[2])
-  {
-    make_proxies = 1;
-    argv++;
-    argc--;
-  }
-
-  edl_path = argv[1];
+  edl_path = realpath (argv[1], NULL);
 
   if (g_str_has_suffix (edl_path, ".mp4") ||
       g_str_has_suffix (edl_path, ".ogv") ||
@@ -1290,7 +1320,8 @@ int main (int argc, char **argv)
     double fps;
     GeglNode *gegl = gegl_node_new ();
     GeglNode *probe = gegl_node_new_child (gegl, "operation",
-                  "gegl:ff-load", "path", edl_path, NULL);
+                                           "gegl:ff-load", "path", edl_path,
+                                           NULL);
     gegl_node_process (probe);
 
     gegl_node_get (probe, "frames", &duration, NULL);
@@ -1310,13 +1341,6 @@ int main (int argc, char **argv)
     edl->output_path = argv[2];
     */
   setup (edl);
-
-  if (make_proxies)
-  {
-     gedl_make_proxies (edl);
-     return 0;
-  }
-
 
   {
 #define RUNMODE_UI     0
@@ -1343,11 +1367,12 @@ int main (int argc, char **argv)
         teardown ();
         return 0;
       case RUNMODE_CACHE:
-        do_encode = 0;
+        do_encode  = 0;
+        max_frames = 24;
         tot_frames  = gedl_get_duration (edl);
         if (edl->range_end == 0)
           edl->range_end = tot_frames-1;
-        process_frames (edl);
+        process_frames_cache (edl);
         teardown ();
         return 0;
      }
