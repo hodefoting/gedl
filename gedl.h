@@ -37,7 +37,7 @@ GeglEDL    *gedl_new_from_path      (const char *path);
 void        gedl_load_path          (GeglEDL    *edl, const char *path);
 void        gedl_save_path          (GeglEDL    *edl, const char *path);
 GeglAudioFragment  *gedl_get_audio  (GeglEDL    *edl);
-Clip       *gedl_get_clip (GeglEDL *edl, int frame, int *clip_frame_no);
+Clip       *gedl_get_clip         (GeglEDL *edl, int frame, int *clip_frame_no);
 GeglBuffer *gedl_get_buffer         (GeglEDL    *edl);
 GeglBuffer *gedl_get_buffer2        (GeglEDL    *edl);
 double gedl_get_mix                 (GeglEDL    *edl);

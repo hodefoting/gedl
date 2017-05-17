@@ -1606,6 +1606,7 @@ void gedl_ui (Mrg *mrg, void *data)
     mrg_printf (mrg, "\n"
     "F1 toggle_help\n"
     "space toggle_playing\n"
+    "tab toggle ui\n"
     "p toggle_use_proxies\n"
     "left/right step_frame\n"
     "shift-left/right extend_selection\n"
