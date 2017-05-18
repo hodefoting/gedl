@@ -1353,12 +1353,15 @@ int main (int argc, char **argv)
 
     sprintf (str, "%s 0 %i\n", edl_path, duration);
     {
-      char * path = g_strdup_printf ("%s.edl", edl_path);
-      char * rpath = realpath (path, NULL);
+      char * path = realpath (edl_path, NULL); 
+      char * rpath = g_strdup_printf ("%s.edl", path);
       char * parent = g_strdup (rpath);
+      fprintf (stderr, "[%s]", path);
       strrchr(parent, '/')[1]='\0';
-
-    edl = gedl_new_from_string (str, parent);
+      edl = gedl_new_from_string (str, parent);
+      g_free (parent);
+      edl->path = rpath;
+      free (path);
     }
     generate_gedl_dir (edl);
   }

@@ -1,3 +1,29 @@
+#if PLAN
+
+bugs
+  bounding box of preview/proxy not working
+
+features
+  re-enable cross-fades for video and audio
+  templates - for both clips and filters - filters that can be chained
+  annotations
+  pcm cache
+  create thumbnails as well as thumbtracks for clips
+  detect locked ui, kill and respawn
+  implement overlaying of wav / mp3 files
+  rewrite ui part in lua
+  gaps in timeline (will be implemented as blank clips - but ui can be different)
+  better video file import
+    insert videos from the commandline
+    on-demand/background proxy generation
+    ui for picking clips in current folder, possibly clib-db separate from video-project
+    implement drag and drop, accepting url to file on filesystem
+    clip database done on demand - files that appear in the timeline get enrolled.
+
+implement image folder videoplayer
+
+#endif
+
 #ifndef GEDL_H
 #define GEDL_H
 
