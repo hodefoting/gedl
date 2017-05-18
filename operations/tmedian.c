@@ -29,6 +29,7 @@ property_double (dampness, _("Dampness"), 0.95)
 
 #define GEGL_OP_FILTER
 #define GEGL_OP_NO_SOURCE
+#define GEGL_OP_NAME     tmedian
 #define GEGL_OP_C_SOURCE tmedian.c
 
 #include "gegl-op.h"
