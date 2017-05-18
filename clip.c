@@ -152,3 +152,22 @@ void clip_set_frame_no (Clip *clip, int frame_no)
         gegl_node_set (clip->loader, "frame", clip->clip_frame_no, NULL);
     }
 }
+
+
+Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame)
+{
+  GList *l;
+  int t = 0;
+  for (l = edl->clips; l; l = l->next)
+  {
+    Clip *clip = l->data;
+    if (frame >= t && frame < t + clip_get_frames (clip))
+    {
+      return clip;
+    }
+    t += clip_get_frames (clip);
+  }
+
+  return NULL;
+}
+

@@ -1,10 +1,3 @@
-/*
-
-todo: prime cache frames when navigating clips, shared with raw edits of same
-frames appearing in timeline
-
- */
-
 #define _BSD_SOURCE
 #define _DEFAULT_SOURCE
 
@@ -17,11 +10,10 @@ frames appearing in timeline
 #include <SDL.h>
 #include <gegl-audio-fragment.h>
 
-#define SPLIT_VER  0.8
+#include "renderer.h"
+
 
 static int exited = 0;
-static GThread *thread;
-long babl_ticks (void);
 
 void frob_fade (void*);
 static unsigned char *copy_buf = NULL;
@@ -29,166 +21,9 @@ static int copy_buf_len = 0;
 
 static int changed = 0;
 
-GeglNode *preview_loader;
-
-int rendering_frame = -1;
-int done_frame     = -1;
-
-static void gedl_cache_invalid (GeglEDL *edl)
-{
-  edl->frame = -1;
-  done_frame=-1;
-  rendering_frame=-1;
-  changed++;
-}
-
-static int audio_len    = 0;
-static int audio_pos    = 0;
-static int audio_post   = 0;
-
-#define AUDIO_BUF_LEN 819200000
-
-int16_t audio_data[AUDIO_BUF_LEN];
-
-static void sdl_audio_cb(void *udata, Uint8 *stream, int len)
-{
-  int audio_remaining = audio_len - audio_pos;
-  if (audio_remaining < 0)
-    return;
-
-  if (audio_remaining < len) len = audio_remaining;
-
-  //SDL_MixAudio(stream, (uint8_t*)&audio_data[audio_pos/2], len, SDL_MIX_MAXVOLUME);
-  memcpy (stream, (uint8_t*)&audio_data[audio_pos/2], len);
-  audio_pos += len;
-  audio_post += len;
-  if (audio_pos >= AUDIO_BUF_LEN)
-  {
-    audio_pos = 0;
-  }
-}
-
-static void sdl_add_audio_sample (int sample_pos, float left, float right)
-{
-   audio_data[audio_len/2 + 0] = left * 32767.0 * 0.46;
-   audio_data[audio_len/2 + 1] = right * 32767.0 * 0.46;
-   audio_len += 4;
-
-   if (audio_len >= AUDIO_BUF_LEN)
-   {
-     audio_len = 0;
-   }
-}
-
-static int audio_started = 0;
-
-static void open_audio (int frequency)
-{
-  SDL_AudioSpec spec = {0};
-  SDL_Init(SDL_INIT_AUDIO);
-  spec.freq = frequency;
-  spec.format = AUDIO_S16SYS;
-  spec.channels = 2;
-  spec.samples = 1024;
-  spec.callback = sdl_audio_cb;
-  SDL_OpenAudio(&spec, 0);
-
-  if (spec.format != AUDIO_S16SYS)
-   {
-      fprintf (stderr, "not getting format we wanted\n");
-   }
-  if (spec.freq != frequency)
-   {
-      fprintf (stderr, "not getting desires samplerate(%i) we wanted got %i instead\n", frequency, spec.freq);
-   }
-}
-
-static void end_audio (void)
-{
-}
+extern GeglNode *preview_loader;
 
 
-void playing_iteration (Mrg *mrg, GeglEDL *edl);
-
-static gpointer renderer_thread (gpointer data)
-{
-  /* XXX: the renderer thread should keep more soon to be useful frames available */
-
-  GeglEDL *edl = data;
-  for (;;)
-  {
-    playing_iteration (edl->mrg, edl);
-    if (edl->active_source)
-    {
-      if (edl->source_frame_no != done_frame)
-      {
-        rendering_frame = edl->source_frame_no;
-        gegl_node_set (preview_loader, "path", edl->active_source->path, NULL);
-        gegl_node_set (preview_loader, "frame", edl->source_frame_no, NULL);
-        GeglRectangle ext = gegl_node_get_bounding_box (preview_loader);
-        gegl_buffer_set_extent (edl->buffer, &ext);
-        gegl_node_process (edl->source_store_buf);
-
-        done_frame = rendering_frame;
-#if 0
-        MrgRectangle rect = {mrg_width (edl->mrg)/2, 0,
-                             mrg_width (edl->mrg)/2, mrg_height (edl->mrg) * SPLIT_VER};
-        mrg_queue_draw (edl->mrg, &rect);
-#endif
-      }
-      else
-        g_usleep (50);
-    }
-    else
-    {
-      if (edl->frame_no != done_frame)
-      {
-        GeglRectangle ext = {0, 0, edl->width, edl->height }; //gegl_node_get_bounding_box (edl->result);
-        rendering_frame = edl->frame_no;
-        gegl_buffer_set_extent (edl->buffer, &ext);
-
-        rig_frame (edl, edl->frame_no); /* this does the frame-set, which causes render  */
-
-        {
-          GeglAudioFragment *audio = gedl_get_audio (edl);
-if (audio)
-{
-       int sample_count = gegl_audio_fragment_get_sample_count (audio);
-       if (sample_count > 0)
-       {
-         int i;
-         if (!audio_started)
-         {
-           open_audio (gegl_audio_fragment_get_sample_rate (audio));
-           SDL_PauseAudio(0);
-           audio_started = 1;
-         }
-         for (i = 0; i < sample_count; i++)
-         {
-           sdl_add_audio_sample (0, audio->data[0][i], audio->data[1][i]);
-         }
-        // while (audio_len > audio_pos + 5000)
-        //   g_usleep (50);
-       }
-}
-        }
-
-        /* this set edl->frame */
-        //gegl_node_process (edl->store_buf);
-
-        done_frame = rendering_frame;
-        MrgRectangle rect = {mrg_width (edl->mrg)/2, 0,
-                             mrg_width (edl->mrg)/2, mrg_height (edl->mrg) * SPLIT_VER};
-        mrg_queue_draw (edl->mrg, &rect);
-      }
-      else
-      {
-        g_usleep (50);
-      }
-    }
-  }
-  return NULL;
-}
 
 static void mrg_gegl_blit (Mrg *mrg,
                           float x0, float y0,
@@ -450,8 +285,6 @@ static void extend_selection_to_the_right (MrgEvent *event, void *data1, void *d
   mrg_queue_draw (event->mrg, NULL);
   changed++;
 }
-static Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame);
-
 static void insert (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -959,41 +792,6 @@ static void do_quit (MrgEvent *event, void *data1, void *data2)
 
 long last_frame = 0;
 
-static Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame)
-{
-  GList *l;
-  int t = 0;
-  for (l = edl->clips; l; l = l->next)
-  {
-    Clip *clip = l->data;
-    if (frame >= t && frame < t + clip_get_frames (clip))
-    {
-      return clip;
-    }
-    t += clip_get_frames (clip);
-  }
-
-  return NULL;
-}
-
-static int max_frame (GeglEDL *edl)
-{
-  GList *l;
-  int t = 0;
-  int start, end;
-
-  gedl_get_range (edl, &start, &end);
-  if (end)
-    return end;
-
-  for (l = edl->clips; l; l = l->next)
-  {
-    Clip *clip = l->data;
-    t += clip_get_frames (clip);
-  }
-
-  return t;
-}
 
 void gedl_ui (Mrg *mrg, void *data);
 
@@ -1177,8 +975,6 @@ void gedl_draw (Mrg     *mrg,
     t += frames;
   }
 
-
-
   double frame = edl->frame_no;
   if (fpx < 1.0)
     cairo_rectangle (cr, frame, y-PAD_DIM, 1.0, VID_HEIGHT + PAD_DIM * 2);
@@ -1299,7 +1095,7 @@ void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, f
   cairo_fill (cr);
 #endif
       }
-      
+
     cairo_restore (cr);
     if (0) /* draw more aspect right selection (at least for start/end "frame aspect part..?) */
     {
@@ -1360,18 +1156,6 @@ void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
 #endif
 }
 
-static long prev_ticks = 0;
-
-static inline void skipped_frames (int count)
-{
-  //fprintf (stderr, "[%i]", count);
-}
-
-static inline void wait_for_frame ()
-{
-  //fprintf (stderr, ".");
-}
-
 static void toggle_ui_mode  (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -1384,101 +1168,6 @@ static void toggle_ui_mode  (MrgEvent *event, void *data1, void *data2)
   changed++;
 }
 
-static void toggle_playing (MrgEvent *event, void *data1, void *data2)
-{
-  GeglEDL *edl = data1;
-  edl->playing =  !edl->playing;
-  killpg(0, SIGUSR2);
-  mrg_event_stop_propagate (event);
-  mrg_queue_draw (event->mrg, NULL);
-  prev_ticks = babl_ticks ();
-  changed++;
-}
-
-
-void playing_iteration (Mrg *mrg, GeglEDL *edl)
-{
-  long ticks = 0;
-  double delta = 1;
-  ticks = babl_ticks ();
-  if (prev_ticks == 0) prev_ticks = ticks;
-
-  if (edl->playing)
-    {
-#if 0
-      if (prev_ticks - ticks < 1000000.0 / gedl_get_fps (edl))
-        return;
-#endif
-      delta = (((ticks - prev_ticks) / 1000000.0) * ( edl->fps ));
-      //fprintf (stderr, "%f\n", delta);
-      if (delta < 1.0)
-      {
-        wait_for_frame ();
-        mrg_queue_draw (mrg, NULL);
-        return;
-      }
-        //delta = 0;
-      {
-#if 0
-        static int frameskip = -1;
-        if (frameskip < 0)
-        {
-          if (getenv ("GEDL_FRAMESKIP"))
-            frameskip = 1;
-          else
-            frameskip = 0;
-        }
-        if (!frameskip)
-          delta = 1;
-#else
-        if (edl->framedrop)
-        {
-          if (delta >= 2.0)
-            {
-              skipped_frames ( (int)(delta)-1 );
-            }
-        }
-        else
-        {
-          if (delta > 1.0)
-            delta = 1;
-          else
-            delta = 0;
-        }
-#endif
-      }
-      if (rendering_frame != done_frame)
-        return;
-      if (delta >= 1.0)
-      {
-      if (edl->active_source)
-      {
-        edl->source_frame_no += delta;
-        if (edl->source_frame_no > edl->active_source->end)
-        {
-           edl->source_frame_no = 0;
-           edl->source_frame_no = edl->active_source->start;
-        }
-        prev_ticks = ticks;
-      }
-
-      if (edl->active_clip)
-      {
-        edl->frame_no += delta;
-        int start, end;
-        gedl_get_range (edl, &start, &end);
-        if (edl->frame_no > max_frame (edl))
-        {
-           edl->frame_no = 0;
-           if (end)
-             edl->frame_no = start;
-        }
-        edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
-        prev_ticks = ticks;
-      }
-      }
-    }
-}
 
 void help_ui (Mrg *mrg, GeglEDL *edl)
 {
@@ -1653,21 +1342,15 @@ void gedl_ui (Mrg *mrg, void *data)
 
   //mrg_printf (mrg, "%i %i %i %i %i\n", edl->frame, edl->frame_no, edl->source_frame_no, rendering_frame, done_frame);
 
-  if (done_frame != rendering_frame)
+  if (!renderer_done (edl))
     mrg_printf (mrg, ".. ");
-  else if (edl->active_source &&
-           edl->source_frame_no != rendering_frame)
-    mrg_printf (mrg, "., ");
-  else if (edl->active_clip &&
-           edl->frame_no != rendering_frame)
-    mrg_printf (mrg, ".:");
 
   help_ui (mrg, edl);
 
   }
 
   if (!edl->clip_query_edited &&
-      !edl->filter_edited 
+      !edl->filter_edited
                   && (
       !edl->active_source   ||
       edl->active_source->editing == 0))
@@ -1684,7 +1367,7 @@ void gedl_ui (Mrg *mrg, void *data)
     mrg_add_binding (mrg, "a", NULL, NULL, select_all, edl);
     mrg_add_binding (mrg, "r", NULL, NULL, set_range, edl);
     mrg_add_binding (mrg, "q", NULL, NULL, (void*)do_quit, mrg);
-    mrg_add_binding (mrg, "space", NULL, NULL, toggle_playing, edl);
+    mrg_add_binding (mrg, "space", NULL, NULL, renderer_toggle_playing, edl);
 
     mrg_add_binding (mrg, "p", NULL, NULL, toggle_use_proxies, edl);
 
@@ -1749,17 +1432,13 @@ int gedl_ui_main (GeglEDL *edl)
   mrg_add_timeout (mrg, 3000, save_idle, edl);
 
   renderer_main (mrg, edl);
-  mrg_add_timeout (mrg, 40000, renderer_main, edl);
-
-  thread = g_thread_new ("renderer", renderer_thread, edl);
+  mrg_add_timeout (mrg, 30000, renderer_main, edl);
 
   gedl_get_duration (edl);
   mrg_set_target_fps (mrg, -1);
   mrg_main (mrg);
   gedl_free (edl);
   gegl_exit ();
-
-  end_audio ();
 
   return 0;
 }
