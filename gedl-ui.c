@@ -1511,7 +1511,7 @@ void help_ui (Mrg *mrg, GeglEDL *edl)
   }
   else
   {
-    mrg_printf (mrg, "\nF1 toggle help");
+    mrg_printf (mrg, "F1 toggle help");
   }
 }
 
@@ -1600,7 +1600,7 @@ void gedl_ui (Mrg *mrg, void *data)
   if (edl->active_clip)
     {
       char *basename = g_path_get_basename (edl->active_clip->path);
-      mrg_printf (mrg, "| %s %i-%i %i\n", basename,
+      mrg_printf (mrg, "| %s %i-%i %i  ", basename,
                   edl->active_clip->start, edl->active_clip->end,
                   gedl_get_clip_frame_no (edl)
                  );
@@ -1733,7 +1733,6 @@ gboolean renderer_main (Mrg *mrg, gpointer data)
       {
         char *cmd = g_strdup_printf ("gedl %s cache %i %i&", edl->path, i, render_slaves);
         save_edl (edl);
-        fprintf (stderr, "%s\n", cmd);
         system (cmd);
         g_free (cmd);
       }
