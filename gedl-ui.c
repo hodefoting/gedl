@@ -1477,6 +1477,43 @@ void playing_iteration (Mrg *mrg, GeglEDL *edl)
     }
 }
 
+void help_ui (Mrg *mrg, GeglEDL *edl)
+{
+  if (help)
+  {
+    mrg_set_font_size (mrg, mrg_height (mrg) / 30.0);
+    mrg_set_xy (mrg, mrg_em (mrg), mrg_em (mrg) * 2);
+    mrg_set_edge_right (mrg, mrg_width (mrg) - mrg_em (mrg) *2);
+    mrg_set_edge_left (mrg, mrg_em (mrg) * 2);
+    mrg_printf (mrg, "\n"
+    "F1 toggle_help\n"
+    "space toggle_playing\n"
+    "tab toggle ui\n"
+    "p toggle_use_proxies\n"
+    "left/right step_frame\n"
+    "shift-left/right extend_selection\n"
+    "v split_clip\n"
+    "del/x remove_clip\n"
+    "d duplicate_clip\n"
+    "i insert\n"
+    "s save\n"
+    "a select_all\n"
+    "r set_range\n"
+    "control-left nav_left\n"
+    "control-right nav_right\n"
+    ". clip_end_inc\n"
+    ", clip_end_dec\n"
+    "alt-left clip_start_inc\n"
+    "alt-right clip_start_dec\n"
+    "f toggle_fade\n"
+
+    "q quit\n");
+  }
+  else
+  {
+    mrg_printf (mrg, "\nF1 toggle help");
+  }
+}
 
 extern int cache_hits;
 extern int cache_misses;
@@ -1538,8 +1575,8 @@ void gedl_ui (Mrg *mrg, void *data)
   if (edl->ui_mode != GEDL_UI_MODE_NONE)
   {
 
-  mrg_set_xy (mrg, 0, 40);
-  mrg_set_edge_right (mrg, mrg_width (mrg) * 0.25 - 8);
+  mrg_set_xy (mrg, mrg_em (mrg), mrg_height(mrg) * SPLIT_VER);
+  mrg_set_edge_right (mrg, mrg_width (mrg));// * 0.25 - 8);
 #if 0
   {
     GeglRectangle rect;
@@ -1553,22 +1590,20 @@ void gedl_ui (Mrg *mrg, void *data)
   mrg_printf (mrg, "cache hit: %2.2f%% of %i\n", 100.0 * cache_hits / (cache_hits + cache_misses), cache_hits + cache_misses);
 #endif
 
+#if 0
   if (done_frame != edl->frame_no)
-    mrg_printf (mrg, "%i (%i shown)\n",edl->frame_no, done_frame);
+    mrg_printf (mrg, "frame %i (%i shown)",edl->frame_no, done_frame);
   else
-    mrg_printf (mrg, "%i\n", edl->frame_no);
-  /*
-  mrg_printf (mrg, "rendering:%i\n", rendering_frame);
-  mrg_printf (mrg, "frame: %i\n", edl->frame);
-  mrg_printf (mrg, "done:%i\n", done_frame);
-*/
+#endif
+  mrg_printf (mrg, " %i  ", edl->frame_no);
+
   if (edl->active_clip)
     {
       char *basename = g_path_get_basename (edl->active_clip->path);
-      mrg_printf (mrg, "%s:%i %i (%i)\n", basename,
-                                     edl->active_clip->start, edl->active_clip->end,
-                                     gedl_get_clip_frame_no (edl)
-                                     );
+      mrg_printf (mrg, "| %s %i-%i %i\n", basename,
+                  edl->active_clip->start, edl->active_clip->end,
+                  gedl_get_clip_frame_no (edl)
+                 );
       g_free (basename);
 
       if(0)  mrg_printf (mrg, "%s %s %i %s %s %i %s %ix%i %f",
@@ -1578,7 +1613,7 @@ void gedl_ui (Mrg *mrg, void *data)
                         edl->video_width, edl->video_height, 
                         0.0/*edl->mix*/);
 
-
+#if 0
       if (edl->active_clip->filter_graph)
       {
         if (edl->filter_edited)
@@ -1602,13 +1637,16 @@ void gedl_ui (Mrg *mrg, void *data)
       {
         mrg_printf (mrg, " %s", "[click to add filter]\n");
       }
+#endif
     }
+#if 0
   if (edl->active_source)
   {
     char *basename = g_path_get_basename (edl->active_source->path);
     mrg_printf (mrg, "%i\n", edl->source_frame_no);
     mrg_printf (mrg, "%s\n", basename);
   }
+#endif
 
   //mrg_printf (mrg, "%i %i %i %i %i\n", edl->frame, edl->frame_no, edl->source_frame_no, rendering_frame, done_frame);
 
@@ -1621,37 +1659,7 @@ void gedl_ui (Mrg *mrg, void *data)
            edl->frame_no != rendering_frame)
     mrg_printf (mrg, ".:");
 
-
-  if (help)
-  {
-    mrg_printf (mrg, "\n"
-    "F1 toggle_help\n"
-    "space toggle_playing\n"
-    "tab toggle ui\n"
-    "p toggle_use_proxies\n"
-    "left/right step_frame\n"
-    "shift-left/right extend_selection\n"
-    "v split_clip\n"
-    "del/x remove_clip\n"
-    "d duplicate_clip\n"
-    "i insert\n"
-    "s save\n"
-    "a select_all\n"
-    "r set_range\n"
-    "control-left nav_left\n"
-    "control-right nav_right\n"
-    ". clip_end_inc\n"
-    ", clip_end_dec\n"
-    "alt-left clip_start_inc\n"
-    "alt-right clip_start_dec\n"
-    "f toggle_fade\n"
-
-    "q quit\n");
-  }
-  else
-  {
-    mrg_printf (mrg, "\nF1 toggle help");
-  }
+  help_ui (mrg, edl);
 
   }
 
