@@ -96,7 +96,7 @@ const char *clip_get_path (Clip *clip)
 
 char *gedl_make_thumb_path (GeglEDL *edl, const char *clip_path)
 {
-  return g_strdup_printf ("%s.gedl/thumb/%s.png", edl->parent_path, basename (clip_path));
+  return g_strdup_printf ("%s.gedl/thumb/%s.png", edl->parent_path, basename (clip_path)); // XXX: should escape relative/absolute path instead of basename - or add bit of its hash
 }
 
 char *gedl_make_proxy_path (GeglEDL *edl, const char *clip_path)
