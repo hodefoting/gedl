@@ -1,8 +1,11 @@
 #include <string.h>
+#include <signal.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <gegl.h>
 #include <gexiv2/gexiv2.h>
 #include <gegl-audio-fragment.h>
+
 
 #define GEDL_SAMPLER   GEGL_SAMPLER_NEAREST
 
@@ -976,18 +979,11 @@ GeglEDL *gedl_new_from_string (const char *string, const char *parent_path)
 
   return edl;
 }
+
 void gedl_save_path (GeglEDL *edl, const char *path)
 {
   char *serialized;
-  if (g_str_has_suffix (path, ".mp4") ||
-      g_str_has_suffix (path, ".MP4") ||
-      g_str_has_suffix (path, ".mkv") ||
-      g_str_has_suffix (path, ".MKV") ||
-      g_str_has_suffix (path, ".OGV") ||
-      g_str_has_suffix (path, ".AVI") ||
-      g_str_has_suffix (path, ".ogv") ||
-      g_str_has_suffix (path, ".avi"))
-    return;
+
   if (g_file_test (path, G_FILE_TEST_IS_REGULAR))
   {
      char backup_path[4096];
@@ -997,7 +993,7 @@ void gedl_save_path (GeglEDL *edl, const char *path)
      time_t now = time(NULL);
      tim = gmtime(&now);
 
-     strftime(backup_path + strlen(backup_path), sizeof(backup_path)-strlen(backup_path), "%Y-%m-%d_%H:%M:%S", tim);
+     strftime(backup_path + strlen(backup_path), sizeof(backup_path)-strlen(backup_path), "%Y%m%d_%H%M%S", tim);
      rename (path, backup_path);
   }
 
@@ -1242,37 +1238,15 @@ int gegl_make_thumb_image (GeglEDL *edl, const char *path, const char *icon_path
   g_string_free (str, TRUE);
 
   return 0;
-#if 0  // much slower and worse for fps/audio than ffmpeg method for creating thumbs
-  int tot_frames; //
-  g_string_append_printf (str, "video-bitrate=100\n\noutput-path=%s\nvideo-width=256\nvideo-height=144\n\n%s\n", thumb_path, path);
-  edl = gedl_new_from_string (str->str);
-  setup (edl);
-  tot_frames = gedl_get_duration (edl);
-
-  if (edl->range_end == 0)
-    edl->range_end = tot_frames-1;
-  process_frames (edl);
-  teardown ();
-  g_string_free (str, TRUE);
-  return 0;
-#endif
 }
-
 
 int gegl_make_thumb_video (GeglEDL *edl, const char *path, const char *thumb_path)
 {
   GString *str = g_string_new ("");
-  //gchar *icon_path = gedl_make_thumb_path (edl, path);
 
   g_string_assign (str, "");
   g_string_append_printf (str, "ffmpeg -y -i %s -vf scale=%ix%i %s", path, edl->proxy_width, edl->proxy_height, thumb_path);
   system (str->str);
-#if 0
-  g_string_assign (str, "");
-  g_string_append_printf (str, "iconographer -p -h -f 'thumb 40' %s -a %s",
-                thumb_path, icon_path);
-  system (str->str);
-#endif
   g_string_free (str, TRUE);
 
   return 0;
