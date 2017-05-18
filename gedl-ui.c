@@ -9,6 +9,7 @@ frames appearing in timeline
 #define _DEFAULT_SOURCE
 
 #include <string.h>
+#include <signal.h>
 #include <stdio.h>
 #include <mrg.h>
 #include <gegl.h>
@@ -952,6 +953,7 @@ static void toggle_edit_source (MrgEvent *event, void *data1, void *data2)
 static void do_quit (MrgEvent *event, void *data1, void *data2)
 {
   exited = 1;
+  killpg(0, SIGUSR1);
   mrg_quit (event->mrg);
 }
 
@@ -1383,6 +1385,7 @@ static void toggle_ui_mode  (MrgEvent *event, void *data1, void *data2)
 static void toggle_playing (MrgEvent *event, void *data1, void *data2)
 {
   playing =  !playing;
+  killpg(0, SIGUSR1);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   prev_ticks = babl_ticks ();
@@ -1715,8 +1718,9 @@ gboolean renderer_main (gpointer data)
   GeglEDL *edl = data;
   if (!playing)
     {
-      char *cmd = g_strdup_printf ("test -f lock || ( touch lock;gedl %s cache;rm lock ) &", edl->path);
-      save_edl (edl);
+      killpg(0, SIGUSR1);
+      char *cmd = g_strdup_printf ("gedl %s cache &", edl->path);
+      // save_edl (edl);
       system (cmd);
     }
   return TRUE;
@@ -1743,7 +1747,8 @@ int gedl_ui_main (GeglEDL *edl)
   mrg_set_ui (mrg, gedl_ui, &o);
   g_timeout_add (3000, save_idle, edl);
 
-  g_timeout_add (1000, renderer_main, edl);
+  renderer_main (edl);
+  g_timeout_add (40000, renderer_main, edl);
 
   thread = g_thread_new ("renderer", renderer_thread, edl);
 //if(0)  g_thread_new ("cachemaster", renderer_main, edl);

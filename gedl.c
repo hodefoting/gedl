@@ -1198,29 +1198,54 @@ static void process_frames (GeglEDL *edl)
   fprintf (stdout, "\n");
 }
 
+void nop_handler(int sig)
+{
+}
+
+static int stop_cacher = 0;
+
+void handler1(int sig)
+{
+  stop_cacher = 1;
+}
+
+static int cacheno = 0;
+static int cachecount = 2;
+
+static inline int this_cacher (int frame_no)
+{
+  if (frame_no % cachecount == cacheno) return 1;
+  return 0;
+}
 
 static void process_frames_cache (GeglEDL *edl)
 {
   int frame_no = edl->frame_no;
   int i;
   int duration;
+  signal(SIGUSR1, handler1);
   for (i = -4; i < 4; i++)
   {
     edl->frame_no = frame_no + i;
-    rig_frame (edl, frame_no + i);
+    if (this_cacher (frame_no + i))
+      rig_frame (edl, frame_no + i);
+    if (stop_cacher) return;
   }
   for (frame_no = edl->range_start; frame_no <= edl->range_end; frame_no++)
   {
     edl->frame_no = frame_no;
-    rig_frame (edl, edl->frame_no);
+    if (this_cacher (edl->frame_no))
+      rig_frame (edl, edl->frame_no);
+    if (stop_cacher) return;
   }
   duration = gedl_get_duration (edl);
   for (frame_no = 0; frame_no <= duration; frame_no++)
   {
     edl->frame_no = frame_no;
-    rig_frame (edl, edl->frame_no);
+    if (this_cacher (edl->frame_no))
+      rig_frame (edl, edl->frame_no);
+    if (stop_cacher) return;
   }
-  fprintf (stdout, "\n");
 }
 
 
@@ -1366,6 +1391,8 @@ int main (int argc, char **argv)
     switch (runmode)
     {
       case RUNMODE_UI: 
+
+        signal(SIGUSR1, nop_handler);
   //if (edl->use_proxies)
         gedl_make_proxies (edl);
         return gedl_ui_main (edl);
