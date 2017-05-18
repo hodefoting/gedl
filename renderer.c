@@ -4,9 +4,9 @@
 #include <string.h>
 #include <signal.h>
 #include <stdio.h>
-#include <mrg.h>
 #include <gegl.h>
 #include "gedl.h"
+#include <mrg.h>
 #include <SDL.h>
 #include <gegl-audio-fragment.h>
 

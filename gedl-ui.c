@@ -7,9 +7,6 @@
 #include <mrg.h>
 #include <gegl.h>
 #include "gedl.h"
-#include <SDL.h>
-#include <gegl-audio-fragment.h>
-
 #include "renderer.h"
 
 
@@ -91,7 +88,6 @@ foo++;
   cairo_translate (cr, x0, y0);
   cairo_pattern_set_filter (cairo_get_source (cr), CAIRO_FILTER_NEAREST);
   cairo_set_source_surface (cr, surface, 0, 0);
-   
   cairo_set_operator (cr, CAIRO_OPERATOR_SOURCE);
 
   if (opacity < 0.9)
@@ -104,7 +100,6 @@ foo++;
   }
   cairo_surface_destroy (surface);
   cairo_restore (cr);
-
 }
 
 
@@ -533,7 +528,6 @@ static void save_edl (GeglEDL *edl)
   if (edl->path)
   {
     gedl_save_path (edl, edl->path);
-    //fprintf (stderr, "saved to %s\n", edl->path);
   }
 }
 
@@ -1429,7 +1423,8 @@ int gedl_ui_main (GeglEDL *edl)
 
   edl->cache_flags = CACHE_TRY_ALL;// | CACHE_MAKE_ALL;
   mrg_set_ui (mrg, gedl_ui, &o);
-  mrg_add_timeout (mrg, 3000, save_idle, edl);
+
+  mrg_add_timeout (mrg, 10100, save_idle, edl);
 
   renderer_main (mrg, edl);
   mrg_add_timeout (mrg, 30000, renderer_main, edl);
