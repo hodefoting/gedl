@@ -47,17 +47,50 @@ gegl_meta_get_audio (const char        *path,
 #define DEFAULT_range_end         0
 #define DEFAULT_framedrop         0
 
+static char *escaped_base_path (GeglEDL *edl, const char *clip_path)
+{
+  char *path0= g_strdup (clip_path);
+  char *path = path0;
+  int i;
+  char *ret = 0;
+  if (!strncmp (path, edl->parent_path, strlen(edl->parent_path)))
+      path += strlen (edl->parent_path);
+  for (i = 0; path[i];i ++)
+  {
+    switch (path[i]){
+      case '/':
+      case ' ':
+      case '\'':
+      case '#':
+      case '%':
+      case '?':
+      case '*':
+        path[i]='_';
+        break;
+    }
+  }
+  ret = g_strdup (path);
+  g_free (path0);
+  return ret;
+}
 
 char *gedl_make_thumb_path (GeglEDL *edl, const char *clip_path)
 {
-  return g_strdup_printf ("%s.gedl/thumb/%s.png", edl->parent_path, basename (clip_path)); // XXX: should escape relative/absolute path instead of basename - or add bit of its hash
+  gchar *ret;
+  gchar *path = escaped_base_path (edl, clip_path);
+  ret = g_strdup_printf ("%s.gedl/thumb/%s.png", edl->parent_path, path); // XXX: should escape relative/absolute path instead of basename - or add bit of its hash
+  g_free (path);
+  return ret;
 }
 
 char *gedl_make_proxy_path (GeglEDL *edl, const char *clip_path)
 {
-  return g_strdup_printf ("%s.gedl/proxy/%s-%ix%i.mp4", edl->parent_path, basename (clip_path), edl->proxy_width, edl->proxy_height);
+  gchar *ret;
+  gchar *path = escaped_base_path (edl, clip_path);
+  ret = g_strdup_printf ("%s.gedl/proxy/%s-%ix%i.mp4", edl->parent_path, path, edl->proxy_width, edl->proxy_height);
+  g_free (path);
+  return ret;
 }
-
 
 #define CACHE_FORMAT "jpg"
 
@@ -347,7 +380,6 @@ void gedl_set_frame (GeglEDL *edl, int frame)
               gchar *tmp = g_strdup_printf ("ln -sf ../cache/%s .gedl/video/%08i.%s", edl->script_hash, frame, "jpg");
               system (tmp);
               g_free (tmp);
-            }
 #endif
             if (do_encode)
             {
