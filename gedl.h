@@ -32,6 +32,7 @@ typedef struct _Clip    Clip;
 
 void gedl_set_use_proxies (GeglEDL *edl, int use_proxies);
 int         gegl_make_thumb_video (GeglEDL *edl, const char *path, const char *thumb_path);
+char *gedl_make_proxy_path (GeglEDL *edl, const char *clip_path);
 const char *compute_cache_path    (const char *path);
 
 #define CACHE_TRY_SIMPLE    (1<<0)
@@ -225,5 +226,6 @@ void  clip_set_end        (Clip *clip, int end);
 void  clip_set_range      (Clip *clip, int start, int end);
 void  clip_set_full       (Clip *clip, const char *path, int start, int end);
 Clip *clip_new_full       (GeglEDL *edl, const char *path, int start, int end);
+void  clip_set_frame_no (Clip *clip, int frame_no);
 
 #endif
