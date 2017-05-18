@@ -1223,7 +1223,7 @@ static void process_frames_cache (GeglEDL *edl)
   int frame_no = edl->frame_no;
   int frame_start = edl->frame_no;
   int duration;
-  signal(SIGUSR1, handler1);
+  signal(SIGUSR2, handler1);
   duration = gedl_get_duration (edl);
   for (frame_no = frame_start - 3; frame_no < duration; frame_no++)
   {
@@ -1394,7 +1394,7 @@ int main (int argc, char **argv)
     {
       case RUNMODE_UI: 
 
-        signal(SIGUSR1, nop_handler);
+        signal(SIGUSR2, nop_handler);
   //if (edl->use_proxies)
         gedl_make_proxies (edl);
         return gedl_ui_main (edl);

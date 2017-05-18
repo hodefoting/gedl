@@ -953,7 +953,7 @@ static void toggle_edit_source (MrgEvent *event, void *data1, void *data2)
 static void do_quit (MrgEvent *event, void *data1, void *data2)
 {
   exited = 1;
-  killpg(0, SIGUSR1);
+  killpg(0, SIGUSR2);
   mrg_quit (event->mrg);
 }
 
@@ -1385,7 +1385,7 @@ static void toggle_ui_mode  (MrgEvent *event, void *data1, void *data2)
 static void toggle_playing (MrgEvent *event, void *data1, void *data2)
 {
   playing =  !playing;
-  killpg(0, SIGUSR1);
+  killpg(0, SIGUSR2);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   prev_ticks = babl_ticks ();
@@ -1720,11 +1720,11 @@ gboolean renderer_main (gpointer data)
     {
       int i;
       int render_slaves = g_get_num_processors ();
-      killpg(0, SIGUSR1);
+      killpg(0, SIGUSR2);
       for (i = 0; i < render_slaves; i ++)
       {
         char *cmd = g_strdup_printf ("gedl %s cache %i %i&", edl->path, i, render_slaves);
-        // save_edl (edl);
+        save_edl (edl);
         system (cmd);
         g_free (cmd);
       }
