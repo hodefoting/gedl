@@ -283,7 +283,6 @@ struct _State {
   char    *save_path;
 };
 
-static int playing  = 0;
 float fpx           = 2;
 
 static void *prev_sclip = NULL;
@@ -331,7 +330,7 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
   edl->selection_end = edl->frame_no;
   edl->active_clip = clip;
   edl->active_source = NULL;
-  playing = 0;
+  edl->playing = 0;
   mrg_queue_draw (e->mrg, NULL);
   changed++;
 }
@@ -408,7 +407,8 @@ static void released_clip (MrgEvent *e, void *data1, void *data2)
 
 static void stop_playing (MrgEvent *event, void *data1, void *data2)
 {
-  playing = 0;
+  GeglEDL *edl = data1;
+  edl->playing = 0;
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
@@ -546,7 +546,7 @@ static void toggle_use_proxies (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
 
-  if (!playing) // disallowing - to avoid some races
+  if (!edl->playing) // disallowing - to avoid some races
   {
     gedl_set_use_proxies (edl, edl->use_proxies?0:1);
     gedl_cache_invalid (edl);
@@ -1031,7 +1031,7 @@ void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start,
   int width, height;
   MrgImage *img = mrg_query_image (mrg, thumb_path, &width, &height);
   g_free (thumb_path);
-  if (!playing && img && width > 0)
+  if (!edl->playing && img && width > 0)
   {
     cairo_surface_t *surface = mrg_image_get_surface (img);
     cairo_matrix_t   matrix;
@@ -1081,7 +1081,7 @@ void gedl_draw (Mrg     *mrg,
 
   cairo_set_source_rgba (cr, 1, 1,1, 1);
 
-  if (playing)
+  if (edl->playing)
   {
     scroll_to_fit (edl, mrg);
     t0 = edl->t0;
@@ -1098,7 +1098,7 @@ void gedl_draw (Mrg     *mrg,
   cairo_rectangle (cr, t0, y, mrg_width(mrg)*fpx, scroll_height);
   mrg_listen (mrg, MRG_DRAG, drag_t0, edl, edl);
   cairo_set_source_rgba (cr, 1, 1, 0.5, 0.25);
-  if (playing)
+  if (edl->playing)
   cairo_stroke (cr);
   else
   cairo_fill (cr);
@@ -1226,6 +1226,7 @@ static void update_query (const char *new_string, void *user_data)
   edl->clip_query = g_strdup (new_string);
 }
 
+#if 0
 static void update_filter (const char *new_string, void *user_data)
 {
   GeglEDL *edl = user_data;
@@ -1235,6 +1236,7 @@ static void update_filter (const char *new_string, void *user_data)
   gedl_cache_invalid (edl);
   mrg_queue_draw (edl->mrg, NULL);
 }
+#endif
 
 void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, float w, float h)
 {
@@ -1384,7 +1386,8 @@ static void toggle_ui_mode  (MrgEvent *event, void *data1, void *data2)
 
 static void toggle_playing (MrgEvent *event, void *data1, void *data2)
 {
-  playing =  !playing;
+  GeglEDL *edl = data1;
+  edl->playing =  !edl->playing;
   killpg(0, SIGUSR2);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -1400,7 +1403,7 @@ void playing_iteration (Mrg *mrg, GeglEDL *edl)
   ticks = babl_ticks ();
   if (prev_ticks == 0) prev_ticks = ticks;
 
-  if (playing)
+  if (edl->playing)
     {
 #if 0
       if (prev_ticks - ticks < 1000000.0 / gedl_get_fps (edl))
@@ -1724,7 +1727,7 @@ static void renderer_set_range (int start, int end)
 gboolean renderer_main (Mrg *mrg, gpointer data)
 {
   GeglEDL *edl = data;
-  if (!playing)
+  if (!edl->playing)
     {
       int i;
       int render_slaves = g_get_num_processors ();

@@ -155,6 +155,7 @@ struct _GeglEDL
   double      fps;
   GeglBuffer *buffer;
   GeglNode   *gegl;
+  int         playing;
   int         width;
   int         height;
   double      mix;
