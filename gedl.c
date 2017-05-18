@@ -1221,25 +1221,18 @@ static inline int this_cacher (int frame_no)
 static void process_frames_cache (GeglEDL *edl)
 {
   int frame_no = edl->frame_no;
-  int i;
+  int frame_start = edl->frame_no;
   int duration;
   signal(SIGUSR1, handler1);
-  for (i = -4; i < 4; i++)
-  {
-    edl->frame_no = frame_no + i;
-    if (this_cacher (frame_no + i))
-      rig_frame (edl, frame_no + i);
-    if (stop_cacher) return;
-  }
-  for (frame_no = edl->range_start; frame_no <= edl->range_end; frame_no++)
+  duration = gedl_get_duration (edl);
+  for (frame_no = frame_start - 3; frame_no < duration; frame_no++)
   {
     edl->frame_no = frame_no;
     if (this_cacher (edl->frame_no))
       rig_frame (edl, edl->frame_no);
     if (stop_cacher) return;
   }
-  duration = gedl_get_duration (edl);
-  for (frame_no = 0; frame_no <= duration; frame_no++)
+  for (frame_no = 0; frame_no < frame_start; frame_no++)
   {
     edl->frame_no = frame_no;
     if (this_cacher (edl->frame_no))
