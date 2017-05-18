@@ -46,7 +46,6 @@ gegl_meta_get_audio (const char        *path,
 #define DEFAULT_range_start       0
 #define DEFAULT_range_end         0
 #define DEFAULT_framedrop         0
-static int max_frames = 0;
 
 char *gedl_make_proxy_path (GeglEDL *edl, const char *clip_path);
 
@@ -618,14 +617,6 @@ void gedl_set_frame (GeglEDL *edl, int frame)
                     gegl_meta_set_audio (cache_path, clip->audio);
                   rename (cache_path, cache_path_final);
                   g_object_unref (save_graph);
-
-    if (max_frames)
-    {
-      max_frames --;
-      if (max_frames == 0)
-        exit(0);
-    }
-
                 }
               g_free (cache_path);
               g_free (cache_path_final);
@@ -1407,7 +1398,6 @@ int main (int argc, char **argv)
         return 0;
       case RUNMODE_CACHE:
         do_encode  = 0;
-        max_frames = 24;
         tot_frames  = gedl_get_duration (edl);
         if (edl->range_end == 0)
           edl->range_end = tot_frames-1;
