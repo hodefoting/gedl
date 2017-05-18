@@ -460,7 +460,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
               gchar *cache_path_final = g_strdup_printf ("%s.gedl/cache/%s", edl->parent_path, g_checksum_get_string(hash));
 
               if ( //!g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
-                  !g_file_test (cache_path_final, G_FILE_TEST_IS_REGULAR))
+                  !g_file_test (cache_path_final, G_FILE_TEST_IS_REGULAR) && !edl->playing)
                 {
                   GeglNode *save_graph = gegl_node_new ();
                   GeglNode *save;
