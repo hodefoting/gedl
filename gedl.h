@@ -1,7 +1,7 @@
 #if PLAN
 
 bugs
-  bounding box of preview/proxy not working
+  bounding box of preview/proxy not working properly
 
 features
   re-enable cross-fades for video and audio

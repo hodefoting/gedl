@@ -1711,19 +1711,6 @@ void gedl_ui (Mrg *mrg, void *data)
 
 }
 
-
-#if 0
-int renderer_pos   = 0;
-int renderer_start = 0;
-int renderer_end   = 0;
-static void renderer_set_range (int start, int end)
-{
-  renderer_start = start;
-  renderer_end = end;
-  renderer_pos = 0;
-}
-#endif
-
 gboolean renderer_main (Mrg *mrg, gpointer data)
 {
   GeglEDL *edl = data;
@@ -1731,7 +1718,7 @@ gboolean renderer_main (Mrg *mrg, gpointer data)
     {
       int i;
       int render_slaves = g_get_num_processors ();
-      killpg(0, SIGUSR2);
+      killpg(0, SIGUSR2); // this will cause previous set of renderers to quite after current frame
       for (i = 0; i < render_slaves; i ++)
       {
         char *cmd = g_strdup_printf ("gedl %s cache %i %i&", edl->path, i, render_slaves);
@@ -1758,9 +1745,6 @@ int gedl_ui_main (GeglEDL *edl)
   gegl_node_connect_to (preview_loader, "output", edl->source_store_buf, "input");
 
   edl->cache_flags = CACHE_TRY_ALL;// | CACHE_MAKE_ALL;
-//  if (!edl->use_proxies)
-//   edl->cache_flags |= CACHE_MAKE_ALL;
-//renderer_set_range (0, 50);
   mrg_set_ui (mrg, gedl_ui, &o);
   mrg_add_timeout (mrg, 3000, save_idle, edl);
 
@@ -1768,7 +1752,6 @@ int gedl_ui_main (GeglEDL *edl)
   mrg_add_timeout (mrg, 40000, renderer_main, edl);
 
   thread = g_thread_new ("renderer", renderer_thread, edl);
-//if(0)  g_thread_new ("cachemaster", renderer_main, edl);
 
   gedl_get_duration (edl);
   mrg_set_target_fps (mrg, -1);
