@@ -710,7 +710,7 @@ static void save (MrgEvent *event, void *data1, void *data2)
   save_edl (edl);
 }
 
-static gboolean save_idle (gpointer edl)
+static gboolean save_idle (Mrg *mrg, gpointer edl)
 {
   if (changed)
   {
@@ -1713,7 +1713,7 @@ static void renderer_set_range (int start, int end)
 }
 #endif
 
-gboolean renderer_main (gpointer data)
+gboolean renderer_main (Mrg *mrg, gpointer data)
 {
   GeglEDL *edl = data;
   if (!playing)
@@ -1725,6 +1725,7 @@ gboolean renderer_main (gpointer data)
       {
         char *cmd = g_strdup_printf ("gedl %s cache %i %i&", edl->path, i, render_slaves);
         save_edl (edl);
+        fprintf (stderr, "%s\n", cmd);
         system (cmd);
         g_free (cmd);
       }
@@ -1751,10 +1752,10 @@ int gedl_ui_main (GeglEDL *edl)
 //   edl->cache_flags |= CACHE_MAKE_ALL;
 //renderer_set_range (0, 50);
   mrg_set_ui (mrg, gedl_ui, &o);
-  g_timeout_add (3000, save_idle, edl);
+  mrg_add_timeout (mrg, 3000, save_idle, edl);
 
-  renderer_main (edl);
-  g_timeout_add (40000, renderer_main, edl);
+  renderer_main (mrg, edl);
+  mrg_add_timeout (mrg, 40000, renderer_main, edl);
 
   thread = g_thread_new ("renderer", renderer_thread, edl);
 //if(0)  g_thread_new ("cachemaster", renderer_main, edl);
