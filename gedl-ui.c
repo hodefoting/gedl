@@ -1718,10 +1718,16 @@ gboolean renderer_main (gpointer data)
   GeglEDL *edl = data;
   if (!playing)
     {
+      int i;
+      int render_slaves = g_get_num_processors ();
       killpg(0, SIGUSR1);
-      char *cmd = g_strdup_printf ("gedl %s cache &", edl->path);
-      // save_edl (edl);
-      system (cmd);
+      for (i = 0; i < render_slaves; i ++)
+      {
+        char *cmd = g_strdup_printf ("gedl %s cache %i %i&", edl->path, i, render_slaves);
+        // save_edl (edl);
+        system (cmd);
+        g_free (cmd);
+      }
     }
   return TRUE;
 }

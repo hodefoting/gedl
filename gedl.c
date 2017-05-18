@@ -1385,7 +1385,16 @@ int main (int argc, char **argv)
     for (int i = 0; argv[i]; i++)
     {
       if (!strcmp (argv[i], "render")) runmode = RUNMODE_RENDER;
-      if (!strcmp (argv[i], "cache")) runmode = RUNMODE_CACHE;
+      if (!strcmp (argv[i], "cache"))
+      {
+        runmode = RUNMODE_CACHE;
+        if (argv[i+1])
+        {
+          cacheno = atoi (argv[i+1]);
+          if (argv[i+2])
+            cachecount = atoi (argv[i+2]);
+        }
+      }
     }
 
     switch (runmode)
