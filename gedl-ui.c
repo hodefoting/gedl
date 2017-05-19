@@ -149,6 +149,15 @@ static void clicked_source_clip (MrgEvent *e, void *data1, void *data2)
   changed++;
 }
 
+
+static void drag_dropped (MrgEvent *e, void *data1, void *data2)
+{
+  Clip *clip = data1;
+  GeglEDL *edl = data2;
+
+  fprintf(stderr, "[%s] %f %f\n", e->string, e->x, e->y);
+}
+
 static void clicked_clip (MrgEvent *e, void *data1, void *data2)
 {
   Clip *clip = data1;
@@ -950,6 +959,9 @@ void gedl_draw (Mrg     *mrg,
   cairo_set_source_rgba (cr, 1, 0, 0, 0.75);
   cairo_fill (cr);
 
+  cairo_rectangle (cr, t0, y, mrg_width(mrg)*fpx, VID_HEIGHT);
+  mrg_listen (mrg, MRG_DROP, drag_dropped, edl, edl);
+  cairo_new_path (cr);
 
   for (l = edl->clips; l; l = l->next)
   {
@@ -1248,6 +1260,10 @@ void gedl_ui (Mrg *mrg, void *data)
      case GEDL_UI_MODE_FULL:
      case GEDL_UI_MODE_PART:
      gedl_draw (mrg, edl, 0, mrg_height (mrg) * SPLIT_VER, edl->scale, edl->t0);
+
+
+
+
   break;
      case GEDL_UI_MODE_NONE:
         break;

@@ -1274,6 +1274,7 @@ int main (int argc, char **argv)
       }
     }
 
+    fprintf (stderr, "%s:%s:%i", __FILE__, __FUNCTION__, __LINE__);
     switch (runmode)
     {
       case RUNMODE_UI: 
