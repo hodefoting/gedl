@@ -1427,6 +1427,7 @@ int gedl_ui_main (GeglEDL *edl)
 
   gedl_get_duration (edl);
   mrg_set_target_fps (mrg, -1);
+  renderer_start (edl);
   mrg_main (mrg);
   gedl_free (edl);
   gegl_exit ();

@@ -176,14 +176,17 @@ if (audio)
   return NULL;
 }
 
+void renderer_start (GeglEDL *edl)
+{
+  if (!thread)
+    thread = g_thread_new ("renderer", renderer_thread, edl);
+}
 
 void renderer_toggle_playing (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
   edl->playing =  !edl->playing;
   killpg(0, SIGUSR2);
-  if (!thread && !edl->playing)
-    thread = g_thread_new ("renderer", renderer_thread, edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   prev_ticks = babl_ticks ();
