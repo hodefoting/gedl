@@ -18,7 +18,6 @@ static int copy_buf_len = 0;
 
 static int changed = 0;
 
-extern GeglNode *preview_loader;
 
 
 
@@ -1417,9 +1416,6 @@ int gedl_ui_main (GeglEDL *edl)
   o.edl = edl;
 
   edl->mrg = mrg;
-  preview_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:ff-load",
-                         "path", "/tmp", NULL);
-  gegl_node_connect_to (preview_loader, "output", edl->source_store_buf, "input");
 
   edl->cache_flags = CACHE_TRY_ALL;// | CACHE_MAKE_ALL;
   mrg_set_ui (mrg, gedl_ui, &o);

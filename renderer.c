@@ -106,6 +106,11 @@ void playing_iteration (Mrg *mrg, GeglEDL *edl);
 static gpointer renderer_thread (gpointer data)
 {
   GeglEDL *edl = data;
+
+  preview_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:ff-load",
+                         "path", "/tmp", NULL);
+  gegl_node_connect_to (preview_loader, "output", edl->source_store_buf, "input");
+
   for (;;)
   {
     playing_iteration (edl->mrg, edl);
