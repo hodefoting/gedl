@@ -275,58 +275,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
       gchar *cache_path;
 
       edl->clip = clip;
-
-      clip_set_frame_no (clip, clip->clip_frame_no = (frame - clip_start) + clip_get_start (clip));
-
-
-#if 0
-      frob_fade (edl, clip);
-
-      if (clip->fade_out && (clip->clip_frame_no > (clip->end - clip->fade_pad_end)) && l->next)
-        {
-          clip2 = l->next->data;
-          clip2->clip_frame_no = 0;
-
-          edl->clip2 = clip2;
-          edl->mix = (clip->end - clip->clip_frame_no) * 1.0 / clip->fade_pad_end;
-          edl->mix = (1.0 - edl->mix) / 2.0;
-//#define CACHE_FILTER 0
-#if CACHE_FILTER
-      //  if (edl->source[1]->clip_path == NULL || strcmp (clip_get_path (clip2), edl->source[1]->clip_path))
-           {
-             gegl_node_set (clip2->loader, "operation", clip2->is_image?"gegl:load":"gegl:ff-load", "path", clip2->clip_path, NULL);
-             clip2->clip_frame_no = clip2->start - ( clip->end - clip->clip_frame_no);
-           }
-#endif
-           if (!clip2->is_image)
-           {
-             gegl_node_set (clip2->loader, "frame", clip2->clip_frame_no, NULL);
-           }
-        }
-      else if (clip->fade_in && (clip->clip_frame_no - clip->start < clip->fade_pad_start))
-        {
-          clip2 = l->prev->data;
-          edl->mix = (clip->fade_pad_start - (clip->clip_frame_no - clip->start) ) * 1.0 / clip->fade_pad_start;
-           edl->mix /= 2.0;
-
-#if CACHE_FILTER
-      //     if (edl->source[1]->clip_path == NULL || strcmp (clip_get_path (clip2), edl->source[1]->clip_path))
-             {
-               gegl_node_set (clip2->loader, "operation", clip2->is_image?"gegl:load":"gegl:ff-load", "path", clip2->clip_path, NULL);
-               clip2->clip_frame_no = clip2->end + (clip->clip_frame_no - clip->start);
-
-             }
-#endif
-            if (!clip2->is_image)
-             gegl_node_set (clip2->loader, "frame", clip2->clip_frame_no, NULL);
-        }
-      else
-        {
-          edl->mix = 0.0;
-        }
-#else
-          edl->mix = 0.0;
-#endif
+      edl->mix = 0.0;
 
       /* this is both where we can keep filter graphs, and do more global
        * cache short circuiting, this would leave the cross fading to still have
@@ -356,9 +305,10 @@ void gedl_set_frame (GeglEDL *edl, int frame)
              }
          }
         /**********************************************************************/
+        int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
 
         frame_recipe = g_strdup_printf ("%s: %s %s %i %s %s %s %i %s %ix%i %f",
-          "gedl-pre-3", clip_path, gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl) * 0, gegl_node_to_xml (edl->nop_transformed, NULL), gegl_node_to_xml (clip->loader, NULL), "aaa", 3, "bbb", edl->width, edl->height, 
+          "gedl-pre-3", clip_path, gedl_get_clip_path (edl), clip_frame_no, gegl_node_to_xml (edl->nop_transformed, NULL), "foo", "aaa", 3, "bbb", edl->width, edl->height,
             0.0/*edl->mix*/);
 
         hash = g_checksum_new (G_CHECKSUM_MD5);
@@ -399,6 +349,8 @@ void gedl_set_frame (GeglEDL *edl, int frame)
           }
         else /* not found in cache - we have to make the frame */
           {
+            clip_set_frame_no (clip, clip_frame_no);
+
             if (edl->mix != 0.0)
             {
                gegl_node_set (edl->load_buf2, "buffer", gedl_get_buffer2 (edl), NULL);
@@ -524,8 +476,6 @@ void gedl_set_frame (GeglEDL *edl, int frame)
     }
     clip_start += clip_frames;
   }
-  //edl->source[0]->clip_path = "unknown";
-  //edl->source[0]->clip_frame_no = 0;
 }
 
 void gedl_set_time (GeglEDL *edl, double seconds)
@@ -1274,7 +1224,6 @@ int main (int argc, char **argv)
       }
     }
 
-    fprintf (stderr, "%s:%s:%i", __FILE__, __FUNCTION__, __LINE__);
     switch (runmode)
     {
       case RUNMODE_UI: 

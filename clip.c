@@ -70,7 +70,6 @@ void clip_set_path (Clip *clip, const char *in_path)
   {
     g_object_set (clip->loader, "operation", "gegl:ff-load", NULL);
   }
-  gegl_node_set (clip->loader, "path", path, NULL);
 }
 int clip_get_start (Clip *clip)
 {
@@ -127,12 +126,22 @@ static void clip_set_proxied (Clip *clip)
   if (clip->edl->use_proxies)
     {
       char *path = gedl_make_proxy_path (clip->edl, clip->path);
+      gchar *old = NULL;
+      gegl_node_get (clip->proxy_loader, "path", &old, NULL);
+
+      if (!old || !strcmp (old, "") || !strcmp (path, old))
+        gegl_node_set (clip->proxy_loader, "path", path, NULL);
       gegl_node_link_many (clip->proxy_loader, clip->store_buf, NULL);
-      gegl_node_set (clip->proxy_loader, "path", path, NULL);
       g_free (path);
     }
   else
-    gegl_node_link_many (clip->loader, clip->store_buf, NULL);
+    {
+      gchar *old = NULL;
+      gegl_node_get (clip->loader, "path", &old, NULL);
+      if (!old || !strcmp (old, "") || !strcmp (clip->path, old))
+        gegl_node_set (clip->loader, "path", clip->path, NULL);
+      gegl_node_link_many (clip->loader, clip->store_buf, NULL);
+    }
 }
 
 void clip_set_frame_no (Clip *clip, int frame_no)

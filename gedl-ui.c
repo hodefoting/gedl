@@ -152,8 +152,8 @@ static void clicked_source_clip (MrgEvent *e, void *data1, void *data2)
 
 static void drag_dropped (MrgEvent *e, void *data1, void *data2)
 {
-  Clip *clip = data1;
-  GeglEDL *edl = data2;
+  //Clip *clip = data1;
+  //GeglEDL *edl = data2;
 
   fprintf(stderr, "[%s] %f %f\n", e->string, e->x, e->y);
 }
