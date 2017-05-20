@@ -1422,7 +1422,7 @@ void gedl_ui (Mrg *mrg, void *data)
 
 }
 
-gboolean renderer_main (Mrg *mrg, gpointer data)
+gboolean cache_renderer_iteration (Mrg *mrg, gpointer data)
 {
   GeglEDL *edl = data;
   if (!edl->playing)
@@ -1457,8 +1457,8 @@ int gedl_ui_main (GeglEDL *edl)
 
   mrg_add_timeout (mrg, 10100, save_idle, edl);
 
-  renderer_main (mrg, edl);
-  mrg_add_timeout (mrg, 30000, renderer_main, edl);
+  cache_renderer_iteration (mrg, edl);
+  mrg_add_timeout (mrg, 60000, cache_renderer_iteration, edl);
 
   gedl_get_duration (edl);
   mrg_set_target_fps (mrg, -1);
