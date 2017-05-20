@@ -208,6 +208,8 @@ static void drag_t0 (MrgEvent *e, void *data1, void *data2)
         {
   GeglEDL *edl = data2;
   edl->t0 += e->delta_x;
+  if (edl->t0 < 0.0)
+    edl->t0 = 0.0;
   mrg_queue_draw (e->mrg, NULL);
   mrg_event_stop_propagate (e);
   changed++;
@@ -255,7 +257,7 @@ static void stop_playing (MrgEvent *event, void *data1, void *data2)
 static void select_all (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  gedl_set_selection (edl, 0, gedl_get_duration (edl));
+  gedl_set_selection (edl, 0, gedl_get_duration (edl)-1);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -857,11 +859,23 @@ void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start,
 static void scroll_to_fit (GeglEDL *edl, Mrg *mrg)
 {
   /* scroll to fit playhead */
-  if ( (edl->frame_no - edl->t0) / edl->scale > mrg_width (mrg) * 0.8)
+  if ( (edl->frame_no - edl->t0) / edl->scale > mrg_width (mrg) * 1.0)
     edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.8) * edl->scale;
-  else if ( (edl->frame_no - edl->t0) / edl->scale < mrg_width (mrg) * 0.2)
+  else if ( (edl->frame_no - edl->t0) / edl->scale < mrg_width (mrg) * 0.0)
     edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.2) * edl->scale;
 }
+
+
+static void zoom_fit (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  gedl_cache_invalid (edl);
+  edl->t0 = 0.0;
+  edl->scale = gedl_get_duration (edl) * 1.0 / mrg_width (event->mrg);
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+}
+
 
 void gedl_draw (Mrg     *mrg,
                 GeglEDL *edl,
@@ -1371,6 +1385,7 @@ void gedl_ui (Mrg *mrg, void *data)
     mrg_add_binding (mrg, "d", NULL, NULL, duplicate_clip, edl);
     mrg_add_binding (mrg, "v", NULL, NULL, split_clip, edl);
     mrg_add_binding (mrg, "f", NULL, NULL, toggle_fade, edl);
+    mrg_add_binding (mrg, "e", NULL, NULL, zoom_fit, edl);
     mrg_add_binding (mrg, "F1", NULL, NULL, toggle_help, edl);
     mrg_add_binding (mrg, "s", NULL, NULL, save, edl);
     mrg_add_binding (mrg, "a", NULL, NULL, select_all, edl);
@@ -1380,8 +1395,8 @@ void gedl_ui (Mrg *mrg, void *data)
 
     mrg_add_binding (mrg, "p", NULL, NULL, toggle_use_proxies, edl);
 
-    mrg_add_binding (mrg, "control-left", NULL, NULL, nav_left, edl);
-    mrg_add_binding (mrg, "control-right", NULL, NULL, nav_right, edl);
+    mrg_add_binding (mrg, "up", NULL, NULL, nav_left, edl);
+    mrg_add_binding (mrg, "down", NULL, NULL, nav_right, edl);
     mrg_add_binding (mrg, ".", NULL, NULL, clip_end_inc, edl);
     mrg_add_binding (mrg, ",", NULL, NULL, clip_end_dec, edl);
     mrg_add_binding (mrg, "alt-left", NULL, NULL, clip_start_inc, edl);
