@@ -1138,6 +1138,12 @@ static void process_frames_cache (GeglEDL *edl)
   int duration;
   signal(SIGUSR2, handler1);
   duration = gedl_get_duration (edl);
+
+  /* XXX: should probably do first frame of each clip - since
+          these are used for quick keyboard navigation of the
+          project
+   */
+
   for (frame_no = frame_start - 3; frame_no < duration; frame_no++)
   {
     edl->frame_no = frame_no;
