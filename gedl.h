@@ -1,5 +1,9 @@
 #if PLAN
 
+replace digested interpolated frame data.. with just the gedl-chain recipe +
+frame for interpolation for hashing (or maybe the win of better dedup makes
+that one a keeper?)
+
 bugs
   bounding box of preview/proxy not working properly
 
@@ -7,6 +11,7 @@ features
   re-enable cross-fades for video and audio
   templates - for both clips and filters - filters that can be chained
   annotations
+  also write a cache for proxy.. when heavily filtered it is neccesary
   pcm cache
   create thumbnails as well as thumbtracks for clips
   detect locked ui, kill and respawn

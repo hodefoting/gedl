@@ -205,7 +205,7 @@ static void drag_clip (MrgEvent *e, void *data1, void *data2)
 }
 
 static void drag_t0 (MrgEvent *e, void *data1, void *data2)
-        {
+{
   GeglEDL *edl = data2;
   edl->t0 += e->delta_x;
   if (edl->t0 < 0.0)
@@ -469,6 +469,8 @@ static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
   changed++;
 }
 
+static void scroll_to_fit (GeglEDL *edl, Mrg *mrg);
+
 static void nav_left (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -478,9 +480,10 @@ static void nav_left (MrgEvent *event, void *data1, void *data2)
     GList *iter = g_list_find (edl->clips, edl->active_clip);
     if (iter) iter = iter->prev;
     if (iter) edl->active_clip = iter->data;
-    edl->frame_no = edl->active_clip->abs_start + 1;
+    edl->frame_no = edl->active_clip->abs_start;
   }
   mrg_event_stop_propagate (event);
+  scroll_to_fit (edl, event->mrg);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
 }
@@ -494,10 +497,11 @@ static void nav_right (MrgEvent *event, void *data1, void *data2)
     GList *iter = g_list_find (edl->clips, edl->active_clip);
     if (iter) iter = iter->next;
     if (iter) edl->active_clip = iter->data;
-    edl->frame_no = edl->active_clip->abs_start + 1;
+    edl->frame_no = edl->active_clip->abs_start;
   }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
+  scroll_to_fit (edl, event->mrg);
   changed++;
 }
 

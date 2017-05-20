@@ -241,6 +241,84 @@ void gedl_set_use_proxies (GeglEDL *edl, int use_proxies)
 }
 int do_encode = 1;
 
+gchar *gedl_get_frame_hash (GeglEDL *edl, int frame)
+{
+  GList *l;
+  int clip_start = 0;
+
+  for (l = edl->clips; l; l = l->next)
+  {
+    Clip *clip = l->data;
+    int clip_frames = clip_get_frames (clip);
+
+    clip->clip_frame_no = 0;
+
+    clip->abs_start = clip_start;
+    if (frame - clip_start < clip_frames)
+    {
+      /* found right clip */
+      const char *clip_path = clip_get_path (clip);
+      //Clip *clip2 = NULL;
+      gchar *frame_recipe;
+      GChecksum *hash;
+      gchar *cache_path;
+
+      edl->clip = clip;
+      edl->mix = 0.0;
+
+      /* this is both where we can keep filter graphs, and do more global
+       * cache short circuiting, this would leave the cross fading to still have
+       * to happen on he fly.. along with audio mix
+       */
+
+         {
+           remove_in_betweens (edl->nop_raw, edl->nop_transformed);
+
+           gegl_node_set (edl->nop_raw, "operation", "gegl:scale-size-keepaspect",
+                                          "y", 0.0, //
+                                          "x", 1.0 * edl->width,
+                                          "sampler", GEDL_SAMPLER,
+                                          NULL);
+
+           gegl_node_link_many (edl->nop_raw, edl->nop_transformed, NULL);
+         }
+        int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
+
+      if (clip->filter_graph)
+        {
+           GError *error = NULL;
+           gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip_frame_no/*, clip->clip_frame_no - clip->end, clip->end - clip->start */, edl->height, NULL, &error);
+           if (error)
+             {
+               /* should set error string */
+               fprintf (stderr, "%s\n", error->message);
+               g_error_free (error);
+             }
+         }
+        /**********************************************************************/
+
+        frame_recipe = g_strdup_printf ("%s: %s %s %i %s %s %s %i %s %ix%i %f",
+          "gedl-pre-3", clip_path, "", clip_frame_no, gegl_node_to_xml (edl->nop_transformed, NULL), "foo", "aaa", 3, "bbb", edl->width, edl->height,
+            0.0/*edl->mix*/);
+
+        hash = g_checksum_new (G_CHECKSUM_MD5);
+        g_checksum_update (hash, (void*)frame_recipe, -1);
+        cache_path  = g_strdup_printf ("%s.gedl/cache/%s", edl->parent_path, g_checksum_get_string(hash));
+        if (edl->script_hash)
+          g_free (edl->script_hash);
+        edl->script_hash = g_strdup (g_checksum_get_string(hash));
+
+      g_checksum_free (hash);
+      g_free (frame_recipe);
+
+      return edl->script_hash;
+    }
+    clip_start += clip_frames;
+  }
+
+  return NULL;
+}
+
 /*  calling this causes gedl to rig up its graphs for providing/rendering this frame
  */
 void gedl_set_frame (GeglEDL *edl, int frame)
