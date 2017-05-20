@@ -176,7 +176,6 @@ Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame)
     }
     t += clip_get_frames (clip);
   }
-
   return NULL;
 }
 

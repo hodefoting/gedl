@@ -18,7 +18,11 @@ features
     on-demand/background proxy generation
     ui for picking clips in current folder, possibly clib-db separate from video-project
     implement drag and drop, accepting url to file on filesystem
-    clip database done on demand - files that appear in the timeline get enrolled.
+    clip database done on demand - files that appear in the timeline get enrolled, as well as files thatappearinthe working dir.
+
+refactor
+   make each clip not have a loader but have a pool of loaders, that
+   can be pre-seeded with right paths for upcoming clips during playback
 
 implement image folder videoplayer
 

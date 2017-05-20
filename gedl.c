@@ -308,7 +308,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
         int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
 
         frame_recipe = g_strdup_printf ("%s: %s %s %i %s %s %s %i %s %ix%i %f",
-          "gedl-pre-3", clip_path, gedl_get_clip_path (edl), clip_frame_no, gegl_node_to_xml (edl->nop_transformed, NULL), "foo", "aaa", 3, "bbb", edl->width, edl->height,
+          "gedl-pre-3", clip_path, "", clip_frame_no, gegl_node_to_xml (edl->nop_transformed, NULL), "foo", "aaa", 3, "bbb", edl->width, edl->height,
             0.0/*edl->mix*/);
 
         hash = g_checksum_new (G_CHECKSUM_MD5);
@@ -350,7 +350,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
         else /* not found in cache - we have to make the frame */
           {
             clip_set_frame_no (clip, clip_frame_no);
-
+#if 0
             if (edl->mix != 0.0)
             {
                gegl_node_set (edl->load_buf2, "buffer", gedl_get_buffer2 (edl), NULL);
@@ -358,6 +358,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
                gegl_node_set (edl->opacity, "value", edl->mix, NULL);
             }
             else
+#endif
             {
               gegl_node_connect_to (edl->crop, "output", edl->result, "input");
             }
