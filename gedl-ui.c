@@ -763,6 +763,61 @@ static void step_frame (MrgEvent *event, void *data1, void *data2)
   changed++;
 }
 
+static void clip_end_start_dec (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  Clip *clip1, *clip2;
+  if (edl->selection_start < edl->selection_end)
+  {
+    clip1 = edl->active_clip = edl_get_clip_for_frame (edl, edl->selection_start);
+    clip2 = edl_get_clip_for_frame (edl, edl->selection_start+1);
+  }
+  else
+  {
+    clip1 = edl->active_clip = edl_get_clip_for_frame (edl, edl->selection_end);
+    clip2 = edl_get_clip_for_frame (edl, edl->selection_end+1);
+  }
+  if (edl->active_clip)
+    {
+      edl->selection_start--;
+      edl->selection_end--;
+      clip1->end--;
+      clip2->start--;
+      edl->frame_no--;
+    }
+      gedl_cache_invalid (edl);
+      mrg_event_stop_propagate (event);
+      mrg_queue_draw (event->mrg, NULL);
+}
+
+static void clip_end_start_inc (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  Clip *clip1, *clip2;
+  if (edl->selection_start < edl->selection_end)
+  {
+    clip1 = edl->active_clip = edl_get_clip_for_frame (edl, edl->selection_start);
+    clip2 = edl_get_clip_for_frame (edl, edl->selection_start+1);
+  }
+  else
+  {
+    clip1 = edl->active_clip = edl_get_clip_for_frame (edl, edl->selection_end);
+    clip2 = edl_get_clip_for_frame (edl, edl->selection_end+1);
+  }
+  if (edl->active_clip)
+    {
+      edl->selection_start++;
+      edl->selection_end++;
+      clip1->end++;
+      clip2->start++;
+      edl->frame_no++;
+    }
+      gedl_cache_invalid (edl);
+      mrg_event_stop_propagate (event);
+      mrg_queue_draw (event->mrg, NULL);
+}
+
+
 static void clip_start_end_inc (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -776,9 +831,9 @@ static void clip_start_end_inc (MrgEvent *event, void *data1, void *data2)
       edl->active_clip->end++;
       edl->active_clip->start++;
     }
-      gedl_cache_invalid (edl);
-      mrg_event_stop_propagate (event);
-      mrg_queue_draw (event->mrg, NULL);
+  gedl_cache_invalid (edl);
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
 }
 
 
@@ -1350,16 +1405,17 @@ void help_ui (Mrg *mrg, GeglEDL *edl)
 
     //cairo_set_source_rgba (mrg_cr (mrg), 0, 0, 0, 0.85);
     //cairo_paint (mrg_cr(mrg));
-    mrg_set_font_size (mrg, mrg_height (mrg) / 30.0);
+    mrg_set_font_size (mrg, mrg_height (mrg) / 20.0);
   mrg_set_style (mrg, "color: white;background: transparent; text-stroke: 4.5px #000");
     mrg_set_edge_right (mrg, mrg_width (mrg) - mrg_em (mrg) *2);
     mrg_set_edge_left (mrg, mrg_em (mrg));
-    mrg_set_xy (mrg, mrg_em (mrg), mrg_height (mrg) * (1.0-SPLIT_VER));
+    mrg_set_xy (mrg, mrg_em (mrg), mrg_em (mrg) * 2);
 
 
     for (i = 0; bindings[i].cb; i++)
     {
-      mrg_printf_xml (mrg, "<div style='display:inline-block; padding-right: 1em;'><b>%s</b>&nbsp;%s</div>  ", bindings[i].nick, bindings[i].label);
+      if (bindings[i].label)
+        mrg_printf_xml (mrg, "<div style='display:inline-block; padding-right: 1em;'><b>%s</b>&nbsp;%s</div>  ", bindings[i].nick, bindings[i].label);
     }
   }
   else
@@ -1541,57 +1597,76 @@ void gedl_ui (Mrg *mrg, void *data)
     if (edl->playing)
     {
       mrg_add_binding (mrg, "space", NULL, "pause", renderer_toggle_playing, edl);
-      if (edl->frame_no == edl->active_clip->abs_start)
+      if (edl->frame_no != edl->active_clip->abs_start)
         mrg_add_binding (mrg, "v", NULL, "split clip", split_clip, edl);
     }
     else
     {
       mrg_add_binding (mrg, "space", NULL, "play", renderer_toggle_playing, edl);
+
     mrg_add_binding (mrg, "tab", NULL, "cycle ui amount", toggle_ui_mode, edl);
     mrg_add_binding (mrg, "e", NULL, "zoom fit", zoom_fit, edl);
+
 
     if (edl->use_proxies)
       mrg_add_binding (mrg, "p", NULL, "don't use proxies", toggle_use_proxies, edl);
     else
       mrg_add_binding (mrg, "p", NULL, "use proxies", toggle_use_proxies, edl);
 
+    //mrg_add_binding (mrg, "s", NULL, "save", save, edl);
+    mrg_add_binding (mrg, "a", NULL, "select all", select_all, edl);
+
+    mrg_add_binding (mrg, "left/right", NULL, "step frame", step_frame, edl);
+    mrg_add_binding (mrg, "right", NULL, NULL, step_frame, edl);
+    mrg_add_binding (mrg, "left", NULL, NULL, step_frame_back, edl);
+
+    mrg_add_binding (mrg, "up/down", NULL, "previous/next cut", nav_left, edl);
+    mrg_add_binding (mrg, "up", NULL, NULL, nav_left, edl);
+    mrg_add_binding (mrg, "down", NULL, NULL, nav_right, edl);
 
     if (edl->frame_no == edl->active_clip->abs_start)
     {
-      mrg_add_binding (mrg, "up", NULL, "previous clip", nav_left, edl);
 
-      mrg_add_binding (mrg, "control-right", NULL, "in++", clip_start_inc, edl);
-      mrg_add_binding (mrg, "control-left", NULL, "in--", clip_start_dec, edl);
-      mrg_add_binding (mrg, "down", NULL, "next clip", nav_right, edl);
-      //mrg_add_binding (mrg, "control-up", NULL, "shuffle clip backward", step_frame, edl);
-      //mrg_add_binding (mrg, "control-down", NULL, "shuffle clip forward", step_frame, edl);
+      if (edl->selection_start == edl->selection_end)
+      {
+        mrg_add_binding (mrg, "control-right", NULL, "in++", clip_start_inc, edl);
+        mrg_add_binding (mrg, "control-left", NULL, "in--", clip_start_dec, edl);
+        //mrg_add_binding (mrg, "control-up", NULL, "shuffle clip backward", step_frame, edl);
+        //mrg_add_binding (mrg, "control-down", NULL, "shuffle clip forward", step_frame, edl);
+      }
     }
     else
     {
-      mrg_add_binding (mrg, "up", NULL, "go to clip start", nav_left, edl);
-      mrg_add_binding (mrg, "down", NULL, "next clip", nav_right, edl);
-
+      if (edl->selection_start == edl->selection_end)
+      {
       //mrg_add_binding (mrg, "control-up", NULL, "slide backward", step_frame, edl);
       //mrg_add_binding (mrg, "control-down", NULL, "slide forward", step_frame, edl);
 
       if (edl->frame_no == edl->active_clip->abs_start + clip_get_frames (edl->active_clip)-1)
       {
-        mrg_add_binding (mrg, "control-right", NULL, "out++", clip_end_inc, edl);
-        mrg_add_binding (mrg, "control-left", NULL, "out--", clip_end_dec, edl);
+        mrg_add_binding (mrg, "control-left/right", NULL, "adjust out", clip_end_inc, edl);
+        mrg_add_binding (mrg, "control-right", NULL, NULL, clip_end_inc, edl);
+        mrg_add_binding (mrg, "control-left", NULL, NULL, clip_end_dec, edl);
       }
       else
       {
-        mrg_add_binding (mrg, "control-right", NULL, "in++ out++", clip_start_end_inc, edl);
-        mrg_add_binding (mrg, "control-left", NULL, "in-- out--", clip_start_end_dec, edl);
+        mrg_add_binding (mrg, "control-left/right", NULL, "slide cut window", clip_start_end_inc, edl);
+        mrg_add_binding (mrg, "control-right", NULL, NULL, clip_start_end_inc, edl);
+        mrg_add_binding (mrg, "control-left", NULL, NULL, clip_start_end_dec, edl);
+      }
+      }
+      else if (edl->selection_end == edl->frame_no &&
+               fabs(edl->selection_start - edl->selection_end) == 1.0)
+      {
+        mrg_add_binding (mrg, "control-left/right", NULL, "move cut", clip_end_start_inc, edl);
+        mrg_add_binding (mrg, "control-right", NULL, NULL, clip_end_start_inc, edl);
+        mrg_add_binding (mrg, "control-left", NULL, NULL, clip_end_start_dec, edl);
       }
     }
 
-    mrg_add_binding (mrg, "right", NULL, "step frame forward", step_frame, edl);
-    mrg_add_binding (mrg, "left", NULL, "step frame backward", step_frame_back, edl);
-
-    mrg_add_binding (mrg, "shift-right", NULL, "extend selection right", extend_selection_to_the_right, edl);
-    mrg_add_binding (mrg, "shift-left", NULL, "extend selection left", extend_selection_to_the_left, edl);
-
+    mrg_add_binding (mrg, "shift-left/right", NULL, "extend selection", extend_selection_to_the_right, edl);
+    mrg_add_binding (mrg, "shift-right", NULL, NULL, extend_selection_to_the_right, edl);
+    mrg_add_binding (mrg, "shift-left", NULL, NULL, extend_selection_to_the_left, edl);
 
     if (edl->selection_start == edl->selection_end)
     {
@@ -1626,8 +1701,6 @@ void gedl_ui (Mrg *mrg, void *data)
       mrg_add_binding (mrg, "c", NULL, "copy selection", remove_clip, edl);
       mrg_add_binding (mrg, "r", NULL, "set playback range", set_range, edl);
     }
-    mrg_add_binding (mrg, "s", NULL, "save", save, edl);
-    mrg_add_binding (mrg, "a", NULL, "select all", select_all, edl);
 
     }
 
