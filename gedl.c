@@ -292,6 +292,29 @@ void gedl_set_frame (GeglEDL *edl, int frame)
   edl->frame = frame;
   edl->mix = 0.0;
 
+  char *frame_hash = gedl_get_frame_hash (edl, frame);
+  char *cache_path  = g_strdup_printf ("%s.gedl/cache/%s", edl->parent_path, frame_hash);
+  g_free (frame_hash);
+  if (!edl->use_proxies &&
+      g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
+      (edl->cache_flags & CACHE_TRY_ALL))
+  {
+    Clip *clip = edl->clip = edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+    gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
+    gegl_node_link_many (edl->cache_loader, edl->result, NULL);
+    if (clip->audio)
+      {
+        g_object_unref (clip->audio);
+        clip->audio = NULL;
+      }
+    if (!clip->audio)
+      clip->audio = gegl_audio_fragment_new (44100, 2, 0, 44100);
+    gegl_meta_get_audio (cache_path, clip->audio);
+    gegl_node_process (edl->store_buf);
+    g_free (cache_path);
+    return;
+  }
+
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
@@ -302,13 +325,6 @@ void gedl_set_frame (GeglEDL *edl, int frame)
     clip->abs_start = clip_start;
     if (frame - clip_start < clip_frames)
     {
-      /* found right clip */
-      const char *clip_path = clip_get_path (clip);
-      //Clip *clip2 = NULL;
-      gchar *frame_recipe;
-      GChecksum *hash;
-      gchar *cache_path;
-
       edl->clip = clip;
       edl->mix = 0.0;
 
@@ -342,47 +358,6 @@ void gedl_set_frame (GeglEDL *edl, int frame)
         /**********************************************************************/
         int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
 
-        frame_recipe = g_strdup_printf ("%s: %s %s %i %s %s %s %i %s %ix%i %f",
-          "gedl-pre-3", clip_path, "", clip_frame_no, clip->filter_graph, "foo", "aaa", 3, "bbb", edl->video_width, edl->video_height,
-            0.0/*edl->mix*/);
-
-        hash = g_checksum_new (G_CHECKSUM_MD5);
-        g_checksum_update (hash, (void*)frame_recipe, -1);
-        cache_path  = g_strdup_printf ("%s.gedl/cache/%s", edl->parent_path, g_checksum_get_string(hash));
-        if (edl->script_hash)
-          g_free (edl->script_hash);
-        edl->script_hash = g_strdup (g_checksum_get_string(hash));
-
-        /*************************************************************************/
-
-        if (!edl->use_proxies &&
-            !strstr (frame_recipe, ".gedl/cache/") &&
-            g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
-            (edl->cache_flags & CACHE_TRY_ALL))
-          {
-#if 0
-             // make a folder of symlinks to images, as a quick image folder hack export
-              gchar *tmp = g_strdup_printf ("ln -sf ../cache/%s .gedl/video/%08i.%s", edl->script_hash, frame, "jpg");
-              system (tmp);
-              g_free (tmp);
-#endif
-            if (do_encode)
-            {
-            gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
-            gegl_node_link_many (edl->cache_loader, edl->result, NULL);
-#if 1
-            if (!clip->audio)
-              clip->audio = gegl_audio_fragment_new (44100, 2, 0, 40000);
-            gegl_meta_get_audio (cache_path, clip->audio);
-#endif
-            gegl_node_process (edl->store_buf);
-            }
-#if DEBUG_CACHE
-            fprintf (stderr, "hit : %i\n", edl->frame);
-#endif
-            cache_hits ++;
-          }
-        else /* not found in cache - we have to make the frame */
           {
             clip_set_frame_no (clip, clip_frame_no);
 #if 0
@@ -398,15 +373,6 @@ void gedl_set_frame (GeglEDL *edl, int frame)
               gegl_node_connect_to (edl->crop, "output", edl->result, "input");
             }
 
-            if (!strstr (frame_recipe, ".gedl/cache"))
-            {
-              if (!edl->use_proxies)
-                cache_misses ++;
-#if DEBUG_CACHE
-              fprintf (stderr, "miss : %i (%s)\n", edl->frame, edl->script_hash);//frame_recipe);
-#endif
-            }
-
             g_mutex_lock (&clip->mutex);
 
             if ((clip->is_image && clip->buffer == NULL) ||
@@ -414,27 +380,11 @@ void gedl_set_frame (GeglEDL *edl, int frame)
               gegl_node_process (clip->store_buf);
             gegl_node_set (edl->load_buf, "buffer", clip->buffer, NULL);
             gegl_node_process (edl->store_buf);
-#if 0
-            if (edl->mix != 0.0 && clip2)
-              {
-                gegl_node_process (clip2->store_buf);
-              }
-#endif
-#if 1
             if (clip->audio)
               {
                 g_object_unref (clip->audio);
                 clip->audio = NULL;
               }
-#endif
-#if 0
-             if (clip2 && clip2->audio)
-              {
-                g_object_unref (clip2->audio);
-                clip2->audio = NULL;
-              }
-#endif
-
             if (clip->is_image)
               clip->audio = NULL;
             else
@@ -445,39 +395,13 @@ void gedl_set_frame (GeglEDL *edl, int frame)
                 gegl_node_get (clip->loader, "audio", &clip->audio, NULL);
             }
 
-#if 0
-            if (edl->mix != 0.0 && clip2)
-              {
-               /* directly mix the audio from the secondary into the primary, with proportional weighting of samples
-                */
-                if (clip2->is_image)
-                  {
-                    clip2->audio = NULL;
-                  }
-                else
-                  {
-                    int i, c;
-                    gegl_node_get (clip2->loader, "audio", &clip2->audio, NULL);
-
-                    for (c = 0; c < gegl_audio_fragment_get_channels (clip->audio); c++)
-                      for (i = 0; i < MIN(gegl_audio_fragment_get_sample_count (clip->audio),
-                              gegl_audio_fragment_get_sample_count (clip2->audio)); i++)
-                        clip->audio->data[c][i] =
-                          clip->audio->data[c][i] * (1.0-edl->mix) +
-                          clip2->audio->data[c][i] * edl->mix;
-                   }
-               }
-#endif
-
           /* write cached render of this frame */
-          //if (!strstr (frame_recipe, ".gedl/cache") && (edl->cache_flags & CACHE_MAKE_ALL))
 
-
-          if (!strstr (frame_recipe, ".gedl/cache") && (!edl->use_proxies))
+          if (!strstr (clip->path, ".gedl/cache") && (!edl->use_proxies))
           // XXX: some proxy renders sneak in!!!!!!
             {
-              gchar *cache_path = g_strdup_printf ("%s.gedl/cache/%s~", edl->parent_path, g_checksum_get_string(hash));
-              gchar *cache_path_final = g_strdup_printf ("%s.gedl/cache/%s", edl->parent_path, g_checksum_get_string(hash));
+              gchar *cache_path_final = cache_path;
+              gchar *cache_path       = g_strdup_printf ("%s~", cache_path_final);
 
               if ( //!g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
                   !g_file_test (cache_path_final, G_FILE_TEST_IS_REGULAR) && !edl->playing)
@@ -500,18 +424,17 @@ void gedl_set_frame (GeglEDL *edl, int frame)
                   g_object_unref (save_graph);
                 }
               g_free (cache_path);
-              g_free (cache_path_final);
             }
             g_mutex_unlock (&clip->mutex);
           }
 
-      g_checksum_free (hash);
-      g_free (frame_recipe);
+      g_free (cache_path);
 
       return;
     }
     clip_start += clip_frames;
   }
+  g_free (cache_path);
 }
 
 void gedl_set_time (GeglEDL *edl, double seconds)
@@ -1053,11 +976,9 @@ static void process_frames (GeglEDL *edl)
     edl->frame_no = frame_no;
     rig_frame (edl, edl->frame_no);
 
-    fprintf (stdout, "\r%1.2f%% %04d / %04d [%s]    ",
+    fprintf (stdout, "\r%1.2f%% %04d / %04d   ",
      100.0 * (frame_no-edl->range_start) * 1.0 / (edl->range_end - edl->range_start),
-     frame_no, edl->range_end,
-
-     edl->script_hash);
+     frame_no, edl->range_end);
 
     if (do_encode)
     {
