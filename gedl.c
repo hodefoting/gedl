@@ -1002,6 +1002,33 @@ static void process_frames_cache (GeglEDL *edl)
   }
 }
 
+static inline void set_bit (guchar *bitmap, int no)
+{
+  bitmap[no/8] |= (1 << (no % 8));
+}
+
+guchar *gedl_get_cache_bitmap (GeglEDL *edl, int *length_ret)
+{
+  int duration = gedl_get_duration (edl);
+  int frame_no;
+  int length = (duration / 8) + 1;
+  guchar *ret = g_malloc0 (length);
+
+  if (length_ret)
+    *length_ret = length;
+
+  for (frame_no = 0; frame_no < duration; frame_no++)
+  {
+    const gchar *hash = gedl_get_frame_hash (edl, frame_no);
+    gchar *path = g_strdup_printf ("%s.gedl/cache/%s", edl->parent_path, hash);
+    if (g_file_test (path, G_FILE_TEST_IS_REGULAR))
+      set_bit (ret, frame_no);
+    g_free (path);
+  }
+
+  return ret;
+}
+
 static void process_frames_cache_stat (GeglEDL *edl)
 {
   int frame_no = edl->frame_no;

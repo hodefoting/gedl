@@ -1062,7 +1062,8 @@ void gedl_draw (Mrg     *mrg,
   GList *l;
   cairo_t *cr = mrg_cr (mrg);
   double t;
- 
+  int duration = gedl_get_duration (edl);
+
   VID_HEIGHT = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.8;
   int scroll_height = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.2;
   t = 0;
@@ -1077,7 +1078,6 @@ void gedl_draw (Mrg     *mrg,
 
   cairo_save (cr);
   {
-    int duration = gedl_get_duration (edl);
     cairo_scale (cr, 1.0 / duration * mrg_width (mrg), 1.0);
   }
 
@@ -1109,6 +1109,7 @@ void gedl_draw (Mrg     *mrg,
     cairo_stroke (cr);
     t += frames;
   }
+
 
   int start = 0, end = 0;
   gedl_get_range (edl, &start, &end);
@@ -1166,6 +1167,47 @@ void gedl_draw (Mrg     *mrg,
     cairo_stroke (cr);
 
     t += frames;
+  }
+
+  if (!edl->playing){
+     gint len;
+     /* should fetch this more seldomly */
+     guchar *bitmap = gedl_get_cache_bitmap (edl, &len);
+     int i;
+     int state = -1;
+     int length = 0;
+     cairo_set_source_rgba (cr, 0.3, 1, 0.3, 1.0);
+     for (i = 0; i < len * 8; i++)
+     {
+        if (bitmap[i / 8] & (1<< (i%8)))
+        {
+          if (state == 1)
+          {
+            length++;
+          }
+          else
+          {
+            length = 0;
+            state = 1;
+          }
+        }
+        else
+        {
+          if (state == 0)
+          {
+            length++;
+          }
+          else
+          {
+            cairo_rectangle (cr, i-length, y, length, 2);
+            length = 0;
+            state = 0;
+          }
+        }
+     }
+     cairo_fill (cr);
+
+     g_free (bitmap);
   }
 
   double frame = edl->frame_no;

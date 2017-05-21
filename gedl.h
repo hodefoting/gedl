@@ -11,6 +11,7 @@ bugs
 
 features
   annotations
+  dragging clip around
   implement overlaying of wav / mp3 files
   re-enable cross-fades for video and audio
   templates - for both clips and filters - filters that can be chained
@@ -95,6 +96,7 @@ void        gedl_get_selection      (GeglEDL    *edl,
                                      int        *start_frame,
                                      int        *end_frame);
 char       *gedl_make_thumb_path    (GeglEDL    *edl, const char *clip_path);
+guchar *gedl_get_cache_bitmap (GeglEDL *edl, int *length_ret);
 void rig_frame (GeglEDL *edl, int frame_no);
 
 /*********/

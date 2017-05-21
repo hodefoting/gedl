@@ -182,11 +182,20 @@ void renderer_start (GeglEDL *edl)
     thread = g_thread_new ("renderer", renderer_thread, edl);
 }
 
+gboolean cache_renderer_iteration (Mrg *mrg, gpointer data);
+
 void renderer_toggle_playing (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
   edl->playing =  !edl->playing;
-  killpg(0, SIGUSR2);
+  if (!edl->playing)
+  {
+    cache_renderer_iteration (event->mrg, edl);
+  }
+  else
+  {
+    killpg(0, SIGUSR2);
+  }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   prev_ticks = babl_ticks ();
