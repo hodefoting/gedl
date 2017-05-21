@@ -343,6 +343,26 @@ static void extend_selection_to_the_left (MrgEvent *event, void *data1, void *da
   mrg_queue_draw (event->mrg, NULL);
   changed++;
 }
+
+
+static int are_mergable (Clip *clip1, Clip *clip2)
+{
+  if (!clip1 || !clip2)
+    return 0;
+  if (strcmp (clip1->path, clip2->path))
+    return 0;
+  if (clip2->start != clip1->end + 1)
+    return 0;
+  if (clip1->filter_graph==NULL && clip2->filter_graph != NULL)
+    return 0;
+  if (clip1->filter_graph!=NULL && clip2->filter_graph == NULL)
+    return 0;
+  if (clip1->filter_graph && strcmp (clip1->filter_graph, clip2->filter_graph))
+    return 0;
+  return 1;
+}
+
+
 static void remove_clip (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -380,6 +400,23 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
   gedl_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
+}
+
+static void merge_clip (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  GList *iter = g_list_find (edl->clips, edl->active_clip);
+  Clip *clip2 = NULL;
+  if (iter) iter = iter->prev;
+  if (iter) clip2 = iter->data;
+
+  if (!are_mergable (clip2, edl->active_clip))
+    return;
+
+  clip2->end = edl->active_clip->end;
+
+  remove_clip (event, data1, data2);
+  edl->active_clip = clip2;
 }
 
 static void toggle_use_proxies (MrgEvent *event, void *data1, void *data2)
@@ -420,10 +457,9 @@ static void split_clip (MrgEvent *event, void *data1, void *data2)
       clip->filter_graph = g_strdup (oldclip->filter_graph);
 
     shift = clip_frame_no;
-    clip->end       =  shift;
-    oldclip->start  =  shift + 1;
-
-    edl->active_clip = clip;
+    clip->end       =  shift - 1;
+    oldclip->start  =  shift;
+    //edl->active_clip = clip;
 
   //  frob_fade (clip);
   //  frob_fade (oldclip);
@@ -527,6 +563,7 @@ static void toggle_help (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
+#if 0
 static void toggle_fade (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -549,6 +586,7 @@ static void toggle_fade (MrgEvent *event, void *data1, void *data2)
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
+#endif
 
 static void save_edl (GeglEDL *edl)
 {
@@ -834,6 +872,7 @@ static void clip_start_dec (MrgEvent *event, void *data1, void *data2)
   changed++;
 }
 
+#if 0
 static void toggle_edit_source (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -843,6 +882,7 @@ static void toggle_edit_source (MrgEvent *event, void *data1, void *data2)
   gedl_cache_invalid (edl);
   mrg_queue_draw (event->mrg, NULL);
 }
+#endif
 
 
 static void do_quit (MrgEvent *event, void *data1, void *data2)
@@ -1080,7 +1120,7 @@ static void update_clip_title (const char *new_string, void *user_data)
   changed++;
 }
 
-
+#if 0
 static void edit_filter_graph (MrgEvent *event, void *data1, void *data2)
 { //XXX
   GeglEDL *edl = data1;
@@ -1089,6 +1129,7 @@ static void edit_filter_graph (MrgEvent *event, void *data1, void *data2)
   edl->filter_edited = !edl->filter_edited;
   mrg_queue_draw (event->mrg, NULL);
 }
+#endif
 
 static void update_query (const char *new_string, void *user_data)
 {
@@ -1558,7 +1599,13 @@ void gedl_ui (Mrg *mrg, void *data)
 
       if (edl->frame_no == edl->active_clip->abs_start)
       {
-        //mrg_add_binding (mrg, "v", NULL, "merge clip", split_clip, edl);
+        GList *iter = g_list_find (edl->clips, edl->active_clip);
+        Clip *clip2 = NULL;
+        if (iter) iter = iter->prev;
+        if (iter) clip2 = iter->data;
+
+        if (are_mergable (clip2, edl->active_clip))
+          mrg_add_binding (mrg, "v", NULL, "merge clip", merge_clip, edl);
         mrg_add_binding (mrg, "d", NULL, "duplicate clip", duplicate_clip, edl);
         //mrg_add_binding (mrg, "f", NULL, "toggle fade", toggle_fade, edl);
 
