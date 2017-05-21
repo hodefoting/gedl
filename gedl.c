@@ -241,6 +241,9 @@ void gedl_set_use_proxies (GeglEDL *edl, int use_proxies)
 }
 int do_encode = 1;
 
+/* computes the hash of a given rendered frame - without altering
+ * any state
+ */
 gchar *gedl_get_frame_hash (GeglEDL *edl, int frame)
 {
   GList *l;
@@ -258,9 +261,13 @@ gchar *gedl_get_frame_hash (GeglEDL *edl, int frame)
 
       int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
 
-      frame_recipe = g_strdup_printf ("%s: %s %s %i %s %s %s %i %s %ix%i %f",
-          "gedl-pre-3", clip_get_path (clip), "", clip_frame_no, clip->filter_graph, "foo", "aaa", 3, "bbb", edl->video_width, edl->video_height,
-            0.0/*edl->mix*/);
+      frame_recipe = g_strdup_printf ("%s: %s %i %s %ix%i",
+          "gedl-pre-4",
+          clip_get_path (clip),
+          clip_frame_no,
+          clip->filter_graph,
+          edl->video_width,
+          edl->video_height);
 
       hash = g_checksum_new (G_CHECKSUM_MD5);
       g_checksum_update (hash, (void*)frame_recipe, -1);
