@@ -4,6 +4,10 @@ replace digested interpolated frame data.. with just the gedl-chain recipe +
 frame for interpolation for hashing (or maybe the win of better dedup makes
 that one a keeper?)
 
+prev  out in  slide underslide   out in  next
+
+
+
 bugs
   bounding box of preview/proxy not working properly
 
@@ -55,11 +59,12 @@ const char *compute_cache_path    (const char *path);
 
 enum {
   GEDL_UI_MODE_FULL = 0,
-  GEDL_UI_MODE_NONE = 1,
-  GEDL_UI_MODE_PART = 2,
+  GEDL_UI_MODE_TIMELINE = 1,
+  GEDL_UI_MODE_NONE = 2,
+  GEDL_UI_MODE_PART = 3,
 };
 
-#define GEDL_LAST_UI_MODE 1
+#define GEDL_LAST_UI_MODE 2
 
 GeglEDL    *gedl_new                (void);
 void        gedl_free               (GeglEDL    *edl);

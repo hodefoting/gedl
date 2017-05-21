@@ -294,6 +294,8 @@ static void insert (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
 
+  // XXX: should split before insert when inside clip
+
   if (edl->active_source)
   {
     GList *iter = g_list_find (edl->clip_db, edl->active_source);
@@ -506,6 +508,8 @@ static void nav_right (MrgEvent *event, void *data1, void *data2)
 }
 
 static int help = 0;
+
+
 
 static void toggle_help (MrgEvent *event, void *data1, void *data2)
 {
@@ -1191,6 +1195,61 @@ static void toggle_ui_mode  (MrgEvent *event, void *data1, void *data2)
   changed++;
 }
 
+void trim_ui (Mrg *mrg, GeglEDL *edl)
+{
+  float h = mrg_height (mrg);
+  float w = mrg_width (mrg);
+  mrg_set_style (mrg, "color: white;background: transparent; text-stroke: 1.5px #000");
+  mrg_set_font_size (mrg, h / 14.0);
+  mrg_set_edge_right (mrg, w);
+  mrg_set_edge_left (mrg, 0);
+
+#define print_str_at(x,y,str) do{\
+   mrg_set_xy (mrg, w * x, h * y);\
+     mrg_printf (mrg, str); } while(0)
+
+  print_str_at (0.1, 0.3, "(insert)");
+  print_str_at (0.3, 0.3, "cut");
+  print_str_at (0.6, 0.3, "split");
+  print_str_at (0.8, 0.3, "ui");
+
+  print_str_at (0.1, 0.4, "copy");
+  print_str_at (0.3, 0.4, "paste");
+  print_str_at (0.6, 0.4, "(merge)");
+  print_str_at (0.8, 0.4, "(filters)");
+
+  print_str_at (0.1, 0.7, "|<");
+  print_str_at (0.3, 0.7, "<");
+
+  if (edl->playing)
+    print_str_at (0.5, 0.7, "||");
+  else
+    print_str_at (0.5, 0.7, "|>");
+
+  print_str_at (0.7, 0.7, ">");
+  print_str_at (0.9, 0.7, ">|");
+
+  print_str_at (0.1, 0.6, "]");
+  print_str_at (0.3, 0.6, "[");
+
+
+  print_str_at (0.5, 0.6, "][");
+  print_str_at (0.6, 0.6, "slip");
+  print_str_at (0.8, 0.6, "slide");
+
+
+
+
+#if 0
+
+ |<-        |>         ->|
+
+ ]     [          ]      [
+
+ ][   slip    slide     ][
+#endif
+
+}
 
 void help_ui (Mrg *mrg, GeglEDL *edl)
 {
@@ -1248,6 +1307,7 @@ void gedl_ui (Mrg *mrg, void *data)
   switch (edl->ui_mode)
   {
      case GEDL_UI_MODE_FULL:
+     case GEDL_UI_MODE_TIMELINE:
      case GEDL_UI_MODE_NONE:
 
   mrg_gegl_blit (mrg, (int)(mrg_width (mrg) * 0.0), 0,
@@ -1276,6 +1336,7 @@ void gedl_ui (Mrg *mrg, void *data)
   switch (edl->ui_mode)
   {
      case GEDL_UI_MODE_FULL:
+     case GEDL_UI_MODE_TIMELINE:
      case GEDL_UI_MODE_PART:
      gedl_draw (mrg, edl, 0, mrg_height (mrg) * SPLIT_VER, edl->scale, edl->t0);
 
@@ -1373,6 +1434,18 @@ void gedl_ui (Mrg *mrg, void *data)
     mrg_printf (mrg, ".. ");
 
   help_ui (mrg, edl);
+  switch (edl->ui_mode)
+  {
+     case GEDL_UI_MODE_FULL:
+        if (!edl->playing)
+          trim_ui (mrg, edl);
+     case GEDL_UI_MODE_TIMELINE:
+     case GEDL_UI_MODE_PART:
+  break;
+     case GEDL_UI_MODE_NONE:
+        break;
+     break;
+  }
 
   }
 
