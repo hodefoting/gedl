@@ -282,6 +282,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
 {
   GList *l;
   int clip_start = 0;
+  int use_proxies = edl->use_proxies;
 
   if ((edl->frame) == frame && (frame != 0))
   {
@@ -294,11 +295,11 @@ void gedl_set_frame (GeglEDL *edl, int frame)
   char *frame_hash = gedl_get_frame_hash (edl, frame);
   char *cache_path  = g_strdup_printf ("%s.gedl/cache/%s", edl->parent_path, frame_hash);
   g_free (frame_hash);
-  if (!edl->use_proxies &&
+  if (!use_proxies &&
       g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
       (edl->cache_flags & CACHE_TRY_ALL))
   {
-    Clip *clip = edl->clip = edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+    Clip *clip = edl->clip = edl->active_clip = edl_get_clip_for_frame (edl, edl->frame);
     gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
     gegl_node_link_many (edl->cache_loader, edl->result, NULL);
     if (clip->audio)
@@ -322,30 +323,27 @@ void gedl_set_frame (GeglEDL *edl, int frame)
     clip->clip_frame_no = 0;
 
     clip->abs_start = clip_start;
+
     if (frame - clip_start < clip_frames)
     {
+      int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
+
       edl->clip = clip;
 
-      /* this is both where we can keep filter graphs, and do more global
-       * cache short circuiting, this would leave the cross fading to still have
-       * to happen on he fly.. along with audio mix
-       */
+      remove_in_betweens (edl->nop_raw, edl->nop_transformed);
 
-         {
-           remove_in_betweens (edl->nop_raw, edl->nop_transformed);
+      gegl_node_set (edl->nop_raw, "operation", "gegl:scale-size-keepaspect",
+                                     "y", 0.0, //
+                                     "x", 1.0 * edl->width,
+                                     "sampler", GEDL_SAMPLER,
+                                     NULL);
 
-           gegl_node_set (edl->nop_raw, "operation", "gegl:scale-size-keepaspect",
-                                          "y", 0.0, //
-                                          "x", 1.0 * edl->width,
-                                          "sampler", GEDL_SAMPLER,
-                                          NULL);
+      gegl_node_link_many (edl->nop_raw, edl->nop_transformed, NULL);
 
-           gegl_node_link_many (edl->nop_raw, edl->nop_transformed, NULL);
-         }
       if (clip->filter_graph)
         {
            GError *error = NULL;
-           gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip->clip_frame_no - clip->start/*, clip->clip_frame_no - clip->end, clip->end - clip->start */, edl->height, NULL, &error);
+           gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip->clip_frame_no - clip->start, edl->height, NULL, &error);
            if (error)
              {
                /* should set error string */
@@ -354,7 +352,6 @@ void gedl_set_frame (GeglEDL *edl, int frame)
              }
          }
       /**********************************************************************/
-      int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
 
       clip_set_frame_no (clip, clip_frame_no);
       gegl_node_connect_to (edl->crop, "output", edl->result, "input");
@@ -372,26 +369,24 @@ void gedl_set_frame (GeglEDL *edl, int frame)
           g_object_unref (clip->audio);
           clip->audio = NULL;
         }
+
       if (clip->is_image)
         clip->audio = NULL;
       else
-      {
-        if (edl->use_proxies)
-          gegl_node_get (clip->proxy_loader, "audio", &clip->audio, NULL);
-        else
-          gegl_node_get (clip->loader, "audio", &clip->audio, NULL);
-      }
+        {
+          if (use_proxies)
+            gegl_node_get (clip->proxy_loader, "audio", &clip->audio, NULL);
+          else
+            gegl_node_get (clip->loader, "audio", &clip->audio, NULL);
+        }
 
       /* write cached render of this frame */
-
-      if (!strstr (clip->path, ".gedl/cache") && (!edl->use_proxies))
-      // XXX: some proxy renders sneak in!!!!!!
+      if (!strstr (clip->path, ".gedl/cache") && (!use_proxies))
         {
           gchar *cache_path_final = cache_path;
           gchar *cache_path       = g_strdup_printf ("%s~", cache_path_final);
 
-          if ( //!g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
-              !g_file_test (cache_path_final, G_FILE_TEST_IS_REGULAR) && !edl->playing)
+          if (!g_file_test (cache_path_final, G_FILE_TEST_IS_REGULAR) && !edl->playing)
             {
               GeglNode *save_graph = gegl_node_new ();
               GeglNode *save;
@@ -412,8 +407,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
             }
           g_free (cache_path);
         }
-        g_mutex_unlock (&clip->mutex);
-
+      g_mutex_unlock (&clip->mutex);
       g_free (cache_path);
 
       return;

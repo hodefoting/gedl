@@ -10,21 +10,21 @@ bugs
   bounding box of preview/proxy not working properly
 
 features
+  annotations
+  implement overlaying of wav / mp3 files
   re-enable cross-fades for video and audio
   templates - for both clips and filters - filters that can be chained
-  annotations
   also write a cache for proxy.. when heavily filtered it is neccesary
   pcm cache
   create thumbnails as well as thumbtracks for clips
   detect locked ui, kill and respawn
-  implement overlaying of wav / mp3 files
   rewrite ui part in lua
   gaps in timeline (will be implemented as blank clips - but ui can be different)
   better video file import
     insert videos from the commandline
     on-demand/background proxy generation
     ui for picking clips in current folder, possibly clib-db separate from video-project
-    implement drag and drop, accepting url to file on filesystem
+    add gedl side code for media dragged from file manager to timeline, the mrg parts for gtk are in place
     clip database done on demand - files that appear in the timeline get enrolled, as well as files thatappearinthe working dir.
 
 refactor
