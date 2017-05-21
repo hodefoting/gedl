@@ -298,5 +298,5 @@ void playing_iteration (Mrg *mrg, GeglEDL *edl)
 
 int renderer_done (GeglEDL *edl)
 {
-  return done_frame != rendering_frame;
+  return done_frame == edl->frame_no; //rendering_frame;
 }

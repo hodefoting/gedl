@@ -596,11 +596,13 @@ static void save_edl (GeglEDL *edl)
   }
 }
 
+#if 0
 static void save (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
   save_edl (edl);
 }
+#endif
 
 static gboolean save_idle (Mrg *mrg, gpointer edl)
 {
@@ -1016,6 +1018,25 @@ static void scroll_to_fit (GeglEDL *edl, Mrg *mrg)
     edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.8) * edl->scale;
   else if ( (edl->frame_no - edl->t0) / edl->scale < mrg_width (mrg) * 0.0)
     edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.2) * edl->scale;
+}
+
+
+static void shuffle_forward (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  gedl_cache_invalid (edl);
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+  changed++;
+}
+
+static void shuffle_back (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  gedl_cache_invalid (edl);
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+  changed++;
 }
 
 
@@ -1629,10 +1650,11 @@ void gedl_ui (Mrg *mrg, void *data)
 
       if (edl->selection_start == edl->selection_end)
       {
-        mrg_add_binding (mrg, "control-right", NULL, "in++", clip_start_inc, edl);
-        mrg_add_binding (mrg, "control-left", NULL, "in--", clip_start_dec, edl);
-        //mrg_add_binding (mrg, "control-up", NULL, "shuffle clip backward", step_frame, edl);
-        //mrg_add_binding (mrg, "control-down", NULL, "shuffle clip forward", step_frame, edl);
+        mrg_add_binding (mrg, "control-left/right", NULL, "adjust in", clip_start_inc, edl);
+        mrg_add_binding (mrg, "control-right", NULL, NULL, clip_start_inc, edl);
+        mrg_add_binding (mrg, "control-left", NULL, NULL, clip_start_dec, edl);
+        mrg_add_binding (mrg, "control-up", NULL, "shuffle clip backward", shuffle_forward, edl);
+        mrg_add_binding (mrg, "control-down", NULL, "shuffle clip forward", shuffle_back, edl);
       }
     }
     else
@@ -1764,7 +1786,7 @@ int gedl_ui_main (GeglEDL *edl)
   mrg_add_timeout (mrg, 10100, save_idle, edl);
 
   cache_renderer_iteration (mrg, edl);
-  mrg_add_timeout (mrg, 60000, cache_renderer_iteration, edl);
+  mrg_add_timeout (mrg, 100 /* seconds */  * 1000, cache_renderer_iteration, edl);
 
   gedl_get_duration (edl);
   mrg_set_target_fps (mrg, -1);
