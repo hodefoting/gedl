@@ -308,6 +308,8 @@ gchar *gedl_get_frame_hash (GeglEDL *edl, int frame)
           g_free (edl->script_hash);
         edl->script_hash = g_strdup (g_checksum_get_string(hash));
 
+        g_free (cache_path);
+
       g_checksum_free (hash);
       g_free (frame_recipe);
 
@@ -1149,14 +1151,40 @@ static void process_frames_cache (GeglEDL *edl)
     edl->frame_no = frame_no;
     if (this_cacher (edl->frame_no))
       rig_frame (edl, edl->frame_no);
-    if (stop_cacher) return;
+    if (stop_cacher)
+      return;
   }
   for (frame_no = 0; frame_no < frame_start; frame_no++)
   {
     edl->frame_no = frame_no;
     if (this_cacher (edl->frame_no))
       rig_frame (edl, edl->frame_no);
-    if (stop_cacher) return;
+    if (stop_cacher)
+      return;
+  }
+}
+
+static void process_frames_cache_stat (GeglEDL *edl)
+{
+  int frame_no = edl->frame_no;
+  int duration;
+  signal(SIGUSR2, handler1);
+  duration = gedl_get_duration (edl);
+
+  /* XXX: should probably do first frame of each clip - since
+          these are used for quick keyboard navigation of the
+          project
+   */
+
+  for (frame_no = 0; frame_no < duration; frame_no++)
+  {
+    const gchar *hash = gedl_get_frame_hash (edl, frame_no);
+    gchar *path = g_strdup_printf ("%s.gedl/cache/%s", edl->parent_path, hash);
+    if (g_file_test (path, G_FILE_TEST_IS_REGULAR))
+      fprintf (stdout, ". %i %s\n", frame_no, hash);
+    else
+      fprintf (stdout, "  %i %s\n", frame_no, hash);
+    g_free (path);
   }
 }
 
@@ -1294,10 +1322,12 @@ int main (int argc, char **argv)
 #define RUNMODE_UI     0
 #define RUNMODE_RENDER 1
 #define RUNMODE_CACHE  2
+#define RUNMODE_CACHE_STAT  3
     int runmode = RUNMODE_UI;
     for (int i = 0; argv[i]; i++)
     {
       if (!strcmp (argv[i], "render")) runmode = RUNMODE_RENDER;
+      if (!strcmp (argv[i], "cachestat")) runmode = RUNMODE_CACHE_STAT;
       if (!strcmp (argv[i], "cache"))
       {
         runmode = RUNMODE_CACHE;
@@ -1331,6 +1361,11 @@ int main (int argc, char **argv)
         if (edl->range_end == 0)
           edl->range_end = tot_frames-1;
         process_frames_cache (edl);
+        teardown ();
+        return 0;
+      case RUNMODE_CACHE_STAT:
+        do_encode  = 0;
+        process_frames_cache_stat (edl);
         teardown ();
         return 0;
      }
