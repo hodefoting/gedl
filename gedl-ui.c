@@ -490,6 +490,7 @@ static void nav_left (MrgEvent *event, void *data1, void *data2)
        }
     }
     edl->frame_no = edl->active_clip->abs_start;
+    edl->selection_start = edl->selection_end = edl->frame_no;
   }
   mrg_event_stop_propagate (event);
   scroll_to_fit (edl, event->mrg);
@@ -510,6 +511,7 @@ static void nav_right (MrgEvent *event, void *data1, void *data2)
   }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
+  edl->selection_start = edl->selection_end = edl->frame_no;
   scroll_to_fit (edl, event->mrg);
   changed++;
 }
@@ -723,6 +725,43 @@ static void step_frame (MrgEvent *event, void *data1, void *data2)
   changed++;
 }
 
+static void clip_start_end_inc (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  if (edl->active_source)
+  {
+      edl->active_source->end++;
+      edl->active_source->start++;
+  }
+  else if (edl->active_clip)
+    {
+      edl->active_clip->end++;
+      edl->active_clip->start++;
+    }
+      gedl_cache_invalid (edl);
+      mrg_event_stop_propagate (event);
+      mrg_queue_draw (event->mrg, NULL);
+}
+
+
+static void clip_start_end_dec (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  if (edl->active_source)
+  {
+      edl->active_source->end--;
+      edl->active_source->start--;
+  }
+  else if (edl->active_clip)
+    {
+      edl->active_clip->end--;
+      edl->active_clip->start--;
+    }
+      gedl_cache_invalid (edl);
+      mrg_event_stop_propagate (event);
+      mrg_queue_draw (event->mrg, NULL);
+}
+
 static void clip_end_inc (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -733,6 +772,7 @@ static void clip_end_inc (MrgEvent *event, void *data1, void *data2)
   else if (edl->active_clip)
     {
       edl->active_clip->end++;
+      edl->frame_no++;
     }
       gedl_cache_invalid (edl);
       mrg_event_stop_propagate (event);
@@ -750,6 +790,7 @@ static void clip_end_dec (MrgEvent *event, void *data1, void *data2)
   else if (edl->active_clip)
     {
       edl->active_clip->end--;
+      edl->frame_no--;
       gedl_cache_invalid (edl);
     }
   mrg_event_stop_propagate (event);
@@ -1457,8 +1498,13 @@ void gedl_ui (Mrg *mrg, void *data)
     mrg_add_binding (mrg, "F1", NULL, "toggle help", toggle_help, edl);
 
     if (edl->playing)
+    {
       mrg_add_binding (mrg, "space", NULL, "pause", renderer_toggle_playing, edl);
+      if (edl->frame_no == edl->active_clip->abs_start)
+        mrg_add_binding (mrg, "v", NULL, "split clip", split_clip, edl);
+    }
     else
+    {
       mrg_add_binding (mrg, "space", NULL, "play", renderer_toggle_playing, edl);
     mrg_add_binding (mrg, "tab", NULL, "cycle ui amount", toggle_ui_mode, edl);
     mrg_add_binding (mrg, "e", NULL, "zoom fit", zoom_fit, edl);
@@ -1472,21 +1518,32 @@ void gedl_ui (Mrg *mrg, void *data)
     if (edl->frame_no == edl->active_clip->abs_start)
     {
       mrg_add_binding (mrg, "up", NULL, "previous clip", nav_left, edl);
-      mrg_add_binding (mrg, "control-right", NULL, "in++", step_frame, edl);
-      mrg_add_binding (mrg, "control-left", NULL, "in--", step_frame, edl);
+
+      mrg_add_binding (mrg, "control-right", NULL, "in++", clip_start_inc, edl);
+      mrg_add_binding (mrg, "control-left", NULL, "in--", clip_start_dec, edl);
+      mrg_add_binding (mrg, "down", NULL, "next clip", nav_right, edl);
+      //mrg_add_binding (mrg, "control-up", NULL, "shuffle clip backward", step_frame, edl);
+      //mrg_add_binding (mrg, "control-down", NULL, "shuffle clip forward", step_frame, edl);
     }
     else
     {
       mrg_add_binding (mrg, "up", NULL, "go to clip start", nav_left, edl);
-    }
-    mrg_add_binding (mrg, "down", NULL, "next clip", nav_right, edl);
+      mrg_add_binding (mrg, "down", NULL, "next clip", nav_right, edl);
 
-    if (edl->frame_no == edl->active_clip->abs_start + clip_get_frames (edl->active_clip)-1)
-    {
-      mrg_add_binding (mrg, "control-right", NULL, "out++", step_frame, edl);
-      mrg_add_binding (mrg, "control-left", NULL, "out--", step_frame, edl);
-    }
+      //mrg_add_binding (mrg, "control-up", NULL, "slide backward", step_frame, edl);
+      //mrg_add_binding (mrg, "control-down", NULL, "slide forward", step_frame, edl);
 
+      if (edl->frame_no == edl->active_clip->abs_start + clip_get_frames (edl->active_clip)-1)
+      {
+        mrg_add_binding (mrg, "control-right", NULL, "out++", clip_end_inc, edl);
+        mrg_add_binding (mrg, "control-left", NULL, "out--", clip_end_dec, edl);
+      }
+      else
+      {
+        mrg_add_binding (mrg, "control-right", NULL, "in++ out++", clip_start_end_inc, edl);
+        mrg_add_binding (mrg, "control-left", NULL, "in-- out--", clip_start_end_dec, edl);
+      }
+    }
 
     mrg_add_binding (mrg, "right", NULL, "step frame forward", step_frame, edl);
     mrg_add_binding (mrg, "left", NULL, "step frame backward", step_frame_back, edl);
@@ -1498,19 +1555,14 @@ void gedl_ui (Mrg *mrg, void *data)
     if (edl->selection_start == edl->selection_end)
     {
       mrg_add_binding (mrg, "x", NULL, "remove clip", remove_clip, edl);
-      //mrg_add_binding (mrg, "delete", NULL, "remove clip", remove_clip, edl);
 
       if (edl->frame_no == edl->active_clip->abs_start)
       {
-        mrg_add_binding (mrg, "v", NULL, "merge clip", split_clip, edl);
+        //mrg_add_binding (mrg, "v", NULL, "merge clip", split_clip, edl);
         mrg_add_binding (mrg, "d", NULL, "duplicate clip", duplicate_clip, edl);
-        mrg_add_binding (mrg, "f", NULL, "toggle fade", toggle_fade, edl);
+        //mrg_add_binding (mrg, "f", NULL, "toggle fade", toggle_fade, edl);
 
 
-        mrg_add_binding (mrg, ".", NULL, "out++", clip_end_inc, edl);
-        mrg_add_binding (mrg, ",", NULL, "out--", clip_end_dec, edl);
-        mrg_add_binding (mrg, "alt-left", NULL, "in++", clip_start_inc, edl);
-        mrg_add_binding (mrg, "alt-right", NULL, "in--", clip_start_dec, edl);
       }
       else
       {
@@ -1529,6 +1581,8 @@ void gedl_ui (Mrg *mrg, void *data)
     }
     mrg_add_binding (mrg, "s", NULL, "save", save, edl);
     mrg_add_binding (mrg, "a", NULL, "select all", select_all, edl);
+
+    }
 
 
     mrg_add_binding (mrg, "q", NULL, "quit", (void*)do_quit, mrg);
