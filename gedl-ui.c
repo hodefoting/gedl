@@ -1614,6 +1614,7 @@ void gedl_ui (Mrg *mrg, void *data)
       edl->active_source->editing == 0))
   {
     mrg_add_binding (mrg, "F1", NULL, "toggle help", toggle_help, edl);
+    mrg_add_binding (mrg, "q", NULL, "quit", (void*)do_quit, mrg);
 
     if (edl->playing)
     {
@@ -1644,6 +1645,43 @@ void gedl_ui (Mrg *mrg, void *data)
     mrg_add_binding (mrg, "up/down", NULL, "previous/next cut", nav_left, edl);
     mrg_add_binding (mrg, "up", NULL, NULL, nav_left, edl);
     mrg_add_binding (mrg, "down", NULL, NULL, nav_right, edl);
+
+    mrg_add_binding (mrg, "shift-left/right", NULL, "extend selection", extend_selection_to_the_right, edl);
+    mrg_add_binding (mrg, "shift-right", NULL, NULL, extend_selection_to_the_right, edl);
+    mrg_add_binding (mrg, "shift-left", NULL, NULL, extend_selection_to_the_left, edl);
+
+    if (edl->selection_start == edl->selection_end)
+    {
+      mrg_add_binding (mrg, "x", NULL, "remove clip", remove_clip, edl);
+      mrg_add_binding (mrg, "d", NULL, "duplicate clip", duplicate_clip, edl);
+
+      if (edl->frame_no == edl->active_clip->abs_start)
+      {
+        GList *iter = g_list_find (edl->clips, edl->active_clip);
+        Clip *clip2 = NULL;
+        if (iter) iter = iter->prev;
+        if (iter) clip2 = iter->data;
+
+        //mrg_add_binding (mrg, "f", NULL, "toggle fade", toggle_fade, edl);
+
+        if (are_mergable (clip2, edl->active_clip))
+          mrg_add_binding (mrg, "v", NULL, "merge clip", merge_clip, edl);
+      }
+      else
+      {
+        mrg_add_binding (mrg, "v", NULL, "split clip", split_clip, edl);
+      }
+
+      mrg_add_binding (mrg, "i", NULL, "insert clip", insert, edl);
+
+
+    }
+    else
+    {
+      mrg_add_binding (mrg, "x", NULL, "cut selection", remove_clip, edl);
+      mrg_add_binding (mrg, "c", NULL, "copy selection", remove_clip, edl);
+      mrg_add_binding (mrg, "r", NULL, "set playback range", set_range, edl);
+    }
 
     if (edl->frame_no == edl->active_clip->abs_start)
     {
@@ -1686,48 +1724,9 @@ void gedl_ui (Mrg *mrg, void *data)
       }
     }
 
-    mrg_add_binding (mrg, "shift-left/right", NULL, "extend selection", extend_selection_to_the_right, edl);
-    mrg_add_binding (mrg, "shift-right", NULL, NULL, extend_selection_to_the_right, edl);
-    mrg_add_binding (mrg, "shift-left", NULL, NULL, extend_selection_to_the_left, edl);
-
-    if (edl->selection_start == edl->selection_end)
-    {
-      mrg_add_binding (mrg, "x", NULL, "remove clip", remove_clip, edl);
-
-      if (edl->frame_no == edl->active_clip->abs_start)
-      {
-        GList *iter = g_list_find (edl->clips, edl->active_clip);
-        Clip *clip2 = NULL;
-        if (iter) iter = iter->prev;
-        if (iter) clip2 = iter->data;
-
-        if (are_mergable (clip2, edl->active_clip))
-          mrg_add_binding (mrg, "v", NULL, "merge clip", merge_clip, edl);
-        mrg_add_binding (mrg, "d", NULL, "duplicate clip", duplicate_clip, edl);
-        //mrg_add_binding (mrg, "f", NULL, "toggle fade", toggle_fade, edl);
-
-
-      }
-      else
-      {
-        mrg_add_binding (mrg, "v", NULL, "split clip", split_clip, edl);
-      }
-
-      mrg_add_binding (mrg, "i", NULL, "insert clip", insert, edl);
-
-
-    }
-    else
-    {
-      mrg_add_binding (mrg, "x", NULL, "cut selection", remove_clip, edl);
-      mrg_add_binding (mrg, "c", NULL, "copy selection", remove_clip, edl);
-      mrg_add_binding (mrg, "r", NULL, "set playback range", set_range, edl);
-    }
 
     }
 
-
-    mrg_add_binding (mrg, "q", NULL, "quit", (void*)do_quit, mrg);
   }
 
 #if 0
