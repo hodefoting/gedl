@@ -142,26 +142,24 @@ static gpointer renderer_thread (gpointer data)
 
         {
           GeglAudioFragment *audio = gedl_get_audio (edl);
-if (audio)
-{
-       int sample_count = gegl_audio_fragment_get_sample_count (audio);
-       if (sample_count > 0)
-       {
-         int i;
-         if (!audio_started)
-         {
-           open_audio (gegl_audio_fragment_get_sample_rate (audio));
-           SDL_PauseAudio(0);
-           audio_started = 1;
-         }
-         for (i = 0; i < sample_count; i++)
-         {
-           sdl_add_audio_sample (0, audio->data[0][i], audio->data[1][i]);
-         }
-        // while (audio_len > audio_pos + 5000)
-        //   g_usleep (50);
-       }
-}
+          if (audio)
+          {
+            int sample_count = gegl_audio_fragment_get_sample_count (audio);
+            if (sample_count > 0)
+            {
+              int i;
+              if (!audio_started)
+              {
+                open_audio (gegl_audio_fragment_get_sample_rate (audio));
+                SDL_PauseAudio(0);
+                audio_started = 1;
+              }
+              for (i = 0; i < sample_count; i++)
+              {
+                sdl_add_audio_sample (0, audio->data[0][i], audio->data[1][i]);
+              }
+            }
+          }
         }
         done_frame = rendering_frame;
         mrg_queue_draw (edl->mrg, NULL); // could queue only rect - if we had it

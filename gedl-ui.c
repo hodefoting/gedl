@@ -11,6 +11,7 @@
 
 
 static int exited = 0;
+long babl_ticks (void);
 
 void frob_fade (void*);
 static unsigned char *copy_buf = NULL;
@@ -972,6 +973,8 @@ static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
       edl->t0 -= edl->scale * 2;
       break;
   }
+
+  scroll_to_fit (edl, event->mrg);
   mrg_queue_draw (event->mrg, NULL);
 }
 
@@ -1170,14 +1173,29 @@ void gedl_draw (Mrg     *mrg,
   }
 
   if (!edl->playing){
-     gint len;
+     static gint bitlen = 0;
      /* should fetch this more seldomly */
-     guchar *bitmap = gedl_get_cache_bitmap (edl, &len);
+     static guchar *bitmap;
+     static long bitticks = 0;
      int i;
      int state = -1;
      int length = 0;
+
+     if (bitlen && ( babl_ticks() - bitticks > 1000 * 1000 * 3))
+     {
+       /* update cache bitmap if it is more than 3s old */
+       bitlen = 0;
+       g_free (bitmap);
+       bitmap = NULL;
+     }
+
+     if (bitlen == 0)
+     {
+       bitmap = gedl_get_cache_bitmap (edl, &bitlen);
+       bitticks = babl_ticks ();
+     }
      cairo_set_source_rgba (cr, 0.3, 1, 0.3, 1.0);
-     for (i = 0; i < len * 8; i++)
+     for (i = 0; i < bitlen * 8; i++)
      {
         if (bitmap[i / 8] & (1<< (i%8)))
         {
@@ -1199,7 +1217,7 @@ void gedl_draw (Mrg     *mrg,
           }
           else
           {
-            cairo_rectangle (cr, i-length, y, length, 2);
+            cairo_rectangle (cr, i-length, y, length + 1, VID_HEIGHT * 0.05);
             length = 0;
             state = 0;
           }
@@ -1207,7 +1225,7 @@ void gedl_draw (Mrg     *mrg,
      }
      cairo_fill (cr);
 
-     g_free (bitmap);
+     //g_free (bitmap);
   }
 
   double frame = edl->frame_no;
@@ -1631,7 +1649,7 @@ void gedl_ui (Mrg *mrg, void *data)
   //mrg_printf (mrg, "%i %i %i %i %i\n", edl->frame, edl->frame_no, edl->source_frame_no, rendering_frame, done_frame);
 
   if (!renderer_done (edl))
-    mrg_printf (mrg, ".. ");
+    mrg_printf (mrg, "rendering ");
 
   switch (edl->ui_mode)
   {

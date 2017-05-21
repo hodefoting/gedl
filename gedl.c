@@ -983,6 +983,23 @@ static void process_frames_cache (GeglEDL *edl)
           these are used for quick keyboard navigation of the
           project
    */
+  GList *l;
+  int clip_start = 0;
+
+  for (l = edl->clips; l; l = l->next)
+  {
+    Clip *clip = l->data;
+    int clip_frames = clip_get_frames (clip);
+    edl->frame_no = clip_start;
+    if (this_cacher (edl->frame_no))
+    {
+      rig_frame (edl, edl->frame_no);
+    }
+
+    clip_start += clip_frames;
+    if (stop_cacher)
+      return;
+  }
 
   for (frame_no = frame_start - 3; frame_no < duration; frame_no++)
   {
