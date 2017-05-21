@@ -6,8 +6,6 @@ that one a keeper?)
 
 prev  out in  slide underslide   out in  next
 
-
-
 bugs
   bounding box of preview/proxy not working properly
 

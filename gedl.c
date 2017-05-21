@@ -1211,6 +1211,7 @@ static void gedl_make_proxies (GeglEDL *eld);
 static void gedl_make_proxies (GeglEDL *eld)
 {
   GList *l;
+  return;
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
