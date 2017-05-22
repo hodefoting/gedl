@@ -15,9 +15,9 @@ features
   implement overlaying of wav / mp3 files
   re-enable cross-fades for video and audio
   templates - for both clips and filters - filters that can be chained
-  also write a cache for proxy.. when heavily filtered it is neccesary
-  pcm cache
   create thumbnails as well as thumbtracks for clips
+     related: also write a cache for proxy.. when heavily filtered it is neccesary
+  pcm cache
   detect locked ui, kill and respawn
   rewrite ui part in lua
   gaps in timeline (will be implemented as blank clips - but ui can be different)

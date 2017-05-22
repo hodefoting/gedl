@@ -1028,6 +1028,32 @@ static void shuffle_forward (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
   gedl_cache_invalid (edl);
+
+  GList *prev = NULL,
+        *next = NULL,
+        *self = g_list_find (edl->clips, edl->active_clip);
+
+  if (self)
+  {
+    next = self->next;
+    prev = self->prev;
+
+  if (self && next)
+  {
+    GList *nextnext = next->next;
+    if (prev)
+      prev->next = next;
+    next->prev = prev;
+    next->next = self;
+    self->prev = next;
+    self->next = nextnext;
+    if (self->next)
+      self->next->prev = self;
+    edl->frame_no += clip_get_frames (next->data);
+  }
+
+  }
+
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
@@ -1037,6 +1063,34 @@ static void shuffle_back (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
   gedl_cache_invalid (edl);
+
+  GList *prev = NULL,
+        *prevprev = NULL,
+        *next = NULL,
+        *self = g_list_find (edl->clips, edl->active_clip);
+
+  if (self)
+  {
+    next = self->next;
+    prev = self->prev;
+    if (prev)
+      prevprev = prev->prev;
+
+  if (self && prev)
+  {
+    if (prevprev)
+      prevprev->next = self;
+    self->prev = prevprev;
+    self->next = prev;
+    prev->prev = self;
+    prev->next = next;
+    if (next)
+      next->prev = prev;
+
+    edl->frame_no -= clip_get_frames (prev->data);
+  }
+  }
+
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
@@ -1714,6 +1768,7 @@ void gedl_ui (Mrg *mrg, void *data)
     {
       mrg_add_binding (mrg, "x", NULL, "remove clip", remove_clip, edl);
       mrg_add_binding (mrg, "d", NULL, "duplicate clip", duplicate_clip, edl);
+      mrg_add_binding (mrg, "i", NULL, "insert clip", insert, edl);
 
       if (edl->frame_no == edl->active_clip->abs_start)
       {
@@ -1732,9 +1787,6 @@ void gedl_ui (Mrg *mrg, void *data)
         mrg_add_binding (mrg, "v", NULL, "split clip", split_clip, edl);
       }
 
-      mrg_add_binding (mrg, "i", NULL, "insert clip", insert, edl);
-
-
     }
     else
     {
@@ -1751,8 +1803,8 @@ void gedl_ui (Mrg *mrg, void *data)
         mrg_add_binding (mrg, "control-left/right", NULL, "adjust in", clip_start_inc, edl);
         mrg_add_binding (mrg, "control-right", NULL, NULL, clip_start_inc, edl);
         mrg_add_binding (mrg, "control-left", NULL, NULL, clip_start_dec, edl);
-        mrg_add_binding (mrg, "control-up", NULL, "shuffle clip backward", shuffle_forward, edl);
-        mrg_add_binding (mrg, "control-down", NULL, "shuffle clip forward", shuffle_back, edl);
+        mrg_add_binding (mrg, "control-up", NULL, "shuffle clip backward", shuffle_back, edl);
+        mrg_add_binding (mrg, "control-down", NULL, "shuffle clip forward", shuffle_forward, edl);
       }
     }
     else
@@ -1845,7 +1897,7 @@ int gedl_ui_main (GeglEDL *edl)
   mrg_add_timeout (mrg, 10100, save_idle, edl);
 
   cache_renderer_iteration (mrg, edl);
-  mrg_add_timeout (mrg, 100 /* seconds */  * 1000, cache_renderer_iteration, edl);
+  mrg_add_timeout (mrg, 90 /* seconds */  * 1000, cache_renderer_iteration, edl);
 
   gedl_get_duration (edl);
   mrg_set_target_fps (mrg, -1);
