@@ -192,8 +192,6 @@ GeglEDL *edl;
 #endif
 
 
-void frob_fade (GeglEDL *edl, Clip *clip);
-
 Clip *gedl_get_clip (GeglEDL *edl, int frame, int *clip_frame_no)
 {
   GList *l;
@@ -306,9 +304,11 @@ void gedl_set_frame (GeglEDL *edl, int frame)
       g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
       (edl->cache_flags & CACHE_TRY_ALL))
   {
-    Clip *clip = edl->clip = edl->active_clip = edl_get_clip_for_frame (edl, edl->frame);
+    Clip *clip = NULL;
     gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
     gegl_node_link_many (edl->cache_loader, edl->result, NULL);
+    while (!clip)
+      clip = edl->clip = edl_get_clip_for_frame (edl, edl->frame);
     if (clip->audio)
       {
         g_object_unref (clip->audio);
@@ -467,42 +467,6 @@ int    gedl_get_duration (GeglEDL *edl)
 }
 #include <string.h>
 
-void frob_fade (GeglEDL *edl, Clip *clip)
-{
-        return;
-  if (!clip->is_image)
-  {
-    if (clip->end == 0)
-       clip->end = clip->duration;
-
-    if (clip->fade_out)
-    {
-       clip->fade_pad_end = edl->fade_duration/2;
-       if (clip->end + clip->fade_pad_end > clip->duration)
-         {
-           int delta = clip->end + clip->fade_pad_end - clip->duration;
-           clip->end -= delta;
-         }
-    }
-    else {
-       clip->fade_pad_end = 0;
-    }
-    if (clip->fade_in)
-    {
-       clip->fade_pad_start = edl->fade_duration/2;
-       if (clip->start - clip->fade_pad_start < 0)
-         {
-           int delta = clip->fade_pad_start - clip->start;
-           clip->start += delta;
-         }
-    }
-    else
-    {
-       clip->fade_pad_start = 0;
-    }
-  }
-}
-
 void gedl_parse_clip (GeglEDL *edl, const char *line)
 {
   int start = 0; int end = 0; int duration = 0;
@@ -653,7 +617,6 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
          gegl_node_get (probe, "frames", &clip->duration, NULL);
          gegl_node_get (probe, "frame-rate", &clip->fps, NULL);
          g_object_unref (gegl);
-         frob_fade (edl, clip);
 
          //fprintf (stderr, "probed: %i %f\n", clip->duration, clip->fps);
          if (edl->fps == 0.0)

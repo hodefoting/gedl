@@ -8,6 +8,9 @@ prev  out in  slide underslide   out in  next
 
 bugs
   bounding box of preview/proxy not working properly
+  huge video files cause thumtrack overflow, vertical instead of horizontal
+  might not have same scanline problem.
+  clipped left most clip cannot be scrubbed
 
 features
   annotations
@@ -17,8 +20,8 @@ features
   templates - for both clips and filters - filters that can be chained
   create thumbnails as well as thumbtracks for clips
      related: also write a cache for proxy.. when heavily filtered it is neccesary
-  pcm cache
-  detect locked ui, kill and respawn
+  pcm cache / thumb cache would almost be...
+  detect locked or crashed ui, kill and respawn
   rewrite ui part in lua
   gaps in timeline (will be implemented as blank clips - but ui can be different)
   better video file import
