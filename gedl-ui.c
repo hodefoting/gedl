@@ -268,6 +268,121 @@ static void select_all (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
+static void scroll_to_fit (GeglEDL *edl, Mrg *mrg);
+
+
+static void prev_cut (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  if (!edl->active_clip)
+    return;
+  {
+    GList *iter = g_list_find (edl->clips, edl->active_clip);
+
+    if (iter)
+    {
+       if (edl->frame_no == edl->active_clip->abs_start)
+       {
+         iter = iter->prev;
+         if (iter) edl->active_clip = iter->data;
+       }
+    }
+    edl->frame_no = edl->active_clip->abs_start;
+    edl->selection_start = edl->selection_end = edl->frame_no;
+  }
+  mrg_event_stop_propagate (event);
+  scroll_to_fit (edl, event->mrg);
+  mrg_queue_draw (event->mrg, NULL);
+  changed++;
+}
+
+static void next_cut (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  if (!edl->active_clip)
+    return;
+  {
+    GList *iter = g_list_find (edl->clips, edl->active_clip);
+    if (iter) iter = iter->next;
+    if (iter)
+    {
+      edl->active_clip = iter->data;
+      edl->frame_no = edl->active_clip->abs_start;
+    }
+    else
+    {
+      edl->frame_no = edl->active_clip->abs_start + clip_get_frames (edl->active_clip);
+    }
+  }
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+  edl->selection_start = edl->selection_end = edl->frame_no;
+  scroll_to_fit (edl, event->mrg);
+  changed++;
+}
+
+static void extend_selection_to_previous_cut (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  int sel_start, sel_end;
+  edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+
+  gedl_get_selection (edl, &sel_start, &sel_end);
+  prev_cut (event, data1, data2);
+  sel_start = edl->frame_no;
+  gedl_set_selection (edl, sel_start, sel_end);
+
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+  changed++;
+}
+
+
+static void extend_selection_to_next_cut (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  int sel_start, sel_end;
+
+  gedl_get_selection (edl, &sel_start, &sel_end);
+  next_cut (event, data1, data2);
+  sel_start = edl->frame_no;
+  gedl_set_selection (edl, sel_start, sel_end);
+
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+  changed++;
+}
+
+static void extend_selection_to_the_left (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  int sel_start, sel_end;
+
+  gedl_get_selection (edl, &sel_start, &sel_end);
+  if (edl->frame_no == sel_end)
+  {
+    sel_end --;
+    edl->frame_no --;
+  }
+  else if (edl->frame_no == sel_start)
+  {
+    sel_start --;
+    edl->frame_no --;
+  }
+  else
+  {
+    sel_start = sel_end = edl->frame_no;
+    sel_end --;
+    edl->frame_no --;
+  }
+  gedl_set_selection (edl, sel_start, sel_end);
+
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+  changed++;
+}
+
+
 static void extend_selection_to_the_right (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -320,36 +435,6 @@ static void insert (MrgEvent *event, void *data1, void *data2)
     return;
   }
 }
-
-static void extend_selection_to_the_left (MrgEvent *event, void *data1, void *data2)
-{
-  GeglEDL *edl = data1;
-  int sel_start, sel_end;
-
-  gedl_get_selection (edl, &sel_start, &sel_end);
-  if (edl->frame_no == sel_end)
-  {
-    sel_end --;
-    edl->frame_no --;
-  }
-  else if (edl->frame_no == sel_start)
-  {
-    sel_start --;
-    edl->frame_no --;
-  }
-  else
-  {
-    sel_start = sel_end = edl->frame_no;
-    sel_end --;
-    edl->frame_no --;
-  }
-  gedl_set_selection (edl, sel_start, sel_end);
-
-  mrg_event_stop_propagate (event);
-  mrg_queue_draw (event->mrg, NULL);
-  changed++;
-}
-
 
 static int are_mergable (Clip *clip1, Clip *clip2, int delta)
 {
@@ -512,57 +597,6 @@ static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
   changed++;
 }
 
-static void scroll_to_fit (GeglEDL *edl, Mrg *mrg);
-
-static void prev_clip (MrgEvent *event, void *data1, void *data2)
-{
-  GeglEDL *edl = data1;
-  if (!edl->active_clip)
-    return;
-  {
-    GList *iter = g_list_find (edl->clips, edl->active_clip);
-
-    if (iter)
-    {
-       if (edl->frame_no == edl->active_clip->abs_start)
-       {
-         iter = iter->prev;
-         if (iter) edl->active_clip = iter->data;
-       }
-    }
-    edl->frame_no = edl->active_clip->abs_start;
-    edl->selection_start = edl->selection_end = edl->frame_no;
-  }
-  mrg_event_stop_propagate (event);
-  scroll_to_fit (edl, event->mrg);
-  mrg_queue_draw (event->mrg, NULL);
-  changed++;
-}
-
-static void next_clip (MrgEvent *event, void *data1, void *data2)
-{
-  GeglEDL *edl = data1;
-  if (!edl->active_clip)
-    return;
-  {
-    GList *iter = g_list_find (edl->clips, edl->active_clip);
-    if (iter) iter = iter->next;
-    if (iter)
-    {
-      edl->active_clip = iter->data;
-      edl->frame_no = edl->active_clip->abs_start;
-    }
-    else
-    {
-      edl->frame_no = edl->active_clip->abs_start + clip_get_frames (edl->active_clip);
-    }
-  }
-  mrg_event_stop_propagate (event);
-  mrg_queue_draw (event->mrg, NULL);
-  edl->selection_start = edl->selection_end = edl->frame_no;
-  scroll_to_fit (edl, event->mrg);
-  changed++;
-}
 
 static int help = 0;
 
@@ -1901,13 +1935,15 @@ void gedl_ui (Mrg *mrg, void *data)
       mrg_add_binding (mrg, "right", NULL, NULL, step_frame, edl);
       mrg_add_binding (mrg, "left", NULL, NULL, step_frame_back, edl);
 
-      mrg_add_binding (mrg, "up/down", NULL, "previous/next cut", prev_clip, edl);
-      mrg_add_binding (mrg, "up", NULL, NULL, prev_clip, edl);
-      mrg_add_binding (mrg, "down", NULL, NULL, next_clip, edl);
+      mrg_add_binding (mrg, "up/down", NULL, "previous/next cut", prev_cut, edl);
+      mrg_add_binding (mrg, "up", NULL, NULL, prev_cut, edl);
+      mrg_add_binding (mrg, "down", NULL, NULL, next_cut, edl);
 
       mrg_add_binding (mrg, "shift-left/right", NULL, "extend selection", extend_selection_to_the_right, edl);
       mrg_add_binding (mrg, "shift-right", NULL, NULL, extend_selection_to_the_right, edl);
-      mrg_add_binding (mrg, "shift-left", NULL, NULL, extend_selection_to_the_left, edl);
+      mrg_add_binding (mrg, "shift-left", NULL, NULL,  extend_selection_to_the_left, edl);
+      mrg_add_binding (mrg, "shift-up", NULL, NULL,    extend_selection_to_previous_cut, edl);
+      mrg_add_binding (mrg, "shift-down", NULL, NULL,  extend_selection_to_next_cut, edl);
 
       if (edl->selection_start == edl->selection_end)
       {
