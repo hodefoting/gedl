@@ -1,11 +1,5 @@
 #if PLAN
 
-replace digested interpolated frame data.. with just the gedl-chain recipe +
-frame for interpolation for hashing (or maybe the win of better dedup makes
-that one a keeper?)
-
-prev  out in  slide underslide   out in  next
-
 bugs
   bounding box of preview/proxy not working properly
   huge video files cause thumtrack overflow, vertical instead of horizontal
@@ -13,27 +7,29 @@ bugs
   clipped left most clip cannot be scrubbed
 
 features
+  rewrite gedl-ui.c in lua
   annotations
-  dragging clip around
+  dragging clip around by mouse
+  trimming by mouse
   implement overlaying of wav / mp3 files
   re-enable cross-fades for video and audio
   templates - for both clips and filters - filters that can be chained
   create thumbnails as well as thumbtracks for clips
-     related: also write a cache for proxy.. when heavily filtered it is neccesary
+     related: also write a cache for proxy.. when heavily filtered it is neccesary, frames from here can form thumbtrack
   pcm cache / thumb cache would almost be...
   detect locked or crashed ui, kill and respawn
-  rewrite ui part in lua
   gaps in timeline (will be implemented as blank clips - but ui can be different)
   better video file import
+    add gedl side code for media dragged from file manager to timeline, the mrg parts for gtk are in place
     insert videos from the commandline
     on-demand/background proxy generation
     ui for picking clips in current folder, possibly clib-db separate from video-project
-    add gedl side code for media dragged from file manager to timeline, the mrg parts for gtk are in place
     clip database done on demand - files that appear in the timeline get enrolled, as well as files thatappearinthe working dir.
 
 refactor
    make each clip not have a loader but have a pool of loaders, that
    can be pre-seeded with right paths for upcoming clips during playback
+   make active_clip not be shared between renderer and ui
 
 implement image folder videoplayer
 
@@ -80,7 +76,7 @@ GeglEDL    *gedl_new_from_path      (const char *path);
 void        gedl_load_path          (GeglEDL    *edl, const char *path);
 void        gedl_save_path          (GeglEDL    *edl, const char *path);
 GeglAudioFragment  *gedl_get_audio  (GeglEDL    *edl);
-Clip       *gedl_get_clip         (GeglEDL *edl, int frame, int *clip_frame_no);
+Clip       *gedl_get_clip           (GeglEDL *edl, int frame, int *clip_frame_no);
 GeglBuffer *gedl_get_buffer         (GeglEDL    *edl);
 void        gedl_set_frame          (GeglEDL    *edl, int frame);
 void        gedl_set_time           (GeglEDL    *edl, double seconds);
@@ -106,12 +102,13 @@ void rig_frame (GeglEDL *edl, int frame_no);
 
 typedef struct SourceClip
 {
-  char *path;
-  int   start;
-  int   end;
-  char *title;
-  int   duration;
-  int   editing;
+  char  *path;
+  int    start;
+  int    end;
+  char  *title;
+  int    duration;
+  int    editing;
+  char  *filter_graph; /* chain of gegl filters */
 } SourceClip;
 
 struct _Clip
@@ -122,18 +119,17 @@ struct _Clip
   char  *title;
   int    duration;
   int    editing;
-  /* start of this must match start of clip */
+  char  *filter_graph; /* chain of gegl filters */
+  /* to here Clip must match start of SourceClip */
   GeglEDL *edl;
 
   double fps;
-  char   sha256sum[20]; /*< would also be the filename of thumbtrack */
   int    fade_out; /* the main control for fading in.. */
   int    fade_in;  /* implied by previous clip fading */
-  int    fade_pad_start; 
+  int    fade_pad_start;
   int    fade_pad_end;
   int    is_image;
 
-  char  *filter_graph; /* chain of gegl filters */
   int    abs_start;
 
   const char        *clip_path;
@@ -148,7 +144,6 @@ struct _Clip
 
   GMutex             mutex;
 };
-
 
 /*
 typedef struct SourceVid
@@ -223,19 +218,19 @@ struct _GeglEDL
 
 } _GeglEDL;
 
-Clip *clip_new            (GeglEDL *edl);
-void  clip_free           (Clip *clip);
-const char *clip_get_path (Clip *clip);
-void  clip_set_path       (Clip *clip, const char *path);
-int   clip_get_start      (Clip *clip);
-int   clip_get_end        (Clip *clip);
-int   clip_get_frames     (Clip *clip);
-void  clip_set_start      (Clip *clip, int start);
-void  clip_set_end        (Clip *clip, int end);
-void  clip_set_range      (Clip *clip, int start, int end);
-void  clip_set_full       (Clip *clip, const char *path, int start, int end);
-Clip *clip_new_full       (GeglEDL *edl, const char *path, int start, int end);
-void  clip_set_frame_no (Clip *clip, int frame_no);
+Clip  *clip_new               (GeglEDL *edl);
+void   clip_free              (Clip *clip);
+const char *clip_get_path     (Clip *clip);
+void   clip_set_path          (Clip *clip, const char *path);
+int    clip_get_start         (Clip *clip);
+int    clip_get_end           (Clip *clip);
+int    clip_get_frames        (Clip *clip);
+void   clip_set_start         (Clip *clip, int start);
+void   clip_set_end           (Clip *clip, int end);
+void   clip_set_range         (Clip *clip, int start, int end);
+void   clip_set_full          (Clip *clip, const char *path, int start, int end);
+Clip  *clip_new_full          (GeglEDL *edl, const char *path, int start, int end);
+void   clip_set_frame_no      (Clip *clip, int frame_no);
 Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame);
 
 #define SPLIT_VER  0.8
