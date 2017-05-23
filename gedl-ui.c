@@ -1032,6 +1032,44 @@ static void shuffle_forward (MrgEvent *event, void *data1, void *data2)
   changed++;
 }
 
+static void shuffle_back (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  gedl_cache_invalid (edl);
+
+  GList *prev = NULL,
+        *prevprev = NULL,
+        *next = NULL,
+        *self = g_list_find (edl->clips, edl->active_clip);
+
+  if (self)
+  {
+    next = self->next;
+    prev = self->prev;
+    if (prev)
+      prevprev = prev->prev;
+
+  if (self && prev)
+  {
+    if (prevprev)
+      prevprev->next = self;
+    self->prev = prevprev;
+    self->next = prev;
+    prev->prev = self;
+    prev->next = next;
+    if (next)
+      next->prev = prev;
+
+    edl->frame_no -= clip_get_frames (prev->data);
+  }
+  }
+
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+  changed++;
+}
+
+
 
 static void slide_forward (MrgEvent *event, void *data1, void *data2)
 {
@@ -1120,42 +1158,93 @@ static void slide_forward (MrgEvent *event, void *data1, void *data2)
   changed++;
 }
 
-static void shuffle_back (MrgEvent *event, void *data1, void *data2)
+static void slide_back (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
   gedl_cache_invalid (edl);
+    edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
 
   GList *prev = NULL,
-        *prevprev = NULL,
         *next = NULL,
         *self = g_list_find (edl->clips, edl->active_clip);
+  /*
+        situations to deal with:
+          inside mergable clips
+          last of inside mergable clips
+          inside mergable clips if we padded prev
+          last of inside mergable clips if we padded prev
+          non mergable clips -> split next and shuffle into
+   */
 
   if (self)
   {
     next = self->next;
     prev = self->prev;
-    if (prev)
-      prevprev = prev->prev;
 
-  if (self && prev)
+
+  if (self && next && prev)
   {
-    if (prevprev)
-      prevprev->next = self;
-    self->prev = prevprev;
-    self->next = prev;
-    prev->prev = self;
-    prev->next = next;
-    if (next)
-      next->prev = prev;
+    Clip *prev_clip = prev->data;
+    Clip *next_clip = next->data;
+    Clip *self_clip = self->data;
 
-    edl->frame_no -= clip_get_frames (prev->data);
+    if (are_mergable (prev_clip, next_clip, 0))
+    {
+      if (clip_get_frames (prev_clip) == 1)
+      {
+        fprintf (stderr, "%i\n", __LINE__);
+        next_clip->start --;
+        edl->clips = g_list_remove (edl->clips, prev_clip);
+        edl->frame_no --;
+      }
+      else
+      {
+        fprintf (stderr, "%i\n", __LINE__);
+        prev_clip->end --;
+        next_clip->start --;
+        edl->frame_no --;
+      }
+    } else if (are_mergable (prev_clip, next_clip, clip_get_frames (self_clip)))
+    {
+      if (clip_get_frames (prev_clip) == 1)
+      {
+        fprintf (stderr, "%i\n", __LINE__);
+        prev_clip->end--;
+        edl->clips = g_list_remove (edl->clips, prev_clip);
+        edl->frame_no --;
+      }
+      else
+      {
+        fprintf (stderr, "%i\n", __LINE__);
+        prev_clip->end --;
+        next_clip->start --;
+        edl->frame_no --;
+      }
+    }
+    else {
+      if (clip_get_frames (prev_clip) == 1)
+      {
+        fprintf (stderr, "%i\n", __LINE__);
+        int frame_no = edl->frame_no - 1;
+        shuffle_back (event, data1, data2);
+        edl->frame_no = frame_no;
+      } else {
+        fprintf (stderr, "%i\n", __LINE__);
+        int frame_no = edl->frame_no - 1;
+        clip_split (prev_clip, prev_clip->end );
+        shuffle_back (event, data1, data2);
+        edl->frame_no = frame_no;
+      }
+    }
   }
+
   }
 
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
 }
+
 
 
 static void zoom_fit (MrgEvent *event, void *data1, void *data2)
@@ -1875,6 +1964,7 @@ void gedl_ui (Mrg *mrg, void *data)
       {
       //mrg_add_binding (mrg, "control-up", NULL, "slide backward", step_frame, edl);
         mrg_add_binding (mrg, "control-up/down", NULL, "slide clip backward/forward", shuffle_back, edl);
+      mrg_add_binding (mrg, "control-up", NULL, NULL, slide_back, edl);
       mrg_add_binding (mrg, "control-down", NULL, NULL, slide_forward, edl);
 
       if (edl->frame_no == edl->active_clip->abs_start + clip_get_frames (edl->active_clip)-1)
