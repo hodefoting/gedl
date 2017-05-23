@@ -1,14 +1,19 @@
 #if PLAN
 
+rename to gcut ? which can mean GEGL cut, goat cut or gnome cut
+
 bugs
   bounding box of preview/proxy not working properly
   huge video files cause thumtrack overflow, vertical instead of horizontal
   might not have same scanline problem.
   clipped left most clip cannot be scrubbed
+  gegl ff-load / ff-save
+    round all audio-frame counts up to a fixed amount, use correct start .. and drop frames when assembling
 
 features
   rewrite gedl-ui.c in lua
   annotations
+  shift up/down for selecting by full clips
   dragging clip around by mouse
   trimming by mouse
   implement overlaying of wav / mp3 files
@@ -27,11 +32,9 @@ features
     clip database done on demand - files that appear in the timeline get enrolled, as well as files thatappearinthe working dir.
 
 refactor
-   make each clip not have a loader but have a pool of loaders, that
-   can be pre-seeded with right paths for upcoming clips during playback
+   make each clip not have a loader but have a pool of loaders, that can be pre-seeded with right paths for upcoming clips during playback
    make active_clip not be shared between renderer and ui
 
-implement image folder videoplayer
 
 #endif
 

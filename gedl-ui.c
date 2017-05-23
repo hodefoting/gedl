@@ -1115,14 +1115,12 @@ static void slide_forward (MrgEvent *event, void *data1, void *data2)
     {
       if (clip_get_frames (next_clip) == 1)
       {
-        fprintf (stderr, "%i\n", __LINE__);
         prev_clip->end++;
         edl->clips = g_list_remove (edl->clips, next_clip);
         edl->frame_no ++;
       }
       else
       {
-        fprintf (stderr, "%i\n", __LINE__);
         prev_clip->end ++;
         next_clip->start ++;
         edl->frame_no ++;
@@ -1131,14 +1129,12 @@ static void slide_forward (MrgEvent *event, void *data1, void *data2)
     {
       if (clip_get_frames (next_clip) == 1)
       {
-        fprintf (stderr, "%i\n", __LINE__);
         prev_clip->end++;
         edl->clips = g_list_remove (edl->clips, next_clip);
         edl->frame_no ++;
       }
       else
       {
-        fprintf (stderr, "%i\n", __LINE__);
         prev_clip->end ++;
         next_clip->start ++;
         edl->frame_no ++;
@@ -1147,12 +1143,10 @@ static void slide_forward (MrgEvent *event, void *data1, void *data2)
     else {
       if (clip_get_frames (next_clip) == 1)
       {
-        fprintf (stderr, "%i\n", __LINE__);
         int frame_no = edl->frame_no + 1;
         shuffle_forward (event, data1, data2);
         edl->frame_no = frame_no;
       } else {
-        fprintf (stderr, "%i\n", __LINE__);
         int frame_no = edl->frame_no + 1;
         clip_split (next_clip, next_clip->start + 1);
         shuffle_forward (event, data1, data2);
@@ -1202,14 +1196,12 @@ static void slide_back (MrgEvent *event, void *data1, void *data2)
     {
       if (clip_get_frames (prev_clip) == 1)
       {
-        fprintf (stderr, "%i\n", __LINE__);
         next_clip->start --;
         edl->clips = g_list_remove (edl->clips, prev_clip);
         edl->frame_no --;
       }
       else
       {
-        fprintf (stderr, "%i\n", __LINE__);
         prev_clip->end --;
         next_clip->start --;
         edl->frame_no --;
@@ -1218,14 +1210,12 @@ static void slide_back (MrgEvent *event, void *data1, void *data2)
     {
       if (clip_get_frames (prev_clip) == 1)
       {
-        fprintf (stderr, "%i\n", __LINE__);
         prev_clip->end--;
         edl->clips = g_list_remove (edl->clips, prev_clip);
         edl->frame_no --;
       }
       else
       {
-        fprintf (stderr, "%i\n", __LINE__);
         prev_clip->end --;
         next_clip->start --;
         edl->frame_no --;
@@ -1234,12 +1224,10 @@ static void slide_back (MrgEvent *event, void *data1, void *data2)
     else {
       if (clip_get_frames (prev_clip) == 1)
       {
-        fprintf (stderr, "%i\n", __LINE__);
         int frame_no = edl->frame_no - 1;
         shuffle_back (event, data1, data2);
         edl->frame_no = frame_no;
       } else {
-        fprintf (stderr, "%i\n", __LINE__);
         int frame_no = edl->frame_no - 1;
         clip_split (prev_clip, prev_clip->end );
         shuffle_back (event, data1, data2);
@@ -1975,10 +1963,6 @@ void gedl_ui (Mrg *mrg, void *data)
         {
           if (edl->selection_start == edl->selection_end)
           {
-            mrg_add_binding (mrg, "control-up/down", NULL, "slide clip backward/forward", shuffle_back, edl);
-            mrg_add_binding (mrg, "control-up", NULL, NULL, slide_back, edl);
-            mrg_add_binding (mrg, "control-down", NULL, NULL, slide_forward, edl);
-
             if (edl->frame_no == edl->active_clip->abs_start + clip_get_frames (edl->active_clip)-1)
             {
               mrg_add_binding (mrg, "control-left/right", NULL, "adjust out", clip_end_inc, edl);
@@ -1987,9 +1971,14 @@ void gedl_ui (Mrg *mrg, void *data)
             }
             else
             {
-              mrg_add_binding (mrg, "control-left/right", NULL, "slide cut window", clip_start_end_inc, edl);
-              mrg_add_binding (mrg, "control-right", NULL, NULL, clip_start_end_inc, edl);
-              mrg_add_binding (mrg, "control-left", NULL, NULL, clip_start_end_dec, edl);
+              mrg_add_binding (mrg, "control-left/right", NULL, "slide clip backward/forward", slide_back, edl);
+              mrg_add_binding (mrg, "control-left", NULL, NULL, slide_back, edl);
+              mrg_add_binding (mrg, "control-right", NULL, NULL, slide_forward, edl);
+
+
+              mrg_add_binding (mrg, "control-up/down", NULL, "slide cut window", clip_start_end_inc, edl);
+              mrg_add_binding (mrg, "control-up", NULL, NULL, clip_start_end_inc, edl);
+              mrg_add_binding (mrg, "control-down", NULL, NULL, clip_start_end_dec, edl);
             }
           }
           else {
