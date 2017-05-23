@@ -257,7 +257,15 @@ static void stop_playing (MrgEvent *event, void *data1, void *data2)
 static void select_all (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  gedl_set_selection (edl, 0, gedl_get_duration (edl)-1);
+  gint end = gedl_get_duration (edl) - 1;
+  if (edl->selection_start == 0 && edl->selection_end == end)
+  {
+    gedl_set_selection (edl, 0, 0);
+  }
+  else
+  {
+    gedl_set_selection (edl, 0, end);
+  }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }

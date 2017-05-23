@@ -57,7 +57,7 @@ long  babl_ticks (void);
 
 void  usage()
 {
-      printf ("usage: negl [options] <video> [thumb]\n"
+      printf ("usage: iconographer [options] <video> [thumb]\n"
 " -p, --progress   - show /progress in terminal\n"
 " -a <analysis-path>, ---analysis\n"
 "                  - path to store information extraction result, if the file\n"
