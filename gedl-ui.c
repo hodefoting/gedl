@@ -162,7 +162,7 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
 {
   Clip *clip = data1;
   GeglEDL *edl = data2;
-  
+
   edl->frame_no = e->x;
   edl->selection_start = edl->frame_no;
   edl->selection_end = edl->frame_no;
@@ -516,7 +516,7 @@ static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
 
 static void scroll_to_fit (GeglEDL *edl, Mrg *mrg);
 
-static void nav_left (MrgEvent *event, void *data1, void *data2)
+static void prev_clip (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
   if (!edl->active_clip)
@@ -541,7 +541,7 @@ static void nav_left (MrgEvent *event, void *data1, void *data2)
   changed++;
 }
 
-static void nav_right (MrgEvent *event, void *data1, void *data2)
+static void next_clip (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
   if (!edl->active_clip)
@@ -549,8 +549,15 @@ static void nav_right (MrgEvent *event, void *data1, void *data2)
   {
     GList *iter = g_list_find (edl->clips, edl->active_clip);
     if (iter) iter = iter->next;
-    if (iter) edl->active_clip = iter->data;
-    edl->frame_no = edl->active_clip->abs_start;
+    if (iter)
+    {
+      edl->active_clip = iter->data;
+      edl->frame_no = edl->active_clip->abs_start;
+    }
+    else
+    {
+      edl->frame_no = edl->active_clip->abs_start + clip_get_frames (edl->active_clip);
+    }
   }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -721,6 +728,8 @@ static void step_frame_back (MrgEvent *event, void *data1, void *data2)
   {
     edl->selection_start = edl->selection_end;
     edl->frame_no --;
+    if (edl->frame_no < 0)
+      edl->frame_no = 0;
     edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
   }
   mrg_event_stop_propagate (event);
@@ -1386,16 +1395,15 @@ void gedl_draw (Mrg     *mrg,
 
   if (!edl->playing){
      static gint bitlen = 0;
-     /* should fetch this more seldomly */
      static guchar *bitmap;
      static long bitticks = 0;
      int i;
      int state = -1;
      int length = 0;
 
-     if (bitlen && ( babl_ticks() - bitticks > 1000 * 1000 * 3))
+     if (bitlen && ( babl_ticks() - bitticks > 1000 * 1000 * 2))
      {
-       /* update cache bitmap if it is more than 3s old */
+       /* update cache bitmap if it is more than 2s old */
        bitlen = 0;
        g_free (bitmap);
        bitmap = NULL;
@@ -1891,115 +1899,117 @@ void gedl_ui (Mrg *mrg, void *data)
     if (edl->playing)
     {
       mrg_add_binding (mrg, "space", NULL, "pause", renderer_toggle_playing, edl);
-      if (edl->frame_no != edl->active_clip->abs_start)
+      if (edl->active_clip && edl->frame_no != edl->active_clip->abs_start)
         mrg_add_binding (mrg, "v", NULL, "split clip", split_clip, edl);
     }
     else
     {
       mrg_add_binding (mrg, "space", NULL, "play", renderer_toggle_playing, edl);
 
-    mrg_add_binding (mrg, "tab", NULL, "cycle ui amount", toggle_ui_mode, edl);
-    mrg_add_binding (mrg, "e", NULL, "zoom fit", zoom_fit, edl);
-
-
-    if (edl->use_proxies)
-      mrg_add_binding (mrg, "p", NULL, "don't use proxies", toggle_use_proxies, edl);
-    else
-      mrg_add_binding (mrg, "p", NULL, "use proxies", toggle_use_proxies, edl);
-
-    //mrg_add_binding (mrg, "s", NULL, "save", save, edl);
-    mrg_add_binding (mrg, "a", NULL, "select all", select_all, edl);
-
-    mrg_add_binding (mrg, "left/right", NULL, "step frame", step_frame, edl);
-    mrg_add_binding (mrg, "right", NULL, NULL, step_frame, edl);
-    mrg_add_binding (mrg, "left", NULL, NULL, step_frame_back, edl);
-
-    mrg_add_binding (mrg, "up/down", NULL, "previous/next cut", nav_left, edl);
-    mrg_add_binding (mrg, "up", NULL, NULL, nav_left, edl);
-    mrg_add_binding (mrg, "down", NULL, NULL, nav_right, edl);
-
-    mrg_add_binding (mrg, "shift-left/right", NULL, "extend selection", extend_selection_to_the_right, edl);
-    mrg_add_binding (mrg, "shift-right", NULL, NULL, extend_selection_to_the_right, edl);
-    mrg_add_binding (mrg, "shift-left", NULL, NULL, extend_selection_to_the_left, edl);
-
-    if (edl->selection_start == edl->selection_end)
-    {
-      mrg_add_binding (mrg, "x", NULL, "remove clip", remove_clip, edl);
-      mrg_add_binding (mrg, "d", NULL, "duplicate clip", duplicate_clip, edl);
-      mrg_add_binding (mrg, "i", NULL, "insert clip", insert, edl);
-
-      if (edl->frame_no == edl->active_clip->abs_start)
-      {
-        GList *iter = g_list_find (edl->clips, edl->active_clip);
-        Clip *clip2 = NULL;
-        if (iter) iter = iter->prev;
-        if (iter) clip2 = iter->data;
-
-        //mrg_add_binding (mrg, "f", NULL, "toggle fade", toggle_fade, edl);
-
-        if (are_mergable (clip2, edl->active_clip, 0))
-          mrg_add_binding (mrg, "v", NULL, "merge clip", merge_clip, edl);
-      }
+      mrg_add_binding (mrg, "tab", NULL, "cycle ui amount", toggle_ui_mode, edl);
+      mrg_add_binding (mrg, "e", NULL, "zoom fit", zoom_fit, edl);
+      if (edl->use_proxies)
+        mrg_add_binding (mrg, "p", NULL, "don't use proxies", toggle_use_proxies, edl);
       else
-      {
-        mrg_add_binding (mrg, "v", NULL, "split clip", split_clip, edl);
-      }
+        mrg_add_binding (mrg, "p", NULL, "use proxies", toggle_use_proxies, edl);
 
-    }
-    else
-    {
-      mrg_add_binding (mrg, "x", NULL, "cut selection", remove_clip, edl);
-      mrg_add_binding (mrg, "c", NULL, "copy selection", remove_clip, edl);
-      mrg_add_binding (mrg, "r", NULL, "set playback range", set_range, edl);
-    }
+      //mrg_add_binding (mrg, "s", NULL, "save", save, edl);
+      mrg_add_binding (mrg, "a", NULL, "select all", select_all, edl);
 
-    if (edl->frame_no == edl->active_clip->abs_start)
-    {
+      mrg_add_binding (mrg, "left/right", NULL, "step frame", step_frame, edl);
+      mrg_add_binding (mrg, "right", NULL, NULL, step_frame, edl);
+      mrg_add_binding (mrg, "left", NULL, NULL, step_frame_back, edl);
+
+      mrg_add_binding (mrg, "up/down", NULL, "previous/next cut", prev_clip, edl);
+      mrg_add_binding (mrg, "up", NULL, NULL, prev_clip, edl);
+      mrg_add_binding (mrg, "down", NULL, NULL, next_clip, edl);
+
+      mrg_add_binding (mrg, "shift-left/right", NULL, "extend selection", extend_selection_to_the_right, edl);
+      mrg_add_binding (mrg, "shift-right", NULL, NULL, extend_selection_to_the_right, edl);
+      mrg_add_binding (mrg, "shift-left", NULL, NULL, extend_selection_to_the_left, edl);
 
       if (edl->selection_start == edl->selection_end)
       {
-        mrg_add_binding (mrg, "control-left/right", NULL, "adjust in", clip_start_inc, edl);
-        mrg_add_binding (mrg, "control-right", NULL, NULL, clip_start_inc, edl);
-        mrg_add_binding (mrg, "control-left", NULL, NULL, clip_start_dec, edl);
-        mrg_add_binding (mrg, "control-up/down", NULL, "shuffle clip backward/forward", shuffle_back, edl);
-        mrg_add_binding (mrg, "control-up", NULL, NULL, shuffle_back, edl);
-        mrg_add_binding (mrg, "control-down", NULL, NULL, shuffle_forward, edl);
-      }
-    }
-    else
-    {
-      if (edl->selection_start == edl->selection_end)
-      {
-      //mrg_add_binding (mrg, "control-up", NULL, "slide backward", step_frame, edl);
-        mrg_add_binding (mrg, "control-up/down", NULL, "slide clip backward/forward", shuffle_back, edl);
-      mrg_add_binding (mrg, "control-up", NULL, NULL, slide_back, edl);
-      mrg_add_binding (mrg, "control-down", NULL, NULL, slide_forward, edl);
+        mrg_add_binding (mrg, "x", NULL, "remove clip", remove_clip, edl);
+        mrg_add_binding (mrg, "d", NULL, "duplicate clip", duplicate_clip, edl);
+        mrg_add_binding (mrg, "i", NULL, "insert clip", insert, edl);
 
-      if (edl->frame_no == edl->active_clip->abs_start + clip_get_frames (edl->active_clip)-1)
-      {
-        mrg_add_binding (mrg, "control-left/right", NULL, "adjust out", clip_end_inc, edl);
-        mrg_add_binding (mrg, "control-right", NULL, NULL, clip_end_inc, edl);
-        mrg_add_binding (mrg, "control-left", NULL, NULL, clip_end_dec, edl);
+        if (edl->active_clip)
+        {
+          if (edl->frame_no == edl->active_clip->abs_start)
+          {
+            GList *iter = g_list_find (edl->clips, edl->active_clip);
+            Clip *clip2 = NULL;
+            if (iter) iter = iter->prev;
+            if (iter) clip2 = iter->data;
+
+            //mrg_add_binding (mrg, "f", NULL, "toggle fade", toggle_fade, edl);
+
+            if (are_mergable (clip2, edl->active_clip, 0))
+              mrg_add_binding (mrg, "v", NULL, "merge clip", merge_clip, edl);
+          }
+          else
+          {
+            mrg_add_binding (mrg, "v", NULL, "split clip", split_clip, edl);
+          }
+        }
+
       }
       else
       {
-        mrg_add_binding (mrg, "control-left/right", NULL, "slide cut window", clip_start_end_inc, edl);
-        mrg_add_binding (mrg, "control-right", NULL, NULL, clip_start_end_inc, edl);
-        mrg_add_binding (mrg, "control-left", NULL, NULL, clip_start_end_dec, edl);
+        mrg_add_binding (mrg, "x", NULL, "cut selection", remove_clip, edl);
+        mrg_add_binding (mrg, "c", NULL, "copy selection", remove_clip, edl);
+        mrg_add_binding (mrg, "r", NULL, "set playback range", set_range, edl);
       }
-      }
-      else if (edl->selection_end == edl->frame_no &&
-               fabs(edl->selection_start - edl->selection_end) == 1.0)
+
+      if (edl->active_clip)
       {
-        mrg_add_binding (mrg, "control-left/right", NULL, "move cut", clip_end_start_inc, edl);
-        mrg_add_binding (mrg, "control-right", NULL, NULL, clip_end_start_inc, edl);
-        mrg_add_binding (mrg, "control-left", NULL, NULL, clip_end_start_dec, edl);
+
+        if (edl->frame_no == edl->active_clip->abs_start)
+        {
+
+          if (edl->selection_start == edl->selection_end)
+          {
+            mrg_add_binding (mrg, "control-left/right", NULL, "adjust in", clip_start_inc, edl);
+            mrg_add_binding (mrg, "control-right", NULL, NULL, clip_start_inc, edl);
+            mrg_add_binding (mrg, "control-left", NULL, NULL, clip_start_dec, edl);
+            mrg_add_binding (mrg, "control-up/down", NULL, "shuffle clip backward/forward", shuffle_back, edl);
+            mrg_add_binding (mrg, "control-up", NULL, NULL, shuffle_back, edl);
+            mrg_add_binding (mrg, "control-down", NULL, NULL, shuffle_forward, edl);
+          }
+        }
+        else
+        {
+          if (edl->selection_start == edl->selection_end)
+          {
+          //mrg_add_binding (mrg, "control-up", NULL, "slide backward", step_frame, edl);
+            mrg_add_binding (mrg, "control-up/down", NULL, "slide clip backward/forward", shuffle_back, edl);
+            mrg_add_binding (mrg, "control-up", NULL, NULL, slide_back, edl);
+            mrg_add_binding (mrg, "control-down", NULL, NULL, slide_forward, edl);
+
+            if (edl->frame_no == edl->active_clip->abs_start + clip_get_frames (edl->active_clip)-1)
+            {
+              mrg_add_binding (mrg, "control-left/right", NULL, "adjust out", clip_end_inc, edl);
+              mrg_add_binding (mrg, "control-right", NULL, NULL, clip_end_inc, edl);
+              mrg_add_binding (mrg, "control-left", NULL, NULL, clip_end_dec, edl);
+            }
+            else
+            {
+              mrg_add_binding (mrg, "control-left/right", NULL, "slide cut window", clip_start_end_inc, edl);
+              mrg_add_binding (mrg, "control-right", NULL, NULL, clip_start_end_inc, edl);
+              mrg_add_binding (mrg, "control-left", NULL, NULL, clip_start_end_dec, edl);
+            }
+          }
+          else if (edl->selection_end == edl->frame_no &&
+                   fabs(edl->selection_start - edl->selection_end) == 1.0)
+          {
+            mrg_add_binding (mrg, "control-left/right", NULL, "move cut", clip_end_start_inc, edl);
+            mrg_add_binding (mrg, "control-right", NULL, NULL, clip_end_start_inc, edl);
+            mrg_add_binding (mrg, "control-left", NULL, NULL, clip_end_start_dec, edl);
+          }
+        }
       }
     }
-
-
-    }
-
   }
 
 #if 0
