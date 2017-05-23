@@ -114,23 +114,6 @@ static gpointer renderer_thread (gpointer data)
   for (;;)
   {
     playing_iteration (edl->mrg, edl);
-    if (edl->active_source)
-    {
-      if (edl->source_frame_no != done_frame)
-      {
-        rendering_frame = edl->source_frame_no;
-        gegl_node_set (preview_loader, "path", edl->active_source->path, NULL);
-        gegl_node_set (preview_loader, "frame", edl->source_frame_no, NULL);
-        GeglRectangle ext = gegl_node_get_bounding_box (preview_loader);
-        gegl_buffer_set_extent (edl->buffer, &ext);
-        gegl_node_process (edl->source_store_buf);
-
-        done_frame = rendering_frame;
-      }
-      else
-        g_usleep (50);
-    }
-    else
     {
       if (edl->frame_no != done_frame)
       {
