@@ -23,7 +23,6 @@ Dependencies:
 
 gegl-0.3.16  http://gegl.org/
 mrg          https://github.com/hodefoting/mrg/
-iconographer https://github.com/the-grid/iconographer
 SDL-1.2
 ffmpeg
 
