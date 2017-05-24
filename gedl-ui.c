@@ -207,10 +207,10 @@ static void insert_clip (GeglEDL *edl, const char *path,
     Clip *last_clip;
     int sin, sout;
     sin = edl->selection_start;
-    sout = edl->selection_end;
+    sout = edl->selection_end + 1;
     if (sin > sout)
     {
-      sout = edl->selection_start;
+      sout = edl->selection_start + 1;
       sin = edl->selection_end;
     }
     int cur_clip_frame_no;
@@ -246,11 +246,8 @@ static void insert_clip (GeglEDL *edl, const char *path,
   gedl_make_proxies (edl);
 }
 
-
-
 static void drag_dropped (MrgEvent *ev, void *data1, void *data2)
 {
-  //Clip *clip = data1;
   GeglEDL *edl = data2;
 
   char *str = g_strdup (ev->string);
@@ -261,7 +258,6 @@ static void drag_dropped (MrgEvent *ev, void *data1, void *data2)
   while (e)
   {
     *e = '\0';
-    fprintf(stderr, "[%s]\n", s);
     if (strstr (s, "file://")) s+= strlen ("file://");
     insert_clip (edl, s, -1, -1);
     s = e+1;
@@ -270,7 +266,6 @@ static void drag_dropped (MrgEvent *ev, void *data1, void *data2)
   }
 
   g_free (str);
-
 }
 
 static void clicked_clip (MrgEvent *e, void *data1, void *data2)
@@ -1075,7 +1070,6 @@ void gedl_ui (Mrg *mrg, void *data);
 static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  Mrg *mrg = event->mrg;
   switch (event->scroll_direction)
   {
     case MRG_SCROLL_DIRECTION_UP:
