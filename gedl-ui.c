@@ -148,12 +148,51 @@ static void clicked_source_clip (MrgEvent *e, void *data1, void *data2)
 }
 
 
-static void drag_dropped (MrgEvent *e, void *data1, void *data2)
+static void insert_clip (GeglEDL *edl, const char *path,
+                         int in, int out)
+{
+  GList *iter;
+  Clip *clip;
+  if (in < 0)
+    in = 0;
+  if (out < 0)
+  {
+    /* probe duration */
+  }
+  clip = clip_new_full (edl, path, in, out);
+  clip->title = g_strdup (basename (path));
+
+  iter = g_list_find (edl->clips, edl_get_clip_for_frame (edl, edl->frame_no));
+  edl->clips = g_list_insert_before (edl->clips, iter, clip);
+  edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+  gedl_make_proxies (edl);
+}
+
+
+
+static void drag_dropped (MrgEvent *ev, void *data1, void *data2)
 {
   //Clip *clip = data1;
-  //GeglEDL *edl = data2;
+  GeglEDL *edl = data2;
 
-  fprintf(stderr, "[%s] %f %f\n", e->string, e->x, e->y);
+  char *str = g_strdup (ev->string);
+  char *s = str;
+  char *e;
+
+  e = strchr (s, '\r');
+  while (e)
+  {
+    *e = '\0';
+    fprintf(stderr, "[%s]\n", s);
+    if (strstr (s, "file://")) s+= strlen ("file://");
+    insert_clip (edl, s, -1, 10);
+    s = e+1;
+    if (*s == '\n') s++;
+    e = strchr (s, '\r');
+  }
+
+  g_free (str);
+
 }
 
 static void clicked_clip (MrgEvent *e, void *data1, void *data2)
@@ -410,30 +449,6 @@ static void extend_selection_to_the_right (MrgEvent *event, void *data1, void *d
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
-}
-static void insert (MrgEvent *event, void *data1, void *data2)
-{
-  GeglEDL *edl = data1;
-
-  // XXX: should split before insert when inside clip
-
-  if (edl->active_source)
-  {
-    GList *iter = g_list_find (edl->clip_db, edl->active_source);
-    Clip *clip = clip_new_full (edl, edl->active_source->path, edl->active_source->start, edl->active_source->end);
-    if (edl->active_source->title)
-      clip->title = g_strdup (edl->active_source->title);
-    
-    iter = g_list_find (edl->clips, edl_get_clip_for_frame (edl, edl->frame_no));
-    edl->clips = g_list_insert_before (edl->clips, iter, clip);
-
-    edl->active_clip = clip;
-    edl->active_source = NULL;
-    gedl_cache_invalid (edl);
-    mrg_event_stop_propagate (event);
-    mrg_queue_draw (event->mrg, NULL);
-    return;
-  }
 }
 
 static int are_mergable (Clip *clip1, Clip *clip2, int delta)
@@ -1949,7 +1964,7 @@ void gedl_ui (Mrg *mrg, void *data)
       {
         mrg_add_binding (mrg, "x", NULL, "remove clip", remove_clip, edl);
         mrg_add_binding (mrg, "d", NULL, "duplicate clip", duplicate_clip, edl);
-        mrg_add_binding (mrg, "i", NULL, "insert clip", insert, edl);
+        //mrg_add_binding (mrg, "i", NULL, "insert clip", insert, edl);
 
         if (edl->active_clip)
         {

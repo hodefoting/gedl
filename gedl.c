@@ -790,7 +790,11 @@ GeglEDL *gedl_new_from_path (const char *path)
     char *parent = g_strdup (rpath);
     strrchr(parent, '/')[1]='\0';
 
-    edl = gedl_new_from_string (string, parent);
+    if (string)
+      edl = gedl_new_from_string (string, parent);
+    else
+      edl = gedl_new_from_string ("", parent);
+
     g_free (parent);
     g_free (string);
     if (!edl->path)
@@ -1086,8 +1090,7 @@ int gegl_make_thumb_video (GeglEDL *edl, const char *path, const char *thumb_pat
 int gedl_ui_main (GeglEDL *edl);
 
 int gegl_make_thumb_video (GeglEDL *edl, const char *path, const char *thumb_path);
-static void gedl_make_proxies (GeglEDL *eld);
-static void gedl_make_proxies (GeglEDL *eld)
+void gedl_make_proxies (GeglEDL *edl)
 {
   GList *l;
   for (l = edl->clips; l; l = l->next)
@@ -1205,7 +1208,6 @@ int main (int argc, char **argv)
 
         signal(SIGUSR2, nop_handler);
   //if (edl->use_proxies)
-        gedl_make_proxies (edl);
         return gedl_ui_main (edl);
       case RUNMODE_RENDER:
         tot_frames  = gedl_get_duration (edl);
@@ -1448,3 +1450,4 @@ void gedl_get_range (GeglEDL *edl,
   if (end_frame)
     *end_frame = edl->range_end;
 }
+
