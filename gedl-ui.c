@@ -22,6 +22,8 @@ static int empty_selection (GeglEDL *edl)
 {
   return edl->selection_start == edl->selection_end;
 }
+static void clip_split (Clip *oldclip, int shift);
+static void clip_remove (Clip *clip);
 
 static void mrg_gegl_blit (Mrg *mrg,
                           float x0, float y0,
@@ -165,28 +167,80 @@ static void insert_clip (GeglEDL *edl, const char *path,
                          int in, int out)
 {
   GList *iter;
-  Clip *clip;
-  int end_frame = 0;
+  Clip *clip, *cur_clip;
+  int end_frame = edl->frame_no;
   if (in < 0)
     in = 0;
   if (out < 0)
   {
     int duration = 0;
-    gedl_get_video_info (path, &duration, NULL);
-    out = duration;
+    if (!empty_selection (edl))
+    {
+      out = edl->selection_end - edl->selection_start;
+      if (out < 0) out = -out;
+    }
+    else
+    {
+      gedl_get_video_info (path, &duration, NULL);
+      out = duration;
+    }
     if (out < in)
       out = in;
   }
   clip = clip_new_full (edl, path, in, out);
   clip->title = g_strdup (basename (path));
+  int clip_frame_no;
+  cur_clip = gedl_get_clip (edl, edl->frame_no, &clip_frame_no);
 
-  iter = g_list_find (edl->clips, edl_get_clip_for_frame (edl, edl->frame_no));
-  end_frame = edl_get_clip_for_frame (edl, edl->frame_no)->abs_start;
+  if (empty_selection (edl))
+  {
+    gedl_get_duration (edl);
+    if (edl->frame_no != cur_clip->abs_start)
+    {
+      gedl_get_duration (edl);
+      clip_split (cur_clip, clip_frame_no);
+      cur_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+    }
+  }
+  else
+  {
+    Clip *last_clip;
+    int sin, sout;
+    sin = edl->selection_start;
+    sout = edl->selection_end;
+    if (sin > sout)
+    {
+      sout = edl->selection_start;
+      sin = edl->selection_end;
+    }
+    int cur_clip_frame_no;
+    cur_clip = gedl_get_clip (edl, sin, &cur_clip_frame_no);
+    clip_split (cur_clip, cur_clip_frame_no);
+    gedl_get_duration (edl);
+    int last_clip_frame_no;
+    cur_clip = gedl_get_clip (edl, sin, &cur_clip_frame_no);
+    last_clip = gedl_get_clip (edl, sout, &last_clip_frame_no);
+    if (cur_clip == last_clip)
+    {
+      clip_split (last_clip, last_clip_frame_no);
+    }
+    last_clip = edl_get_clip_for_frame (edl, sout);
+
+    cur_clip = edl_get_clip_for_frame (edl, sin);
+    while (cur_clip != last_clip)
+    {
+      clip_remove (cur_clip);
+      cur_clip = edl_get_clip_for_frame (edl, sin);
+    }
+    edl->frame_no = sin;
+  }
+
+  cur_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+  iter = g_list_find (edl->clips, cur_clip);
   edl->clips = g_list_insert_before (edl->clips, iter, clip);
-
   end_frame += out - in + 1;
-
   edl->frame_no = end_frame;
+
   edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
 
   gedl_make_proxies (edl);
@@ -492,6 +546,22 @@ static int are_mergable (Clip *clip1, Clip *clip2, int delta)
   return 1;
 }
 
+static void clip_remove (Clip *clip)
+{
+  GeglEDL *edl = clip->edl;
+  GList *iter = g_list_find (edl->clips, clip);
+
+  if (iter->next)
+    iter = iter->next;
+  else if (iter->prev)
+    iter = iter->prev;
+  else
+    return;
+
+  edl->clips = g_list_remove (edl->clips, clip);
+  edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+}
+
 
 static void remove_clip (MrgEvent *event, void *data1, void *data2)
 {
@@ -515,17 +585,8 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
 
   if (!edl->active_clip)
     return;
-  {
-    GList *iter = g_list_find (edl->clips, edl->active_clip);
-    if (iter->next) iter = iter->next;
-    else if (iter->prev) iter = iter->prev;
-    else 
-      return;
-    edl->clips = g_list_remove (edl->clips, edl->active_clip);
-    if (iter) edl->active_clip = iter->data;
-    else
-        edl->active_clip = NULL;
-  }
+
+  clip_remove (edl->active_clip);
   gedl_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
