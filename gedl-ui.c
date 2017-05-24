@@ -18,6 +18,10 @@ static int copy_buf_len = 0;
 
 static int changed = 0;
 
+static int empty_selection (GeglEDL *edl)
+{
+  return edl->selection_start == edl->selection_end;
+}
 
 static void mrg_gegl_blit (Mrg *mrg,
                           float x0, float y0,
@@ -146,6 +150,16 @@ static void clicked_source_clip (MrgEvent *e, void *data1, void *data2)
   prev_sclip = clip;
   changed++;
 }
+
+#if 0
+ // with copy/paste we'd want to have this:
+ // available: with a path + newline being valid, and perhaps
+ // sufficient for the drag + drop case as well
+
+static void insert_string (GeglEDL *edl, const char *string)
+{
+}
+#endif
 
 static void insert_clip (GeglEDL *edl, const char *path,
                          int in, int out)
@@ -1970,7 +1984,7 @@ void gedl_ui (Mrg *mrg, void *data)
       mrg_add_binding (mrg, "shift-up", NULL, NULL,    extend_selection_to_previous_cut, edl);
       mrg_add_binding (mrg, "shift-down", NULL, NULL,  extend_selection_to_next_cut, edl);
 
-      if (edl->selection_start == edl->selection_end)
+      if (empty_selection (edl))
       {
         mrg_add_binding (mrg, "x", NULL, "remove clip", remove_clip, edl);
         mrg_add_binding (mrg, "d", NULL, "duplicate clip", duplicate_clip, edl);
@@ -2010,7 +2024,7 @@ void gedl_ui (Mrg *mrg, void *data)
         if (edl->frame_no == edl->active_clip->abs_start)
         {
 
-          if (edl->selection_start == edl->selection_end)
+          if (empty_selection (edl))
           {
             mrg_add_binding (mrg, "control-left/right", NULL, "adjust in", clip_start_inc, edl);
             mrg_add_binding (mrg, "control-right", NULL, NULL, clip_start_inc, edl);
@@ -2022,7 +2036,7 @@ void gedl_ui (Mrg *mrg, void *data)
         }
         else
         {
-          if (edl->selection_start == edl->selection_end)
+          if (empty_selection (edl))
           {
             if (edl->frame_no == edl->active_clip->abs_start + clip_get_frames (edl->active_clip)-1)
             {
