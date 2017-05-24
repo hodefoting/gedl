@@ -1057,7 +1057,7 @@ int gegl_make_thumb_image (GeglEDL *edl, const char *path, const char *icon_path
   GString *str = g_string_new ("");
 
   g_string_assign (str, "");
-  g_string_append_printf (str, "gedl iconographer -p -h -f 'mid-col 96 audio' %s -a %s",
+  g_string_append_printf (str, "gedl iconographer -p -f 'mid-col 96 audio' %s -a %s",
   //g_string_append_printf (str, "iconographer -p -h -f 'thumb 96' %s -a %s",
                           path, icon_path);
   system (str->str);

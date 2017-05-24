@@ -612,6 +612,9 @@ static void toggle_use_proxies (MrgEvent *event, void *data1, void *data2)
   {
     gedl_set_use_proxies (edl, edl->use_proxies?0:1);
     gedl_cache_invalid (edl);
+
+    if (edl->use_proxies)
+      gedl_make_proxies (edl);
   }
 
   mrg_event_stop_propagate (event);

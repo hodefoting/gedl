@@ -13,9 +13,7 @@ bugs
 features
   rewrite gedl-ui.c in lua
   annotations
-  shift up/down for selecting by full clips
-  dragging clip around by mouse
-  trimming by mouse
+  trimming by mouse / dragging clips around by mouse
   implement overlaying of wav / mp3 files
   re-enable cross-fades for video and audio
   templates - for both clips and filters - filters that can be chained
@@ -34,7 +32,6 @@ features
 refactor
    make each clip not have a loader but have a pool of loaders, that can be pre-seeded with right paths for upcoming clips during playback
    make active_clip not be shared between renderer and ui
-
 
 #endif
 
