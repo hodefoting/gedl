@@ -147,24 +147,34 @@ static void clicked_source_clip (MrgEvent *e, void *data1, void *data2)
   changed++;
 }
 
-
 static void insert_clip (GeglEDL *edl, const char *path,
                          int in, int out)
 {
   GList *iter;
   Clip *clip;
+  int end_frame = 0;
   if (in < 0)
     in = 0;
   if (out < 0)
   {
-    /* probe duration */
+    int duration = 0;
+    gedl_get_video_info (path, &duration, NULL);
+    out = duration;
+    if (out < in)
+      out = in;
   }
   clip = clip_new_full (edl, path, in, out);
   clip->title = g_strdup (basename (path));
 
   iter = g_list_find (edl->clips, edl_get_clip_for_frame (edl, edl->frame_no));
+  end_frame = edl_get_clip_for_frame (edl, edl->frame_no)->abs_start;
   edl->clips = g_list_insert_before (edl->clips, iter, clip);
+
+  end_frame += out - in + 1;
+
+  edl->frame_no = end_frame;
   edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+
   gedl_make_proxies (edl);
 }
 
@@ -185,7 +195,7 @@ static void drag_dropped (MrgEvent *ev, void *data1, void *data2)
     *e = '\0';
     fprintf(stderr, "[%s]\n", s);
     if (strstr (s, "file://")) s+= strlen ("file://");
-    insert_clip (edl, s, -1, 10);
+    insert_clip (edl, s, -1, -1);
     s = e+1;
     if (*s == '\n') s++;
     e = strchr (s, '\r');

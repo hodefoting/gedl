@@ -454,6 +454,20 @@ GeglBuffer *gedl_get_buffer (GeglEDL *edl)
   return edl->clip?edl->clip->buffer:NULL;
 }
 
+void gedl_get_video_info (const char *path, int *duration, double *fps)
+{
+  GeglNode *gegl = gegl_node_new ();
+  GeglNode *probe = gegl_node_new_child (gegl, "operation",
+                          "gegl:ff-load", "path", path, NULL);
+  gegl_node_process (probe);
+
+  if (duration)
+  gegl_node_get (probe, "frames", duration, NULL);
+  if (fps)
+  gegl_node_get (probe, "frame-rate", fps, NULL);
+  g_object_unref (gegl);
+}
+
 int    gedl_get_duration (GeglEDL *edl)
 {
   int count = 0;
@@ -609,14 +623,7 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
 
      if (ff_probe && !clip->is_image)
        {
-         GeglNode *gegl = gegl_node_new ();
-         GeglNode *probe = gegl_node_new_child (gegl, "operation",
-                          "gegl:ff-load", "path", clip->path, NULL);
-         gegl_node_process (probe);
-
-         gegl_node_get (probe, "frames", &clip->duration, NULL);
-         gegl_node_get (probe, "frame-rate", &clip->fps, NULL);
-         g_object_unref (gegl);
+         gedl_get_video_info (clip->path, &clip->duration, &clip->fps);
 
          //fprintf (stderr, "probed: %i %f\n", clip->duration, clip->fps);
          if (edl->fps == 0.0)

@@ -236,6 +236,7 @@ Clip  *clip_new_full          (GeglEDL *edl, const char *path, int start, int en
 void   clip_set_frame_no      (Clip *clip, int frame_no);
 Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame);
 void   gedl_make_proxies      (GeglEDL *edl);
+void gedl_get_video_info (const char *path, int *duration, double *fps);
 
 #define SPLIT_VER  0.8
 
