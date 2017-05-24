@@ -1075,13 +1075,18 @@ void gedl_ui (Mrg *mrg, void *data);
 static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
+  Mrg *mrg = event->mrg;
   switch (event->scroll_direction)
   {
     case MRG_SCROLL_DIRECTION_UP:
+      edl->t0 +=    event->x * edl->scale;
       edl->scale *= 1.02;
+      edl->t0 -=    event->x * edl->scale;
       break;
     case MRG_SCROLL_DIRECTION_DOWN:
+      edl->t0 +=    event->x * edl->scale;
       edl->scale /= 1.02;
+      edl->t0 -=    event->x * edl->scale;
       break;
     case MRG_SCROLL_DIRECTION_LEFT:
       edl->t0 += edl->scale * 2;
