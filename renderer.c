@@ -103,6 +103,8 @@ static inline void wait_for_frame ()
 
 void playing_iteration (Mrg *mrg, GeglEDL *edl);
 
+extern int got_cached;
+
 static gpointer renderer_thread (gpointer data)
 {
   GeglEDL *edl = data;
@@ -117,11 +119,19 @@ static gpointer renderer_thread (gpointer data)
     {
       if (edl->frame_no != done_frame)
       {
-        GeglRectangle ext = {0, 0, edl->width, edl->height }; //gegl_node_get_bounding_box (edl->result);
         rendering_frame = edl->frame_no;
-        gegl_buffer_set_extent (edl->buffer, &ext);
 
+        {
+          GeglRectangle ext = {0,0,edl->video_width, edl->video_height};
+          gegl_buffer_set_extent (edl->buffer, &ext);
+        }
         rig_frame (edl, edl->frame_no); /* this does the frame-set, which causes render  */
+#if 1
+        {
+          GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
+          gegl_buffer_set_extent (edl->buffer, &ext);
+        }
+#endif
 
         {
           GeglAudioFragment *audio = gedl_get_audio (edl);

@@ -283,6 +283,8 @@ gchar *gedl_get_frame_hash (GeglEDL *edl, int frame)
 
 /*  calling this causes gedl to rig up its graphs for providing/rendering this frame
  */
+int got_cached = 0;
+
 void gedl_set_frame (GeglEDL *edl, int frame)
 {
   GList *l;
@@ -294,13 +296,14 @@ void gedl_set_frame (GeglEDL *edl, int frame)
     fprintf (stderr, "already done!\n");
     return;
   }
+  got_cached = 0;
 
   edl->frame = frame;
 
   char *frame_hash = gedl_get_frame_hash (edl, frame);
   char *cache_path  = g_strdup_printf ("%s.gedl/cache/%s", edl->parent_path, frame_hash);
   g_free (frame_hash);
-  if (!use_proxies &&
+  if (//!use_proxies &&
       g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
       (edl->cache_flags & CACHE_TRY_ALL))
   {
@@ -319,6 +322,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
     gegl_meta_get_audio (cache_path, clip->audio);
     gegl_node_process (edl->store_buf);
     g_free (cache_path);
+    got_cached = 1;
     return;
   }
 
@@ -342,7 +346,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
       gegl_node_set (edl->nop_raw, "operation", "gegl:scale-size-keepaspect",
                                      "y", 0.0, //
                                      "x", 1.0 * edl->width,
-                                     "sampler", GEDL_SAMPLER,
+                                     "sampler", use_proxies?GEDL_SAMPLER:GEGL_SAMPLER_CUBIC,
                                      NULL);
 
       gegl_node_link_many (edl->nop_raw, edl->nop_transformed, NULL);
@@ -1057,7 +1061,7 @@ int gegl_make_thumb_image (GeglEDL *edl, const char *path, const char *icon_path
   GString *str = g_string_new ("");
 
   g_string_assign (str, "");
-  g_string_append_printf (str, "gedl iconographer -p -f 'mid-col 96 audio' %s -a %s",
+  g_string_append_printf (str, "gedl iconographer -p -h -f 'mid-col 96 audio' %s -a %s",
   //g_string_append_printf (str, "iconographer -p -h -f 'thumb 96' %s -a %s",
                           path, icon_path);
   system (str->str);

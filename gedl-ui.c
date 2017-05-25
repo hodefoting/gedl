@@ -617,8 +617,11 @@ static void toggle_use_proxies (MrgEvent *event, void *data1, void *data2)
       gedl_make_proxies (edl);
   }
 
-  mrg_event_stop_propagate (event);
-  mrg_queue_draw (event->mrg, NULL);
+  if (event)
+  {
+    mrg_event_stop_propagate (event);
+    mrg_queue_draw (event->mrg, NULL);
+  }
 }
 
 static void clip_split (Clip *oldclip, int shift)
@@ -1115,7 +1118,11 @@ void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start,
     cairo_surface_t *surface = mrg_image_get_surface (img);
     cairo_matrix_t   matrix;
     cairo_pattern_t *pattern = cairo_pattern_create_for_surface (surface);
-    cairo_matrix_init_scale (&matrix, 1.0, height * 1.0/ VID_HEIGHT);
+
+    //cairo_matrix_init_rotate (&matrix, M_PI / 2); /* compensate for .. */
+    //cairo_matrix_translate (&matrix, 0, -width);  /* vertical format   */
+
+    cairo_matrix_init_scale (&matrix, 1.0, height* 1.0/ VID_HEIGHT);
     cairo_matrix_translate  (&matrix, -(x - clip_start), -y);
     cairo_pattern_set_matrix (pattern, &matrix);
     cairo_pattern_set_filter (pattern, CAIRO_FILTER_NEAREST);
@@ -1157,20 +1164,19 @@ static void shuffle_forward (MrgEvent *event, void *data1, void *data2)
     next = self->next;
     prev = self->prev;
 
-  if (self && next)
-  {
-    GList *nextnext = next->next;
-    if (prev)
-      prev->next = next;
-    next->prev = prev;
-    next->next = self;
-    self->prev = next;
-    self->next = nextnext;
-    if (self->next)
-      self->next->prev = self;
-    edl->frame_no += clip_get_frames (next->data);
-  }
-
+    if (self && next)
+    {
+      GList *nextnext = next->next;
+      if (prev)
+        prev->next = next;
+      next->prev = prev;
+      next->next = self;
+      self->prev = next;
+      self->next = nextnext;
+      if (self->next)
+        self->next->prev = self;
+      edl->frame_no += clip_get_frames (next->data);
+    }
   }
 
   mrg_event_stop_propagate (event);
@@ -1195,19 +1201,19 @@ static void shuffle_back (MrgEvent *event, void *data1, void *data2)
     if (prev)
       prevprev = prev->prev;
 
-  if (self && prev)
-  {
-    if (prevprev)
-      prevprev->next = self;
-    self->prev = prevprev;
-    self->next = prev;
-    prev->prev = self;
-    prev->next = next;
-    if (next)
-      next->prev = prev;
+    if (self && prev)
+    {
+      if (prevprev)
+        prevprev->next = self;
+      self->prev = prevprev;
+      self->next = prev;
+      prev->prev = self;
+      prev->next = next;
+      if (next)
+        next->prev = prev;
 
-    edl->frame_no -= clip_get_frames (prev->data);
-  }
+      edl->frame_no -= clip_get_frames (prev->data);
+    }
   }
 
   mrg_event_stop_propagate (event);
@@ -1240,57 +1246,55 @@ static void slide_forward (MrgEvent *event, void *data1, void *data2)
     next = self->next;
     prev = self->prev;
 
-
-  if (self && next && prev)
-  {
-    Clip *prev_clip = prev->data;
-    Clip *next_clip = next->data;
-    Clip *self_clip = self->data;
-
-    if (are_mergable (prev_clip, next_clip, 0))
+    if (self && next && prev)
     {
-      if (clip_get_frames (next_clip) == 1)
+      Clip *prev_clip = prev->data;
+      Clip *next_clip = next->data;
+      Clip *self_clip = self->data;
+
+      if (are_mergable (prev_clip, next_clip, 0))
       {
-        prev_clip->end++;
-        edl->clips = g_list_remove (edl->clips, next_clip);
-        edl->frame_no ++;
+        if (clip_get_frames (next_clip) == 1)
+        {
+          prev_clip->end++;
+          edl->clips = g_list_remove (edl->clips, next_clip);
+          edl->frame_no ++;
+        }
+        else
+        {
+          prev_clip->end ++;
+          next_clip->start ++;
+          edl->frame_no ++;
+        }
+      } else if (are_mergable (prev_clip, next_clip, clip_get_frames (self_clip)))
+      {
+        if (clip_get_frames (next_clip) == 1)
+        {
+          prev_clip->end++;
+          edl->clips = g_list_remove (edl->clips, next_clip);
+          edl->frame_no ++;
+        }
+        else
+        {
+          prev_clip->end ++;
+          next_clip->start ++;
+          edl->frame_no ++;
+        }
       }
-      else
-      {
-        prev_clip->end ++;
-        next_clip->start ++;
-        edl->frame_no ++;
-      }
-    } else if (are_mergable (prev_clip, next_clip, clip_get_frames (self_clip)))
-    {
-      if (clip_get_frames (next_clip) == 1)
-      {
-        prev_clip->end++;
-        edl->clips = g_list_remove (edl->clips, next_clip);
-        edl->frame_no ++;
-      }
-      else
-      {
-        prev_clip->end ++;
-        next_clip->start ++;
-        edl->frame_no ++;
+      else {
+        if (clip_get_frames (next_clip) == 1)
+        {
+          int frame_no = edl->frame_no + 1;
+          shuffle_forward (event, data1, data2);
+          edl->frame_no = frame_no;
+        } else {
+          int frame_no = edl->frame_no + 1;
+          clip_split (next_clip, next_clip->start + 1);
+          shuffle_forward (event, data1, data2);
+          edl->frame_no = frame_no;
+        }
       }
     }
-    else {
-      if (clip_get_frames (next_clip) == 1)
-      {
-        int frame_no = edl->frame_no + 1;
-        shuffle_forward (event, data1, data2);
-        edl->frame_no = frame_no;
-      } else {
-        int frame_no = edl->frame_no + 1;
-        clip_split (next_clip, next_clip->start + 1);
-        shuffle_forward (event, data1, data2);
-        edl->frame_no = frame_no;
-      }
-    }
-  }
-
   }
 
   mrg_event_stop_propagate (event);
@@ -1378,8 +1382,6 @@ static void slide_back (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
   changed++;
 }
-
-
 
 static void zoom_fit (MrgEvent *event, void *data1, void *data2)
 {
@@ -1843,6 +1845,8 @@ void help_ui (Mrg *mrg, GeglEDL *edl)
   }
 }
 
+gchar *message = NULL;
+
 extern int cache_hits;
 extern int cache_misses;
 
@@ -1857,6 +1861,13 @@ void gedl_ui (Mrg *mrg, void *data)
   cairo_set_source_rgb (mrg_cr (mrg), 0,0,0);
   cairo_paint (mrg_cr (mrg));
 #endif
+
+  if (message)
+  {
+    mrg_set_style (mrg, "font-size: 0.1yh");
+    mrg_printf (mrg, "%s", message);
+    return;
+  }
 
   switch (edl->ui_mode)
   {
@@ -2198,6 +2209,8 @@ int gedl_ui_main (GeglEDL *edl)
 
   gedl_get_duration (edl);
   mrg_set_target_fps (mrg, -1);
+//  gedl_set_use_proxies (edl, 1);
+  toggle_use_proxies (NULL, edl, NULL);
   renderer_start (edl);
   mrg_main (mrg);
   gedl_free (edl);
