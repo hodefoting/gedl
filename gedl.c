@@ -17,6 +17,7 @@
    if topology of graphs match..
  */
 
+
 #include "gedl.h"
 
 void
@@ -629,7 +630,6 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
        {
          gedl_get_video_info (clip->path, &clip->duration, &clip->fps);
 
-         //fprintf (stderr, "probed: %i %f\n", clip->duration, clip->fps);
          if (edl->fps == 0.0)
          {
            gedl_set_fps (edl, clip->fps);
@@ -784,7 +784,7 @@ void gedl_update_video_size (GeglEDL *edl)
 
 static void generate_gedl_dir (GeglEDL *edl)
 {
-  char *tmp = g_strdup_printf ("cd %s; mkdir .gedl 2>/dev/null ; mkdir .gedl/cache 2>/dev/null mkdir .gedl/proxy 2>/dev/null mkdir .gedl/thumb 2>/dev/null mkdir .gedl/video 2>/dev/null; mkdir .gedl/history 2>/dev/null", edl->parent_path);
+  char *tmp = g_strdup_printf ("cd %s; mkdir .gedl 2>/dev/null ; mkdir .gedl/cache 2>/dev/null mkdir .gedl/proxy 2>/dev/null mkdir .gedl/thumb 2>/dev/null ; mkdir .gedl/video 2>/dev/null; mkdir .gedl/history 2>/dev/null", edl->parent_path);
   system (tmp);
   g_free (tmp);
 }
@@ -801,15 +801,39 @@ GeglEDL *gedl_new_from_path (const char *path)
     char *parent = g_strdup (rpath);
     strrchr(parent, '/')[1]='\0';
 
-    if (string)
       edl = gedl_new_from_string (string, parent);
-    else
-      edl = gedl_new_from_string ("", parent);
 
     g_free (parent);
     g_free (string);
     if (!edl->path)
       edl->path = g_strdup (realpath (path, NULL)); // XXX: leak
+  }
+  else
+  {
+    char *parent = NULL;
+    if (path[0] == '/')
+    {
+      parent = strdup (path);
+      strrchr(parent, '/')[1]='\0';
+    }
+    else
+    {
+      parent = g_malloc0 (PATH_MAX);
+      getcwd (parent, PATH_MAX);
+    }
+    edl = gedl_new_from_string ("", parent);
+    if (!edl->path)
+    {
+      if (path[0] == '/')
+      {
+        edl->path = g_strdup (path);
+      }
+      else
+      {
+        edl->path = g_strdup_printf ("%s/%s", parent, basename (path));
+      }
+    }
+    g_free (parent);
   }
   generate_gedl_dir (edl);
 
@@ -1169,7 +1193,6 @@ int main (int argc, char **argv)
       char * path = realpath (edl_path, NULL); 
       char * rpath = g_strdup_printf ("%s.edl", path);
       char * parent = g_strdup (rpath);
-      fprintf (stderr, "[%s]", path);
       strrchr(parent, '/')[1]='\0';
       edl = gedl_new_from_string (str, parent);
       g_free (parent);
