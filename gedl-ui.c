@@ -2136,8 +2136,9 @@ void gedl_ui (Mrg *mrg, void *data)
             GList *start_iter = g_list_find (edl->clips, start_clip);
             GList *end_iter = g_list_find (edl->clips, end_clip);
 
-            if (start_iter->next == end_iter ||
-                start_iter->prev == end_iter)
+            if (start_iter &&
+                (start_iter->next == end_iter ||
+                start_iter->prev == end_iter))
             {
               mrg_add_binding (mrg, "control-left/right", NULL, "move cut", clip_end_start_inc, edl);
               mrg_add_binding (mrg, "control-right", NULL, NULL, clip_end_start_inc, edl);
