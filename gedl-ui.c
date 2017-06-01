@@ -41,7 +41,7 @@ static void mrg_gegl_blit (Mrg *mrg,
     return;
 
   bounds = gegl_node_get_bounding_box (node);
-
+  
   if (width == -1 && height == -1)
   {
     width  = bounds.width;
@@ -1410,6 +1410,9 @@ void gedl_draw (Mrg     *mrg,
   VID_HEIGHT = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.8;
   int scroll_height = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.2;
   t = 0;
+
+  if (duration == 0)
+    return;
 
   cairo_set_source_rgba (cr, 1, 1,1, 1);
 
