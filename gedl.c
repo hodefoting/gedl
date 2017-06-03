@@ -741,7 +741,11 @@ void gedl_save_path (GeglEDL *edl, const char *path)
      g_file_get_contents (path, &old_contents, NULL, NULL);
      if (old_contents)
      {
-       if (!strcmp (old_contents, serialized))
+       char *oc, *s;
+
+       oc = strstr (old_contents, "\n\n");
+       s  = strstr (serialized, "\n\n");
+       if (oc && s && !strcmp (oc, s))
        {
          g_free (old_contents);
          return;
@@ -767,7 +771,7 @@ void gedl_save_path (GeglEDL *edl, const char *path)
 
   if (serialized)
   {
-    fprintf (file, "%s\n", serialized);
+    fprintf (file, "%s", serialized);
     g_free (serialized);
   }
   fclose (file);
