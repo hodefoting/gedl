@@ -48,6 +48,8 @@ gegl_meta_get_audio (const char        *path,
 #define DEFAULT_range_end         0
 #define DEFAULT_framedrop         0
 
+char *gedl_binary_path = NULL;
+
 static char *escaped_base_path (GeglEDL *edl, const char *clip_path)
 {
   char *path0= g_strdup (clip_path);
@@ -789,6 +791,13 @@ static void generate_gedl_dir (GeglEDL *edl)
   g_free (tmp);
 }
 
+void
+gedl_monitor_start (GeglEDL *edl)
+{
+  /* save to know we exist */
+  /* start monitor */
+}
+
 GeglEDL *gedl_new_from_path (const char *path)
 {
   GeglEDL *edl = NULL;
@@ -1085,9 +1094,9 @@ int gegl_make_thumb_image (GeglEDL *edl, const char *path, const char *icon_path
   GString *str = g_string_new ("");
 
   g_string_assign (str, "");
-  g_string_append_printf (str, "gedl iconographer -p -h -f 'mid-col 96 audio' %s -a %s",
+  g_string_append_printf (str, "%s iconographer -p -h -f 'mid-col 96 audio' %s -a %s",
   //g_string_append_printf (str, "iconographer -p -h -f 'thumb 96' %s -a %s",
-                          path, icon_path);
+                          gedl_binary_path, path, icon_path);
   system (str->str);
 
   g_string_free (str, TRUE);
@@ -1147,6 +1156,7 @@ gint iconographer_main (gint    argc, gchar **argv);
 int main (int argc, char **argv)
 {
   int tot_frames;
+  gedl_binary_path = realpath (argv[0], NULL);
 
   if (argv[1] && !strcmp (argv[1], "iconographer"))
   {
@@ -1238,10 +1248,12 @@ int main (int argc, char **argv)
 
     switch (runmode)
     {
-      case RUNMODE_UI: 
+      case RUNMODE_UI:
 
         signal(SIGUSR2, nop_handler);
-  //if (edl->use_proxies)
+
+        gedl_monitor_start (edl);
+
         return gedl_ui_main (edl);
       case RUNMODE_RENDER:
         tot_frames  = gedl_get_duration (edl);

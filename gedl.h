@@ -237,5 +237,6 @@ void gedl_get_video_info (const char *path, int *duration, double *fps);
 
 #define SPLIT_VER  0.8
 
+extern char *gedl_binary_path;
 
 #endif

@@ -2183,7 +2183,9 @@ gboolean cache_renderer_iteration (Mrg *mrg, gpointer data)
       killpg(0, SIGUSR2); // this will cause previous set of renderers to quite after current frame
       for (i = 0; i < render_slaves; i ++)
       {
-        char *cmd = g_strdup_printf ("gedl %s cache %i %i&", edl->path, i, render_slaves);
+        char *cmd = g_strdup_printf ("%s %s cache %i %i&",
+                                     gedl_binary_path,
+                                     edl->path, i, render_slaves);
         save_edl (edl);
         system (cmd);
         g_free (cmd);
