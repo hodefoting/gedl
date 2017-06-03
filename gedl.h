@@ -7,8 +7,9 @@ bugs
   huge video files cause thumtrack overflow, vertical instead of horizontal
   might not have same scanline problem.
   clipped left most clip cannot be scrubbed
-  gegl ff-load / ff-save
-    round all audio-frame counts up to a fixed amount, use correct start .. and drop frames when assembling
+  audio glitches, gegl ff-load / ff-save should perhaps round all audio-frame
+    counts up to a fixed amount, use correct start .. and drop frames when
+    assembling
 
 features
   rewrite gedl-ui.c in lua
@@ -37,6 +38,8 @@ refactor
 
 #ifndef GEDL_H
 #define GEDL_H
+
+#include <gio/gio.h>
 
 typedef struct _GeglEDL GeglEDL;
 typedef struct _Clip    Clip;
@@ -156,6 +159,7 @@ typedef struct SourceVid
 
 struct _GeglEDL
 {
+  GFileMonitor *monitor;
   char       *path;
   char       *parent_path;
   GList      *clip_db;

@@ -17,7 +17,6 @@
    if topology of graphs match..
  */
 
-
 #include "gedl.h"
 
 void
@@ -731,11 +730,25 @@ GeglEDL *gedl_new_from_string (const char *string, const char *parent_path)
 void gedl_save_path (GeglEDL *edl, const char *path)
 {
   char *serialized;
+  serialized = gedl_serialise (edl);
 
   if (g_file_test (path, G_FILE_TEST_IS_REGULAR))
   {
      char backup_path[4096];
      struct tm *tim;
+     char *old_contents = NULL;
+
+     g_file_get_contents (path, &old_contents, NULL, NULL);
+     if (old_contents)
+     {
+       if (!strcmp (old_contents, serialized))
+       {
+         g_free (old_contents);
+         return;
+       }
+       g_free (old_contents);
+     }
+
      sprintf (backup_path, "%s.gedl/history/%s-", edl->parent_path, basename(edl->path));
 
      time_t now = time(NULL);
@@ -747,9 +760,11 @@ void gedl_save_path (GeglEDL *edl, const char *path)
 
   FILE *file = fopen (path, "w");
   if (!file)
+  {
+    g_free (serialized);
     return;
+  }
 
-  serialized = gedl_serialise (edl);
   if (serialized)
   {
     fprintf (file, "%s\n", serialized);
@@ -791,11 +806,118 @@ static void generate_gedl_dir (GeglEDL *edl)
   g_free (tmp);
 }
 
+static void file_changed (GFileMonitor     *monitor,
+                          GFile            *file,
+                          GFile            *other_file,
+                          GFileMonitorEvent event_type,
+                          gchar            *commandline)
+{
+
+  switch (event_type)
+    {
+#if 0
+      case G_FILE_MONITOR_EVENT_DELETED:
+        {
+          GFileInfo *info;
+
+          info = g_file_query_info (file, "standard::*", 0, NULL, NULL);
+          if (!info)
+            return;
+
+          /* deletion of regular files happens when writing changes
+           * from a text editor
+           */
+          if (g_file_info_get_file_type (info) == G_FILE_TYPE_REGULAR)
+            return;
+          g_object_unref (info);
+        }
+#endif
+      case G_FILE_MONITOR_EVENT_CREATED:
+	fprintf (stderr, "!! created\n");
+#if 0
+        if (monitor_creation)
+          {
+            GString *cmd = g_string_new ("");
+            gchar *p;
+            gchar *path = g_file_get_path (file);
+
+            for (p=commandline; *p;p++)
+              {
+                if (*p == '%')
+                  {
+                    if (p[1] == '%')
+                      {
+                        g_string_append_c (cmd, '%');
+                        p++;
+                      }
+                    else
+                      g_string_append (cmd, path);
+                  }
+                else
+                 g_string_append_c (cmd, *p);
+              }
+
+            if (verbose > 2)
+              g_print ("running %s\n", cmd->str);
+            system (cmd->str);
+            g_string_free (cmd, TRUE);
+            g_free (path);
+          }
+#endif
+        break;
+      case G_FILE_MONITOR_EVENT_ATTRIBUTE_CHANGED:
+      case G_FILE_MONITOR_EVENT_CHANGED:
+	fprintf (stderr, "change !!!!\n");
+#if 0
+        {
+          if (!monitor_creation && !timeout_id)
+            {
+              gdouble elapsed = g_timer_elapsed (timer, NULL);
+              gdouble wait;
+             
+              if (first)
+                {
+                  first = FALSE;
+                  wait = 0.0;
+                }
+              else
+                {
+                  wait = throttle - elapsed;
+                }
+
+              if (verbose)
+                {
+                  gchar *uri = g_file_get_uri (file);
+                  g_print ("%s\n", uri);
+                }
+
+              if (wait <= 0.0)
+                wait = 0.0;
+              else if (verbose > 1)
+                g_print ("waiting %f seconds\n", wait);
+
+              timeout_id = g_timeout_add (wait * 1000, timeout, commandline);
+            }
+          }
+#endif
+      default:
+        break;
+    }
+}
+
+
 void
 gedl_monitor_start (GeglEDL *edl)
 {
+  if (!edl->path)
+    return;
+  gedl_save_path (edl, edl->path);
   /* save to know we exist */
   /* start monitor */
+  edl->monitor = g_file_monitor_file (g_file_new_for_path (edl->path),
+                                      G_FILE_MONITOR_NONE,
+                                      NULL, NULL);
+  g_signal_connect (edl->monitor, "changed", G_CALLBACK (file_changed), edl);
 }
 
 GeglEDL *gedl_new_from_path (const char *path)
