@@ -857,62 +857,8 @@ static void file_changed (GFileMonitor     *monitor,
                           GFileMonitorEvent event_type,
                           GeglEDL          *edl)
 {
-
-  switch (event_type)
+  if (event_type == G_FILE_MONITOR_EVENT_CHANGED)
     {
-#if 0
-      case G_FILE_MONITOR_EVENT_DELETED:
-        {
-          GFileInfo *info;
-
-          info = g_file_query_info (file, "standard::*", 0, NULL, NULL);
-          if (!info)
-            return;
-
-          /* deletion of regular files happens when writing changes
-           * from a text editor
-           */
-          if (g_file_info_get_file_type (info) == G_FILE_TYPE_REGULAR)
-            return;
-          g_object_unref (info);
-        }
-#endif
-      case G_FILE_MONITOR_EVENT_CREATED:
-	fprintf (stderr, "!! created\n");
-#if 0
-        if (monitor_creation)
-          {
-            GString *cmd = g_string_new ("");
-            gchar *p;
-            gchar *path = g_file_get_path (file);
-
-            for (p=commandline; *p;p++)
-              {
-                if (*p == '%')
-                  {
-                    if (p[1] == '%')
-                      {
-                        g_string_append_c (cmd, '%');
-                        p++;
-                      }
-                    else
-                      g_string_append (cmd, path);
-                  }
-                else
-                 g_string_append_c (cmd, *p);
-              }
-
-            if (verbose > 2)
-              g_print ("running %s\n", cmd->str);
-            system (cmd->str);
-            g_string_free (cmd, TRUE);
-            g_free (path);
-          }
-#endif
-        break;
-      case G_FILE_MONITOR_EVENT_ATTRIBUTE_CHANGED:
-      case G_FILE_MONITOR_EVENT_CHANGED:
-        {
           if (!timeout_id)
             {
               gdouble elapsed = g_timer_elapsed (timer, NULL);
@@ -923,12 +869,8 @@ static void file_changed (GFileMonitor     *monitor,
 
               timeout_id = g_timeout_add (wait * 1000, timeout, edl);
             }
-          }
-      default:
-        break;
     }
 }
-
 
 void
 gedl_monitor_start (GeglEDL *edl)
