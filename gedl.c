@@ -305,8 +305,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
   char *frame_hash = gedl_get_frame_hash (edl, frame);
   char *cache_path  = g_strdup_printf ("%s.gedl/cache/%s", edl->parent_path, frame_hash);
   g_free (frame_hash);
-  if (//!use_proxies &&
-      g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
+  if (g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
       (edl->cache_flags & CACHE_TRY_ALL))
   {
     Clip *clip = NULL;
@@ -371,8 +370,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
 
       g_mutex_lock (&clip->mutex);
 
-      if ((clip_is_static_source (clip) && clip->buffer == NULL) ||
-                       !clip_is_static_source (clip))
+      if (!clip_is_static_source (clip) || clip->buffer == NULL)
         gegl_node_process (clip->store_buf);
       gegl_node_set (edl->load_buf, "buffer", clip->buffer, NULL);
       gegl_node_process (edl->store_buf);
