@@ -257,13 +257,14 @@ gchar *gedl_get_frame_hash (GeglEDL *edl, int frame)
     {
       gchar *frame_recipe;
       GChecksum *hash;
+      int is_static_source = clip_is_static_source (clip);
 
       int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
 
       frame_recipe = g_strdup_printf ("%s: %s %i %s %ix%i",
           "gedl-pre-4",
           clip_get_path (clip),
-          clip_frame_no,
+          clip->filter_graph || (!is_static_source) ? clip_frame_no : 0,
           clip->filter_graph,
           edl->video_width,
           edl->video_height);
