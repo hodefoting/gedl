@@ -810,11 +810,52 @@ static void generate_gedl_dir (GeglEDL *edl)
   g_free (tmp);
 }
 
+static GTimer *  timer            = NULL;
+static guint     timeout_id       = 0;
+static gdouble   throttle         = 4.0;
+
+void gedl_reread (GeglEDL *edl)
+{
+  GeglEDL *new_edl = gedl_new_from_path (edl->path);
+  GList *l;
+
+  /* swap clips */
+  l = edl->clips;
+  edl->clips = new_edl->clips;
+  new_edl->clips = l;
+  edl->active_clip = NULL; // XXX: better to resolve?
+
+  for (l = edl->clips; l; l = l->next)
+  {
+    Clip *clip = l->data;
+    clip->edl = edl;
+  }
+
+  for (l = new_edl->clips; l; l = l->next)
+  {
+    Clip *clip = l->data;
+    clip->edl = new_edl;
+  }
+
+  gedl_free (new_edl);
+}
+
+static gboolean timeout (gpointer user_data)
+{
+  GeglEDL *edl = user_data;
+  gedl_reread (edl);
+  // system (user_data);
+  g_timer_start (timer);
+  timeout_id = 0;
+  return FALSE;
+}
+
+
 static void file_changed (GFileMonitor     *monitor,
                           GFile            *file,
                           GFile            *other_file,
                           GFileMonitorEvent event_type,
-                          gchar            *commandline)
+                          GeglEDL          *edl)
 {
 
   switch (event_type)
@@ -871,39 +912,18 @@ static void file_changed (GFileMonitor     *monitor,
         break;
       case G_FILE_MONITOR_EVENT_ATTRIBUTE_CHANGED:
       case G_FILE_MONITOR_EVENT_CHANGED:
-	fprintf (stderr, "change !!!!\n");
-#if 0
         {
-          if (!monitor_creation && !timeout_id)
+          if (!timeout_id)
             {
               gdouble elapsed = g_timer_elapsed (timer, NULL);
-              gdouble wait;
-             
-              if (first)
-                {
-                  first = FALSE;
-                  wait = 0.0;
-                }
-              else
-                {
-                  wait = throttle - elapsed;
-                }
-
-              if (verbose)
-                {
-                  gchar *uri = g_file_get_uri (file);
-                  g_print ("%s\n", uri);
-                }
+              gdouble wait    = throttle - elapsed;
 
               if (wait <= 0.0)
                 wait = 0.0;
-              else if (verbose > 1)
-                g_print ("waiting %f seconds\n", wait);
 
-              timeout_id = g_timeout_add (wait * 1000, timeout, commandline);
+              timeout_id = g_timeout_add (wait * 1000, timeout, edl);
             }
           }
-#endif
       default:
         break;
     }
@@ -918,6 +938,7 @@ gedl_monitor_start (GeglEDL *edl)
   gedl_save_path (edl, edl->path);
   /* save to know we exist */
   /* start monitor */
+  timer = g_timer_new ();
   edl->monitor = g_file_monitor_file (g_file_new_for_path (edl->path),
                                       G_FILE_MONITOR_NONE,
                                       NULL, NULL);
@@ -1470,7 +1491,7 @@ char *gedl_serialise (GeglEDL *edl)
       path += strlen (edl->parent_path);
     g_string_append_printf (ser, "%s %d %d%s%s%s%s%s\n", path, clip->start, clip->end,
         clip->fade_out?" [fade]":"",
-        (edl->active_clip == clip)?" [active]":"",
+        "", //(edl->active_clip == clip)?" [active]":"",
         clip->filter_graph?" -- ":"",clip->filter_graph?clip->filter_graph:"",
         clip->filter_graph?"\n":"\n");
   }
@@ -1479,7 +1500,7 @@ char *gedl_serialise (GeglEDL *edl)
   {
     SourceClip *clip = l->data;
     g_string_append_printf (ser, "%s %d %d %d%s%s%s\n", clip->path, clip->start, clip->end, clip->duration,
-        (edl->active_source == clip)?" [active]":"",
+        "", //(edl->active_source == clip)?" [active]":"",
         clip->title?" -- ":"",clip->title?clip->title:"");
   }
   ret=ser->str;
