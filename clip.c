@@ -46,9 +46,9 @@ void clip_set_path (Clip *clip, const char *in_path)
   else
   {
     if (clip->edl->parent_path)
-    path = g_strdup_printf ("%s%s", clip->edl->parent_path, in_path);
+      path = g_strdup_printf ("%s%s", clip->edl->parent_path, in_path);
     else
-    path = g_strdup_printf ("%s", in_path);
+      path = g_strdup_printf ("%s", in_path);
   }
 
   if (clip->path && !strcmp (clip->path, path))
@@ -61,15 +61,22 @@ void clip_set_path (Clip *clip, const char *in_path)
     g_free (clip->path);
   clip->path = path;
 
-  if (strstr (path, "jpg") ||
-      strstr (path, "png"))
-  {
-    g_object_set (clip->loader, "operation", "gegl:load", NULL);
-  }
+
+  if (g_str_has_suffix (path, ".png") ||
+      g_str_has_suffix (path, ".jpg") ||
+      g_str_has_suffix (path, ".exr") ||
+      g_str_has_suffix (path, ".EXR") ||
+      g_str_has_suffix (path, ".PNG") ||
+      g_str_has_suffix (path, ".JPG"))
+   {
+     g_object_set (clip->loader, "operation", "gegl:load", NULL);
+     clip->static_source = 1;
+   }
   else
-  {
-    g_object_set (clip->loader, "operation", "gegl:ff-load", NULL);
-  }
+   {
+     g_object_set (clip->loader, "operation", "gegl:ff-load", NULL);
+     clip->static_source = 0;
+   }
 }
 int clip_get_start (Clip *clip)
 {
@@ -153,7 +160,7 @@ void clip_set_frame_no (Clip *clip, int frame_no)
 
   clip_set_proxied (clip);
 
-  if (!clip->is_image)
+  if (!clip_is_static_source (clip))
     {
       if (clip->edl->use_proxies)
         gegl_node_set (clip->proxy_loader, "frame", clip->clip_frame_no, NULL);
@@ -163,19 +170,7 @@ void clip_set_frame_no (Clip *clip, int frame_no)
 }
 
 
-Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame)
+int    clip_is_static_source  (Clip *clip)
 {
-  GList *l;
-  int t = 0;
-  for (l = edl->clips; l; l = l->next)
-  {
-    Clip *clip = l->data;
-    if (frame >= t && frame < t + clip_get_frames (clip))
-    {
-      return clip;
-    }
-    t += clip_get_frames (clip);
-  }
-  return NULL;
+  return clip->static_source;
 }
-

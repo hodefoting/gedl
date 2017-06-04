@@ -370,8 +370,8 @@ void gedl_set_frame (GeglEDL *edl, int frame)
 
       g_mutex_lock (&clip->mutex);
 
-      if ((clip->is_image && clip->buffer == NULL) ||
-                       !clip->is_image)
+      if ((clip_is_static_source (clip) && clip->buffer == NULL) ||
+                       !clip_is_static_source (clip))
         gegl_node_process (clip->store_buf);
       gegl_node_set (edl->load_buf, "buffer", clip->buffer, NULL);
       gegl_node_process (edl->store_buf);
@@ -382,7 +382,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
           clip->audio = NULL;
         }
 
-      if (clip->is_image)
+      if (clip_is_static_source (clip))
         clip->audio = NULL;
       else
         {
@@ -578,25 +578,12 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
       Clip *clip = NULL;
       int ff_probe = 0;
 
-      if (g_str_has_suffix (path, ".png") ||
-          g_str_has_suffix (path, ".jpg") ||
-          g_str_has_suffix (path, ".exr") ||
-          g_str_has_suffix (path, ".EXR") ||
-          g_str_has_suffix (path, ".PNG") ||
-          g_str_has_suffix (path, ".JPG"))
-       {
-         clip = clip_new_full (edl, path, start, end);
-         clip->is_image = 1;
-         edl->clips = g_list_append (edl->clips, clip);
-       }
-      else
-       {
-         if ((start == 0 && end == 0))
-           ff_probe = 1;
 
-         clip = clip_new_full (edl, path, start, end);
-         edl->clips = g_list_append (edl->clips, clip);
-       }
+     clip = clip_new_full (edl, path, start, end);
+     if (!clip_is_static_source (clip) &&
+         (start == 0 && end == 0))
+       ff_probe = 1;
+     edl->clips = g_list_append (edl->clips, clip);
      if (strstr (line, "[fade]"))
        {
          clip->fade_out = TRUE;
@@ -626,7 +613,7 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
        ff_probe = 1;
      }
 
-     if (ff_probe && !clip->is_image)
+     if (ff_probe && !clip_is_static_source (clip))
        {
          gedl_get_video_info (clip->path, &clip->duration, &clip->fps);
 
@@ -1587,3 +1574,19 @@ void gedl_get_range (GeglEDL *edl,
     *end_frame = edl->range_end;
 }
 
+
+Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame)
+{
+  GList *l;
+  int t = 0;
+  for (l = edl->clips; l; l = l->next)
+  {
+    Clip *clip = l->data;
+    if (frame >= t && frame < t + clip_get_frames (clip))
+    {
+      return clip;
+    }
+    t += clip_get_frames (clip);
+  }
+  return NULL;
+}

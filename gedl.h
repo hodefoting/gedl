@@ -113,6 +113,7 @@ void   clip_set_path          (Clip *clip, const char *path);
 int    clip_get_start         (Clip *clip);
 int    clip_get_end           (Clip *clip);
 int    clip_get_frames        (Clip *clip);
+int    clip_is_static_source  (Clip *clip);
 void   clip_set_start         (Clip *clip, int start);
 void   clip_set_end           (Clip *clip, int end);
 void   clip_set_range         (Clip *clip, int start, int end);
@@ -157,7 +158,7 @@ struct _Clip
   int    fade_in;  /* implied by previous clip fading */
   int    fade_pad_start;
   int    fade_pad_end;
-  int    is_image;
+  int    static_source;
 
   int    abs_start;
 
