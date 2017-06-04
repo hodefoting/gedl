@@ -377,18 +377,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
       gegl_node_set (edl->load_buf, "buffer", clip->buffer, NULL);
       gegl_node_process (edl->store_buf);
 
-      if (clip->audio)
-        {
-          g_object_unref (clip->audio);
-          clip->audio = NULL;
-        }
-
-      if (clip_is_static_source (clip))
-        clip->audio = NULL;
-      else
-        {
-          clip_fetch_audio (clip);
-        }
+     clip_fetch_audio (clip);
 
       /* write cached render of this frame */
       if (!strstr (clip->path, ".gedl/cache") && (!use_proxies))

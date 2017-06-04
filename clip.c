@@ -177,9 +177,21 @@ int clip_is_static_source (Clip *clip)
 void clip_fetch_audio (Clip *clip)
 {
   int use_proxies = clip->edl->use_proxies;
-  if (use_proxies)
-    gegl_node_get (clip->proxy_loader, "audio", &clip->audio, NULL);
+
+  if (clip->audio)
+    {
+      g_object_unref (clip->audio);
+      clip->audio = NULL;
+    }
+
+  if (clip_is_static_source (clip))
+    clip->audio = NULL;
   else
-    gegl_node_get (clip->loader, "audio", &clip->audio, NULL);
+    {
+      if (use_proxies)
+        gegl_node_get (clip->proxy_loader, "audio", &clip->audio, NULL);
+      else
+        gegl_node_get (clip->loader, "audio", &clip->audio, NULL);
+    }
 }
 
