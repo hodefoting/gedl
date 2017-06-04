@@ -13,6 +13,11 @@ bugs
 
 features
   rewrite gedl-ui.c in lua
+  add support for other frame sources.
+     image
+     video
+     op-chain - or is it enough to permit opchain on empty source?
+
   annotations
   trimming by mouse / dragging clips around by mouse
   implement overlaying of wav / mp3 files
@@ -100,6 +105,27 @@ void        gedl_get_selection      (GeglEDL    *edl,
 char       *gedl_make_thumb_path    (GeglEDL    *edl, const char *clip_path);
 guchar *gedl_get_cache_bitmap (GeglEDL *edl, int *length_ret);
 void rig_frame (GeglEDL *edl, int frame_no);
+
+Clip  *clip_new               (GeglEDL *edl);
+void   clip_free              (Clip *clip);
+const char *clip_get_path     (Clip *clip);
+void   clip_set_path          (Clip *clip, const char *path);
+int    clip_get_start         (Clip *clip);
+int    clip_get_end           (Clip *clip);
+int    clip_get_frames        (Clip *clip);
+void   clip_set_start         (Clip *clip, int start);
+void   clip_set_end           (Clip *clip, int end);
+void   clip_set_range         (Clip *clip, int start, int end);
+void   clip_set_full          (Clip *clip, const char *path, int start, int end);
+Clip  *clip_new_full          (GeglEDL *edl, const char *path, int start, int end);
+void   clip_set_frame_no      (Clip *clip, int frame_no);
+Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame);
+void   gedl_make_proxies      (GeglEDL *edl);
+void gedl_get_video_info (const char *path, int *duration, double *fps);
+
+#define SPLIT_VER  0.8
+
+extern char *gedl_binary_path;
 
 /*********/
 
@@ -222,25 +248,5 @@ struct _GeglEDL
 
 } _GeglEDL;
 
-Clip  *clip_new               (GeglEDL *edl);
-void   clip_free              (Clip *clip);
-const char *clip_get_path     (Clip *clip);
-void   clip_set_path          (Clip *clip, const char *path);
-int    clip_get_start         (Clip *clip);
-int    clip_get_end           (Clip *clip);
-int    clip_get_frames        (Clip *clip);
-void   clip_set_start         (Clip *clip, int start);
-void   clip_set_end           (Clip *clip, int end);
-void   clip_set_range         (Clip *clip, int start, int end);
-void   clip_set_full          (Clip *clip, const char *path, int start, int end);
-Clip  *clip_new_full          (GeglEDL *edl, const char *path, int start, int end);
-void   clip_set_frame_no      (Clip *clip, int frame_no);
-Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame);
-void   gedl_make_proxies      (GeglEDL *edl);
-void gedl_get_video_info (const char *path, int *duration, double *fps);
-
-#define SPLIT_VER  0.8
-
-extern char *gedl_binary_path;
 
 #endif
