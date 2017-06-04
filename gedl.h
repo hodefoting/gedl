@@ -117,6 +117,7 @@ int    clip_is_static_source  (Clip *clip);
 void   clip_set_start         (Clip *clip, int start);
 void   clip_set_end           (Clip *clip, int end);
 void   clip_set_range         (Clip *clip, int start, int end);
+void   clip_fetch_audio       (Clip *clip);
 void   clip_set_full          (Clip *clip, const char *path, int start, int end);
 Clip  *clip_new_full          (GeglEDL *edl, const char *path, int start, int end);
 void   clip_set_frame_no      (Clip *clip, int frame_no);

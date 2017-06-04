@@ -387,10 +387,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
         clip->audio = NULL;
       else
         {
-          if (use_proxies)
-            gegl_node_get (clip->proxy_loader, "audio", &clip->audio, NULL);
-          else
-            gegl_node_get (clip->loader, "audio", &clip->audio, NULL);
+          clip_fetch_audio (clip);
         }
 
       /* write cached render of this frame */

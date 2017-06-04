@@ -169,8 +169,17 @@ void clip_set_frame_no (Clip *clip, int frame_no)
     }
 }
 
-
-int    clip_is_static_source  (Clip *clip)
+int clip_is_static_source (Clip *clip)
 {
   return clip->static_source;
 }
+
+void clip_fetch_audio (Clip *clip)
+{
+  int use_proxies = clip->edl->use_proxies;
+  if (use_proxies)
+    gegl_node_get (clip->proxy_loader, "audio", &clip->audio, NULL);
+  else
+    gegl_node_get (clip->loader, "audio", &clip->audio, NULL);
+}
+
