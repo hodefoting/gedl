@@ -20,7 +20,7 @@ features
 
   annotations
   trimming by mouse / dragging clips around by mouse
-  implement overlaying of wav / mp3 files
+  implement overlaying of audio from wav / mp3 files
   re-enable cross-fades for video and audio
   templates - for both clips and filters - filters that can be chained
   create thumbnails as well as thumbtracks for clips
@@ -37,7 +37,7 @@ features
 
 refactor
    make each clip not have a loader but have a pool of loaders, that can be pre-seeded with right paths for upcoming clips during playback
-   make active_clip not be shared between renderer and ui
+   make active_clip not be shared between renderer and ui, perhaps not even serialize it?
 
 #endif
 

@@ -187,7 +187,6 @@ void remove_in_betweens (GeglNode *nop_raw, GeglNode *nop_transformed)
 
 /* XXX: oops global state */
 
-const char *edl_path = "input.edl";
 
 #if 1
 GeglEDL *edl;
@@ -877,8 +876,8 @@ gedl_monitor_start (GeglEDL *edl)
 {
   if (!edl->path)
     return;
+  /* save to make sure file exists */
   gedl_save_path (edl, edl->path);
-  /* save to know we exist */
   /* start monitor */
   timer = g_timer_new ();
   edl->monitor = g_file_monitor_file (g_file_new_for_path (edl->path),
@@ -1244,7 +1243,9 @@ gint iconographer_main (gint    argc, gchar **argv);
 
 int main (int argc, char **argv)
 {
+  const char *edl_path = "input.edl";
   int tot_frames;
+
   gedl_binary_path = realpath (argv[0], NULL);
 
   if (argv[1] && !strcmp (argv[1], "iconographer"))
