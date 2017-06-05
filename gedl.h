@@ -17,6 +17,9 @@ features
      image
      video
      op-chain - or is it enough to permit opchain on empty source?
+     edl
+
+  separate filters from clips,.. permitting different chains to apply over many clips
 
   annotations
   trimming by mouse / dragging clips around by mouse
@@ -225,7 +228,7 @@ struct _GeglEDL
   GeglNode   *nop_raw;
   GeglNode   *nop_transformed;
   GeglNode   *load_buf;
-  GeglNode   *result, *encode, *crop, *scale_size, *opacity;
+  GeglNode   *result, *encode, *crop, *opacity;
   GeglNode   *store_buf;
   GeglNode   *source_store_buf;
   GeglNode   *cached_result;

@@ -936,7 +936,6 @@ static void setup (GeglEDL *edl)
 
   edl->nop_transformed  = gegl_node_new_child (edl->gegl, "operation", "gegl:nop", NULL);
   edl->opacity          = gegl_node_new_child (edl->gegl, "operation", "gegl:opacity", NULL);
-  edl->scale_size       = gegl_node_new_child (edl->gegl, "operation", "gegl:nop", NULL);
   /*"operation", "gegl:scale-size-keepaspect",
                                           "y", 0.0, //
                                           "x", 1.0 * edl->width, NULL);*/
@@ -954,7 +953,7 @@ static void setup (GeglEDL *edl)
   edl->source_store_buf = gegl_node_new_child (edl->gegl, "operation", "gegl:write-buffer", "buffer", edl->buffer, NULL);
 
   gegl_node_link_many (edl->result, edl->encode, NULL);
-  gegl_node_link_many (edl->load_buf, edl->scale_size, edl->nop_raw, edl->nop_transformed, edl->crop, NULL);
+  gegl_node_link_many (edl->load_buf, edl->nop_raw, edl->nop_transformed, edl->crop, NULL);
   gegl_node_connect_to (edl->result, "output", edl->store_buf, "input");
   gegl_node_connect_to (edl->nop_raw, "output", edl->nop_transformed, "input");
   gegl_node_connect_to (edl->crop, "output", edl->result, "input");
