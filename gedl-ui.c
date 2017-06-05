@@ -1951,18 +1951,9 @@ void gedl_ui (Mrg *mrg, void *data)
       char *basename = g_path_get_basename (edl->active_clip->path);
       mrg_printf (mrg, "| %s %i-%i %i  ", basename,
                   edl->active_clip->start, edl->active_clip->end,
-                  gedl_get_clip_frame_no (edl)
+                  0//gedl_get_clip_frame_no (edl)
                  );
       g_free (basename);
-
-#if 0
-      if(0)  mrg_printf (mrg, "%s %s %i %s %s %i %s %ix%i %f",
-          "gedl-pre-3", gedl_get_clip_path (edl), gedl_get_clip_frame_no (edl), edl->clip?edl->clip->filter_graph:"-",
-                        //gedl_get_clip2_path (edl), gedl_get_clip2_frame_no (edl), clip2->filter_graph,
-                        "aaa", 3, "bbb",
-                        edl->video_width, edl->video_height, 
-                        0.0/*edl->mix*/);
-#endif
 
 #if 0
       if (edl->active_clip->filter_graph)

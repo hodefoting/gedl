@@ -151,21 +151,19 @@ static void clip_set_proxied (Clip *clip)
     }
 }
 
-void clip_set_frame_no (Clip *clip, int frame_no)
+void clip_set_frame_no (Clip *clip, int clip_frame_no)
 {
-  clip->clip_frame_no = frame_no;
-
-  if (clip->clip_frame_no < 0)
-    clip->clip_frame_no = 0;
+  if (clip_frame_no < 0)
+    clip_frame_no = 0;
 
   clip_set_proxied (clip);
 
   if (!clip_is_static_source (clip))
     {
       if (clip->edl->use_proxies)
-        gegl_node_set (clip->proxy_loader, "frame", clip->clip_frame_no, NULL);
+        gegl_node_set (clip->proxy_loader, "frame", clip_frame_no, NULL);
       else
-        gegl_node_set (clip->loader, "frame", clip->clip_frame_no, NULL);
+        gegl_node_set (clip->loader, "frame", clip_frame_no, NULL);
     }
 }
 

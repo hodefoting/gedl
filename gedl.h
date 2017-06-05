@@ -89,8 +89,6 @@ GeglBuffer *gedl_get_buffer         (GeglEDL    *edl);
 void        gedl_set_frame          (GeglEDL    *edl, int frame);
 void        gedl_set_time           (GeglEDL    *edl, double seconds);
 int         gedl_get_frame          (GeglEDL    *edl);
-const char *gedl_get_clip_path      (GeglEDL    *edl);
-int         gedl_get_clip_frame_no  (GeglEDL    *edl);
 char       *gedl_serialise          (GeglEDL    *edl);
 
 void        gedl_set_range          (GeglEDL    *edl, int start_frame, int end_frame);
@@ -165,7 +163,6 @@ struct _Clip
 
   const char        *clip_path;
   GeglNode          *gegl;
-  int                clip_frame_no;
   GeglBuffer        *buffer;
   GeglAudioFragment *audio;
   GeglNode          *loader;

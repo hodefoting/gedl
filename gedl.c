@@ -332,8 +332,6 @@ void gedl_set_frame (GeglEDL *edl, int frame)
     Clip *clip = l->data;
     int clip_frames = clip_get_frames (clip);
 
-    clip->clip_frame_no = 0;
-
     clip->abs_start = clip_start;
 
     if (frame - clip_start < clip_frames)
@@ -367,14 +365,12 @@ void gedl_set_frame (GeglEDL *edl, int frame)
       clip_set_frame_no (clip, clip_frame_no);
       gegl_node_connect_to (edl->crop, "output", edl->result, "input");
 
-
       if (!clip_is_static_source (clip) || clip->buffer == NULL)
         gegl_node_process (clip->store_buf);
       gegl_node_set (edl->load_buf, "buffer", clip->buffer, NULL);
       gegl_node_process (edl->store_buf);
 
       clip_fetch_audio (clip);
-
 
       /* write cached render of this frame for this clip */
       if (!strstr (clip->path, ".gedl/cache") && (!use_proxies))
@@ -448,11 +444,6 @@ const char *gedl_get_clip_path (GeglEDL *edl)
 {
   Clip * clip = edl_get_clip_for_frame (edl, edl->frame);
   return clip?clip->clip_path:"";
-}
-int gedl_get_clip_frame_no    (GeglEDL *edl)
-{
-  Clip * clip = edl_get_clip_for_frame (edl, edl->frame);
-  return clip?clip->clip_frame_no:0;
 }
 
 void gedl_get_video_info (const char *path, int *duration, double *fps)
