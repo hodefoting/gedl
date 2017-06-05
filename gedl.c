@@ -283,60 +283,10 @@ gchar *gedl_get_frame_hash (GeglEDL *edl, int frame)
   return NULL;
 }
 
-/*  calling this causes gedl to rig up its graphs for providing/rendering this frame
- */
-int got_cached = 0;
-
-void gedl_set_frame (GeglEDL *edl, int frame)
+void clip_render_frame (Clip *clip, int clip_frame_no, const char *cache_path)
 {
-  GList *l;
-  int clip_start = 0;
-  int use_proxies = edl->use_proxies;
-
-  if ((edl->frame) == frame && (frame != 0))
-  {
-    fprintf (stderr, "already done!\n");
-    return;
-  }
-  got_cached = 0;
-
-  edl->frame = frame;
-
-  char *frame_hash = gedl_get_frame_hash (edl, frame);
-  char *cache_path  = g_strdup_printf ("%s.gedl/cache/%s", edl->parent_path, frame_hash);
-  g_free (frame_hash);
-  if (g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
-      (edl->cache_flags & CACHE_TRY_ALL))
-  {
-    Clip *clip = NULL;
-    gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
-    gegl_node_link_many (edl->cache_loader, edl->result, NULL);
-    while (!clip)
-      clip = edl_get_clip_for_frame (edl, edl->frame);
-    if (clip->audio)
-      {
-        g_object_unref (clip->audio);
-        clip->audio = NULL;
-      }
-    if (!clip->audio)
-      clip->audio = gegl_audio_fragment_new (44100, 2, 0, 44100);
-    gegl_meta_get_audio (cache_path, clip->audio);
-    gegl_node_process (edl->store_buf);
-    g_free (cache_path);
-    got_cached = 1;
-    return;
-  }
-
-  for (l = edl->clips; l; l = l->next)
-  {
-    Clip *clip = l->data;
-    int clip_frames = clip_get_frames (clip);
-
-    clip->abs_start = clip_start;
-
-    if (frame - clip_start < clip_frames)
-    {
-      int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
+  int use_proxies = clip->edl->use_proxies;
+      g_mutex_lock (&clip->mutex);
 
       remove_in_betweens (edl->nop_raw, edl->nop_transformed);
 
@@ -361,7 +311,6 @@ void gedl_set_frame (GeglEDL *edl, int frame)
          }
       /**********************************************************************/
 
-      g_mutex_lock (&clip->mutex);
       clip_set_frame_no (clip, clip_frame_no);
       gegl_node_connect_to (edl->crop, "output", edl->result, "input");
 
@@ -375,7 +324,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
       /* write cached render of this frame for this clip */
       if (!strstr (clip->path, ".gedl/cache") && (!use_proxies))
         {
-          gchar *cache_path_final = cache_path;
+          const gchar *cache_path_final = cache_path;
           gchar *cache_path       = g_strdup_printf ("%s~", cache_path_final);
 
           if (!g_file_test (cache_path_final, G_FILE_TEST_IS_REGULAR) && !edl->playing)
@@ -400,8 +349,59 @@ void gedl_set_frame (GeglEDL *edl, int frame)
           g_free (cache_path);
         }
       g_mutex_unlock (&clip->mutex);
-      g_free (cache_path);
+}
 
+/*  calling this causes gedl to rig up its graphs for providing/rendering this frame
+ */
+void gedl_set_frame (GeglEDL *edl, int frame)
+{
+  GList *l;
+  int clip_start;
+
+  if ((edl->frame) == frame && (frame != 0))
+  {
+    fprintf (stderr, "already done!\n");
+    return;
+  }
+
+  edl->frame = frame;
+
+  char *frame_hash = gedl_get_frame_hash (edl, frame);
+  char *cache_path  = g_strdup_printf ("%s.gedl/cache/%s", edl->parent_path, frame_hash);
+  g_free (frame_hash);
+  if (g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
+      (edl->cache_flags & CACHE_TRY_ALL))
+  {
+    Clip *clip = NULL;
+    gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
+    gegl_node_link_many (edl->cache_loader, edl->result, NULL);
+    while (!clip)
+      clip = edl_get_clip_for_frame (edl, edl->frame);
+    if (clip->audio)
+      {
+        g_object_unref (clip->audio);
+        clip->audio = NULL;
+      }
+    if (!clip->audio)
+      clip->audio = gegl_audio_fragment_new (44100, 2, 0, 44100);
+    gegl_meta_get_audio (cache_path, clip->audio);
+    gegl_node_process (edl->store_buf);
+    g_free (cache_path);
+    return;
+  }
+
+  clip_start = 0;
+
+  for (l = edl->clips; l; l = l->next)
+  {
+    Clip *clip = l->data;
+    int clip_frames = clip_get_frames (clip);
+
+    if (frame - clip_start < clip_frames)
+    {
+      int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
+      clip_render_frame (clip, clip_frame_no, cache_path);
+      g_free (cache_path);
       return;
     }
     clip_start += clip_frames;
@@ -909,6 +909,7 @@ GeglEDL *gedl_new_from_path (const char *path)
 
   return edl;
 }
+
 static void update_size (GeglEDL *edl)
 {
   if (!edl->crop)
@@ -916,67 +917,47 @@ static void update_size (GeglEDL *edl)
   gegl_node_set (edl->crop, "width", 1.0 * edl->width,
                             "height", 1.0 * edl->height,
                             NULL);
-  gegl_node_set (edl->crop2, "width", 1.0 * edl->width,
-                             "height", 1.0 * edl->height,
-                             NULL);
   gegl_node_set (edl->nop_raw, "x", 1.0 * edl->width,
                              "y", 0.0,
                              NULL);
-  gegl_node_set (edl->scale_size2, "x", 1.0 * edl->width,
-                             "y", 1.0 * edl->height,
-                             NULL);
 }
+
 static void setup (GeglEDL *edl)
 {
-  edl->result = gegl_node_new_child    (edl->gegl, "operation", "gegl:nop", NULL);
-  edl->load_buf = gegl_node_new_child  (edl->gegl, "operation", "gegl:buffer-source", NULL);
-  edl->load_buf2 = gegl_node_new_child (edl->gegl, "operation", "gegl:buffer-source", NULL);
-  edl->crop = gegl_node_new_child      (edl->gegl, "operation", "gegl:crop", "x", 0.0, "y", 0.0, "width", 1.0 * edl->width,
-                                         "height", 1.0 * edl->height, NULL);
-  edl->crop2 = gegl_node_new_child     (edl->gegl, "operation", "gegl:crop", "x", 0.0, "y", 0.0, "width", 1.0 * edl->width,
-                                         "height", 1.0 * edl->height, NULL);
-  edl->over = gegl_node_new_child      (edl->gegl, "operation", "gegl:over", NULL);
-  edl->nop_raw = gegl_node_new_child (edl->gegl, "operation", "gegl:scale-size-keepaspect",
-                                          "y", 0.0, //
-                                          "x", 1.0 * edl->width,
-                                          "sampler", GEDL_SAMPLER,
-                                          NULL);
+  edl->result    = gegl_node_new_child (edl->gegl, "operation", "gegl:nop", NULL);
+  edl->load_buf  = gegl_node_new_child (edl->gegl, "operation", "gegl:buffer-source", NULL);
+  edl->crop  = gegl_node_new_child     (edl->gegl, "operation", "gegl:crop", "x", 0.0, "y", 0.0, "width", 1.0 * edl->width,
+                                        "height", 1.0 * edl->height, NULL);
+  edl->nop_raw = gegl_node_new_child   (edl->gegl, "operation", "gegl:scale-size-keepaspect",
+                                        "y", 0.0, //
+                                        "x", 1.0 * edl->width,
+                                        "sampler", GEDL_SAMPLER,
+                                        NULL);
 
-  edl->nop_raw2 = gegl_node_new_child  (edl->gegl, "operation", "gegl:nop", NULL);
-  edl->nop_transformed = gegl_node_new_child (edl->gegl, "operation", "gegl:nop", NULL);
-  edl->nop_transformed2 = gegl_node_new_child (edl->gegl, "operation", "gegl:nop", NULL);
-  edl->opacity = gegl_node_new_child (edl->gegl, "operation", "gegl:opacity", NULL);
-  edl->scale_size = gegl_node_new_child (edl->gegl, "operation", "gegl:nop", NULL);
+  edl->nop_transformed  = gegl_node_new_child (edl->gegl, "operation", "gegl:nop", NULL);
+  edl->opacity          = gegl_node_new_child (edl->gegl, "operation", "gegl:opacity", NULL);
+  edl->scale_size       = gegl_node_new_child (edl->gegl, "operation", "gegl:nop", NULL);
   /*"operation", "gegl:scale-size-keepaspect",
                                           "y", 0.0, //
                                           "x", 1.0 * edl->width, NULL);*/
-  edl->scale_size2 = gegl_node_new_child (edl->gegl, "operation", "gegl:scale-size-keepaspect",
-                                    "x", 1.0 * edl->width,
-                                    "y", 1.0 * edl->height,
-                                    "sampler", GEDL_SAMPLER,
-                                    NULL);
   edl->encode = gegl_node_new_child (edl->gegl, "operation", "gegl:ff-save",
-                                      "path",           edl->output_path,
-                                      "frame-rate",     gedl_get_fps (edl),
-                                      "video-bit-rate", edl->video_bitrate,
-                                      "video-bufsize",  edl->video_bufsize,
-                                      "audio-bit-rate", edl->audio_bitrate,
-                                      "audio-codec",    edl->audio_codec,
-                                      "video-codec",    edl->video_codec,
-                                      NULL);
-  edl->cached_result = gegl_node_new_child (edl->gegl, "operation", "gegl:buffer-source", "buffer", edl->buffer, NULL);
-  edl->store_buf = gegl_node_new_child (edl->gegl, "operation", "gegl:write-buffer", "buffer", edl->buffer, NULL);
+                                     "path",           edl->output_path,
+                                     "frame-rate",     gedl_get_fps (edl),
+                                     "video-bit-rate", edl->video_bitrate,
+                                     "video-bufsize",  edl->video_bufsize,
+                                     "audio-bit-rate", edl->audio_bitrate,
+                                     "audio-codec",    edl->audio_codec,
+                                     "video-codec",    edl->video_codec,
+                                     NULL);
+  edl->cached_result    = gegl_node_new_child (edl->gegl, "operation", "gegl:buffer-source", "buffer", edl->buffer, NULL);
+  edl->store_buf        = gegl_node_new_child (edl->gegl, "operation", "gegl:write-buffer", "buffer", edl->buffer, NULL);
   edl->source_store_buf = gegl_node_new_child (edl->gegl, "operation", "gegl:write-buffer", "buffer", edl->buffer, NULL);
 
   gegl_node_link_many (edl->result, edl->encode, NULL);
   gegl_node_link_many (edl->load_buf, edl->scale_size, edl->nop_raw, edl->nop_transformed, edl->crop, NULL);
-  gegl_node_link_many (edl->load_buf2, edl->scale_size2, edl->nop_raw2, edl->nop_transformed2, edl->opacity, edl->crop2,  NULL);
   gegl_node_connect_to (edl->result, "output", edl->store_buf, "input");
   gegl_node_connect_to (edl->nop_raw, "output", edl->nop_transformed, "input");
-  gegl_node_connect_to (edl->nop_raw2, "output", edl->nop_transformed2, "input");
-  gegl_node_connect_to (edl->crop2, "output", edl->over, "aux");
-  gegl_node_connect_to (edl->crop, "output", edl->over, "input");
-  gegl_node_connect_to (edl->over, "output", edl->result, "input");
+  gegl_node_connect_to (edl->crop, "output", edl->result, "input");
   update_size (edl);
 }
 void rig_frame (GeglEDL *edl, int frame_no)
@@ -1183,7 +1164,6 @@ int gegl_make_thumb_video (GeglEDL *edl, const char *path, const char *thumb_pat
 #endif
 }
 
-
 int gedl_ui_main (GeglEDL *edl);
 
 int gegl_make_thumb_video (GeglEDL *edl, const char *path, const char *thumb_path);
@@ -1273,10 +1253,7 @@ int main (int argc, char **argv)
 
   chdir (edl->parent_path); /* we try as good as we can to deal with absolute
                                paths correctly,  */
-/*
-  if (argv[2] && argv[2][0]!='-')
-    edl->output_path = argv[2];
-    */
+
   setup (edl);
 
   {
@@ -1340,7 +1317,6 @@ char *gedl_serialise (GeglEDL *edl)
   GList *l;
   char *ret;
   GString *ser = g_string_new ("");
-
 
   if (edl->proxy_width != DEFAULT_proxy_width)
     g_string_append_printf (ser, "proxy-width=%i\n",  edl->proxy_width);
@@ -1551,7 +1527,6 @@ void gedl_get_range (GeglEDL *edl,
   if (end_frame)
     *end_frame = edl->range_end;
 }
-
 
 Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame)
 {

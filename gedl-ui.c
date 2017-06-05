@@ -1405,7 +1405,7 @@ void gedl_draw (Mrg     *mrg,
   GList *l;
   cairo_t *cr = mrg_cr (mrg);
   double t;
-  int duration = gedl_get_duration (edl);
+  int duration = gedl_get_duration (edl); // causes update of abs_start
 
   VID_HEIGHT = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.8;
   int scroll_height = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.2;
