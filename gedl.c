@@ -363,19 +363,20 @@ void gedl_set_frame (GeglEDL *edl, int frame)
          }
       /**********************************************************************/
 
+      g_mutex_lock (&clip->mutex);
       clip_set_frame_no (clip, clip_frame_no);
       gegl_node_connect_to (edl->crop, "output", edl->result, "input");
 
-      g_mutex_lock (&clip->mutex);
 
       if (!clip_is_static_source (clip) || clip->buffer == NULL)
         gegl_node_process (clip->store_buf);
       gegl_node_set (edl->load_buf, "buffer", clip->buffer, NULL);
       gegl_node_process (edl->store_buf);
 
-     clip_fetch_audio (clip);
+      clip_fetch_audio (clip);
 
-      /* write cached render of this frame */
+
+      /* write cached render of this frame for this clip */
       if (!strstr (clip->path, ".gedl/cache") && (!use_proxies))
         {
           gchar *cache_path_final = cache_path;
