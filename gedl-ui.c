@@ -41,7 +41,7 @@ static void mrg_gegl_blit (Mrg *mrg,
     return;
 
   bounds = gegl_node_get_bounding_box (node);
-  
+
   if (width == -1 && height == -1)
   {
     width  = bounds.width;

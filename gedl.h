@@ -29,9 +29,7 @@ features
   detect locked or crashed ui, kill and respawn
   gaps in timeline (will be implemented as blank clips - but ui can be different)
   better video file import
-    add gedl side code for media dragged from file manager to timeline, the mrg parts for gtk are in place
     insert videos from the commandline
-    on-demand/background proxy generation
     ui for picking clips in current folder, possibly clib-db separate from video-project
     clip database done on demand - files that appear in the timeline get enrolled, as well as files thatappearinthe working dir.
 
@@ -85,7 +83,9 @@ void        gedl_load_path          (GeglEDL    *edl, const char *path);
 void        gedl_save_path          (GeglEDL    *edl, const char *path);
 GeglAudioFragment  *gedl_get_audio  (GeglEDL    *edl);
 Clip       *gedl_get_clip           (GeglEDL *edl, int frame, int *clip_frame_no);
+
 GeglBuffer *gedl_get_buffer         (GeglEDL    *edl);
+
 void        gedl_set_frame          (GeglEDL    *edl, int frame);
 void        gedl_set_time           (GeglEDL    *edl, double seconds);
 int         gedl_get_frame          (GeglEDL    *edl);

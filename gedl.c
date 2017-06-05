@@ -437,11 +437,13 @@ double gedl_get_time (GeglEDL *edl)
 }
 GeglAudioFragment *gedl_get_audio (GeglEDL *edl)
 {
-  return edl->clip?edl->clip->audio:NULL;
+  Clip * clip = edl_get_clip_for_frame (edl, edl->frame);
+  return clip?clip->audio:NULL;
 }
 GeglBuffer *gedl_get_buffer (GeglEDL *edl)
 {
-  return edl->clip?edl->clip->buffer:NULL;
+  Clip * clip = edl_get_clip_for_frame (edl, edl->frame);
+  return clip?clip->buffer:NULL;
 }
 
 void gedl_get_video_info (const char *path, int *duration, double *fps)
@@ -502,8 +504,7 @@ void gedl_parse_clip (GeglEDL *edl, const char *line)
       if (rest)
         sclip->title = g_strdup (rest);
     }
-  /* todo: probe video file for length if any of arguments are not present as
-           integers.. alloving full clips and clips with mm:ss.nn timestamps,
+  /* todo: parse hh:mm:ss.nn timestamps,
    */
 }
 
