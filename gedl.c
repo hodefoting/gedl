@@ -312,7 +312,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
     gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
     gegl_node_link_many (edl->cache_loader, edl->result, NULL);
     while (!clip)
-      clip = edl->clip = edl_get_clip_for_frame (edl, edl->frame);
+      clip = edl_get_clip_for_frame (edl, edl->frame);
     if (clip->audio)
       {
         g_object_unref (clip->audio);
@@ -339,8 +339,6 @@ void gedl_set_frame (GeglEDL *edl, int frame)
     if (frame - clip_start < clip_frames)
     {
       int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
-
-      edl->clip = clip;
 
       remove_in_betweens (edl->nop_raw, edl->nop_transformed);
 
@@ -444,6 +442,16 @@ GeglBuffer *gedl_get_buffer (GeglEDL *edl)
 {
   Clip * clip = edl_get_clip_for_frame (edl, edl->frame);
   return clip?clip->buffer:NULL;
+}
+const char *gedl_get_clip_path (GeglEDL *edl)
+{
+  Clip * clip = edl_get_clip_for_frame (edl, edl->frame);
+  return clip?clip->clip_path:"";
+}
+int gedl_get_clip_frame_no    (GeglEDL *edl)
+{
+  Clip * clip = edl_get_clip_for_frame (edl, edl->frame);
+  return clip?clip->clip_frame_no:0;
 }
 
 void gedl_get_video_info (const char *path, int *duration, double *fps)
@@ -908,14 +916,6 @@ GeglEDL *gedl_new_from_path (const char *path)
   generate_gedl_dir (edl);
 
   return edl;
-}
-const char *gedl_get_clip_path (GeglEDL *edl)
-{
-  return edl->clip?edl->clip->clip_path:"";
-}
-int gedl_get_clip_frame_no    (GeglEDL *edl)
-{
-  return edl->clip?edl->clip->clip_frame_no:0;
 }
 static void update_size (GeglEDL *edl)
 {

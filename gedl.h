@@ -201,7 +201,6 @@ struct _GeglEDL
   int         height;
   GeglNode   *cache_loader;
   int         cache_flags;
-  Clip       *clip;
   int         selection_start;
   int         selection_end;
   int         range_start;
