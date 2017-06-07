@@ -193,3 +193,119 @@ void clip_fetch_audio (Clip *clip)
     }
 }
 
+void remove_in_betweens (GeglNode *nop_raw, GeglNode *nop_transformed);
+void remove_in_betweens (GeglNode *nop_raw, GeglNode *nop_transformed)
+{
+ GeglNode *iter = nop_raw;
+ GList *collect = NULL;
+ while (iter && iter != nop_transformed)
+ {
+   GeglNode **nodes = NULL;
+   int count = gegl_node_get_consumers (iter, "output", &nodes, NULL);
+   if (count) iter = nodes[0];
+   g_free (nodes);
+   if (iter && iter != nop_transformed)
+     collect = g_list_append (collect, iter);
+ }
+ while (collect)
+ {
+    g_object_unref (collect->data);
+    collect = g_list_remove (collect, collect->data);
+ }
+}
+
+void clip_render_frame (Clip *clip, int clip_frame_no, const char *cache_path)
+{
+  GeglEDL *edl = clip->edl;
+  int use_proxies = edl->use_proxies;
+  g_mutex_lock (&clip->mutex);
+
+  remove_in_betweens (edl->nop_raw, edl->nop_transformed);
+
+  gegl_node_set (edl->nop_raw, "operation", "gegl:scale-size-keepaspect",
+                               "y", 0.0, //
+                               "x", 1.0 * edl->width,
+                               "sampler", use_proxies?GEDL_SAMPLER:GEGL_SAMPLER_CUBIC,
+                               NULL);
+
+      gegl_node_link_many (edl->nop_raw, edl->nop_transformed, NULL);
+
+      if (clip->filter_graph)
+        {
+           GError *error = NULL;
+           gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip_frame_no - clip->start, edl->height, NULL, &error);
+           if (error)
+             {
+               /* should set error string */
+               fprintf (stderr, "%s\n", error->message);
+               g_error_free (error);
+             }
+         }
+      /**********************************************************************/
+
+      clip_set_frame_no (clip, clip_frame_no);
+      gegl_node_connect_to (edl->crop, "output", edl->result, "input");
+
+      if (!clip_is_static_source (clip) || clip->buffer == NULL)
+        gegl_node_process (clip->store_buf);
+
+      gegl_node_set (edl->load_buf, "buffer", clip->buffer, NULL);
+      gegl_node_process (edl->store_buf);
+
+      clip_fetch_audio (clip);
+
+      /* write cached render of this frame for this clip */
+      if (!strstr (clip->path, ".gedl/cache") && (!use_proxies))
+        {
+          const gchar *cache_path_final = cache_path;
+          gchar *cache_path       = g_strdup_printf ("%s~", cache_path_final);
+
+          if (!g_file_test (cache_path_final, G_FILE_TEST_IS_REGULAR) && !edl->playing)
+            {
+              GeglNode *save_graph = gegl_node_new ();
+              GeglNode *save;
+              save = gegl_node_new_child (save_graph,
+                          "operation", "gegl:" CACHE_FORMAT "-save",
+                          "path", cache_path,
+                          NULL);
+              if (!strcmp (CACHE_FORMAT, "png"))
+              {
+                gegl_node_set (save, "bitdepth", 8, NULL);
+              }
+              gegl_node_link_many (edl->result, save, NULL);
+              gegl_node_process (save);
+              if (clip->audio)
+                gegl_meta_set_audio (cache_path, clip->audio);
+              rename (cache_path, cache_path_final);
+              g_object_unref (save_graph);
+            }
+          g_free (cache_path);
+        }
+      g_mutex_unlock (&clip->mutex);
+}
+
+
+gchar *clip_get_frame_hash (Clip *clip, int clip_frame_no)
+{
+  GeglEDL *edl = clip->edl;
+  gchar *frame_recipe;
+  GChecksum *hash;
+  int is_static_source = clip_is_static_source (clip);
+
+  frame_recipe = g_strdup_printf ("%s: %s %i %s %ix%i",
+      "gedl-pre-4",
+      clip_get_path (clip),
+      clip->filter_graph || (!is_static_source) ? clip_frame_no : 0,
+      clip->filter_graph,
+      edl->video_width,
+      edl->video_height);
+
+  hash = g_checksum_new (G_CHECKSUM_MD5);
+  g_checksum_update (hash, (void*)frame_recipe, -1);
+  char *ret = g_strdup (g_checksum_get_string(hash));
+
+  g_checksum_free (hash);
+  g_free (frame_recipe);
+
+  return ret;
+}

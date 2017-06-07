@@ -42,6 +42,9 @@ refactor
 
 #endif
 
+#define CACHE_FORMAT "jpg"
+#define GEDL_SAMPLER   GEGL_SAMPLER_NEAREST
+
 #ifndef GEDL_H
 #define GEDL_H
 
@@ -107,6 +110,7 @@ char       *gedl_make_thumb_path    (GeglEDL    *edl, const char *clip_path);
 guchar *gedl_get_cache_bitmap (GeglEDL *edl, int *length_ret);
 void rig_frame (GeglEDL *edl, int frame_no);
 
+
 Clip  *clip_new               (GeglEDL *edl);
 void   clip_free              (Clip *clip);
 const char *clip_get_path     (Clip *clip);
@@ -114,17 +118,31 @@ void   clip_set_path          (Clip *clip, const char *path);
 int    clip_get_start         (Clip *clip);
 int    clip_get_end           (Clip *clip);
 int    clip_get_frames        (Clip *clip);
-int    clip_is_static_source  (Clip *clip);
 void   clip_set_start         (Clip *clip, int start);
 void   clip_set_end           (Clip *clip, int end);
 void   clip_set_range         (Clip *clip, int start, int end);
+int    clip_is_static_source  (Clip *clip);
+gchar *clip_get_frame_hash    (Clip *clip, int clip_frame_no);
+
+
 void   clip_fetch_audio       (Clip *clip);
 void   clip_set_full          (Clip *clip, const char *path, int start, int end);
 Clip  *clip_new_full          (GeglEDL *edl, const char *path, int start, int end);
-void   clip_set_frame_no      (Clip *clip, int frame_no);
+
+//void   clip_set_frame_no      (Clip *clip, int frame_no);
+void clip_render_frame (Clip *clip, int clip_frame_no, const char *cache_path);
+
+
+
 Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame);
 void   gedl_make_proxies      (GeglEDL *edl);
 void gedl_get_video_info (const char *path, int *duration, double *fps);
+void
+gegl_meta_set_audio (const char        *path,
+                     GeglAudioFragment *audio);
+void
+gegl_meta_get_audio (const char        *path,
+                     GeglAudioFragment *audio);
 
 #define SPLIT_VER  0.8
 

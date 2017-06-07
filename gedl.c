@@ -7,7 +7,6 @@
 #include <gegl-audio-fragment.h>
 
 
-#define GEDL_SAMPLER   GEGL_SAMPLER_NEAREST
 
 /* GEGL edit decision list - a digital video cutter and splicer */
 
@@ -19,12 +18,6 @@
 
 #include "gedl.h"
 
-void
-gegl_meta_set_audio (const char        *path,
-                     GeglAudioFragment *audio);
-void
-gegl_meta_get_audio (const char        *path,
-                     GeglAudioFragment *audio);
 
 #define DEFAULT_output_path      "output.mp4"
 #define DEFAULT_video_codec      "auto"
@@ -94,7 +87,6 @@ char *gedl_make_proxy_path (GeglEDL *edl, const char *clip_path)
   return ret;
 }
 
-#define CACHE_FORMAT "jpg"
 
 #include <stdlib.h>
 
@@ -164,26 +156,6 @@ void     gedl_free          (GeglEDL *edl)
   g_free (edl);
 }
 
-void remove_in_betweens (GeglNode *nop_raw, GeglNode *nop_transformed);
-void remove_in_betweens (GeglNode *nop_raw, GeglNode *nop_transformed)
-{
- GeglNode *iter = nop_raw;
- GList *collect = NULL;
- while (iter && iter != nop_transformed)
- {
-   GeglNode **nodes = NULL;
-   int count = gegl_node_get_consumers (iter, "output", &nodes, NULL);
-   if (count) iter = nodes[0];
-   g_free (nodes);
-   if (iter && iter != nop_transformed)
-     collect = g_list_append (collect, iter);
- }
- while (collect)
- {
-    g_object_unref (collect->data);
-    collect = g_list_remove (collect, collect->data);
- }
-}
 
 /* XXX: oops global state */
 
@@ -240,6 +212,7 @@ void gedl_set_use_proxies (GeglEDL *edl, int use_proxies)
 }
 int do_encode = 1;
 
+
 /* computes the hash of a given rendered frame - without altering
  * any state
  */
@@ -255,101 +228,14 @@ gchar *gedl_get_frame_hash (GeglEDL *edl, int frame)
 
     if (frame - clip_start < clip_frames)
     {
-      gchar *frame_recipe;
-      GChecksum *hash;
-      int is_static_source = clip_is_static_source (clip);
-
       int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
-
-      frame_recipe = g_strdup_printf ("%s: %s %i %s %ix%i",
-          "gedl-pre-4",
-          clip_get_path (clip),
-          clip->filter_graph || (!is_static_source) ? clip_frame_no : 0,
-          clip->filter_graph,
-          edl->video_width,
-          edl->video_height);
-
-      hash = g_checksum_new (G_CHECKSUM_MD5);
-      g_checksum_update (hash, (void*)frame_recipe, -1);
-      char *ret = g_strdup (g_checksum_get_string(hash));
-
-      g_checksum_free (hash);
-      g_free (frame_recipe);
-
-      return ret;
+      return clip_get_frame_hash (clip, clip_frame_no);
     }
     clip_start += clip_frames;
   }
   return NULL;
 }
 
-void clip_render_frame (Clip *clip, int clip_frame_no, const char *cache_path)
-{
-  int use_proxies = clip->edl->use_proxies;
-      g_mutex_lock (&clip->mutex);
-
-      remove_in_betweens (edl->nop_raw, edl->nop_transformed);
-
-      gegl_node_set (edl->nop_raw, "operation", "gegl:scale-size-keepaspect",
-                                     "y", 0.0, //
-                                     "x", 1.0 * edl->width,
-                                     "sampler", use_proxies?GEDL_SAMPLER:GEGL_SAMPLER_CUBIC,
-                                     NULL);
-
-      gegl_node_link_many (edl->nop_raw, edl->nop_transformed, NULL);
-
-      if (clip->filter_graph)
-        {
-           GError *error = NULL;
-           gegl_create_chain (clip->filter_graph, edl->nop_raw, edl->nop_transformed, clip_frame_no - clip->start, edl->height, NULL, &error);
-           if (error)
-             {
-               /* should set error string */
-               fprintf (stderr, "%s\n", error->message);
-               g_error_free (error);
-             }
-         }
-      /**********************************************************************/
-
-      clip_set_frame_no (clip, clip_frame_no);
-      gegl_node_connect_to (edl->crop, "output", edl->result, "input");
-
-      if (!clip_is_static_source (clip) || clip->buffer == NULL)
-        gegl_node_process (clip->store_buf);
-      gegl_node_set (edl->load_buf, "buffer", clip->buffer, NULL);
-      gegl_node_process (edl->store_buf);
-
-      clip_fetch_audio (clip);
-
-      /* write cached render of this frame for this clip */
-      if (!strstr (clip->path, ".gedl/cache") && (!use_proxies))
-        {
-          const gchar *cache_path_final = cache_path;
-          gchar *cache_path       = g_strdup_printf ("%s~", cache_path_final);
-
-          if (!g_file_test (cache_path_final, G_FILE_TEST_IS_REGULAR) && !edl->playing)
-            {
-              GeglNode *save_graph = gegl_node_new ();
-              GeglNode *save;
-              save = gegl_node_new_child (save_graph,
-                          "operation", "gegl:" CACHE_FORMAT "-save",
-                          "path", cache_path,
-                          NULL);
-              if (!strcmp (CACHE_FORMAT, "png"))
-              {
-                gegl_node_set (save, "bitdepth", 8, NULL);
-              }
-              gegl_node_link_many (edl->result, save, NULL);
-              gegl_node_process (save);
-              if (clip->audio)
-                gegl_meta_set_audio (cache_path, clip->audio);
-              rename (cache_path, cache_path_final);
-              g_object_unref (save_graph);
-            }
-          g_free (cache_path);
-        }
-      g_mutex_unlock (&clip->mutex);
-}
 
 /*  calling this causes gedl to rig up its graphs for providing/rendering this frame
  */
@@ -382,8 +268,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
         g_object_unref (clip->audio);
         clip->audio = NULL;
       }
-    if (!clip->audio)
-      clip->audio = gegl_audio_fragment_new (44100, 2, 0, 44100);
+    clip->audio = gegl_audio_fragment_new (44100, 2, 0, 44100);
     gegl_meta_get_audio (cache_path, clip->audio);
     gegl_node_process (edl->store_buf);
     g_free (cache_path);
@@ -396,7 +281,6 @@ void gedl_set_frame (GeglEDL *edl, int frame)
   {
     Clip *clip = l->data;
     int clip_frames = clip_get_frames (clip);
-
     if (frame - clip_start < clip_frames)
     {
       int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
