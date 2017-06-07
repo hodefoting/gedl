@@ -125,7 +125,7 @@ static gpointer renderer_thread (gpointer data)
           GeglRectangle ext = {0,0,edl->video_width, edl->video_height};
           gegl_buffer_set_extent (edl->buffer, &ext);
         }
-        rig_frame (edl, edl->frame_no); /* this does the frame-set, which causes render  */
+        gedl_set_frame (edl, edl->frame_no); /* this does the frame-set, which causes render  */
 #if 1
         {
           GeglRectangle ext = gegl_node_get_bounding_box (edl->result);

@@ -246,7 +246,6 @@ void gedl_set_frame (GeglEDL *edl, int frame)
 
   if ((edl->frame) == frame && (frame != 0))
   {
-    fprintf (stderr, "already done!\n");
     return;
   }
 
@@ -842,20 +841,12 @@ static void setup (GeglEDL *edl)
   gegl_node_connect_to (edl->crop, "output", edl->result, "input");
   update_size (edl);
 }
-void rig_frame (GeglEDL *edl, int frame_no)
-{
-  if (edl->frame == frame_no)
-    return;
-  gedl_set_frame (edl, frame_no);
-
-  if (do_encode)
-    gegl_node_set (edl->encode, "audio", gedl_get_audio (edl), NULL);
-}
 
 static void teardown (void)
 {
   gedl_free (edl);
 }
+
 static void init (int argc, char **argv)
 {
   gegl_init (&argc, &argv);
@@ -870,7 +861,7 @@ static void process_frames (GeglEDL *edl)
   for (frame_no = edl->range_start; frame_no <= edl->range_end; frame_no++)
   {
     edl->frame_no = frame_no;
-    rig_frame (edl, edl->frame_no);
+    gedl_set_frame (edl, edl->frame_no);
 
     fprintf (stdout, "\r%1.2f%% %04d / %04d   ",
      100.0 * (frame_no-edl->range_start) * 1.0 / (edl->range_end - edl->range_start),
@@ -878,6 +869,7 @@ static void process_frames (GeglEDL *edl)
 
     if (do_encode)
     {
+      gegl_node_set (edl->encode, "audio", gedl_get_audio (edl), NULL);
       gegl_node_process (edl->encode);
     }
     fflush (0);
@@ -927,7 +919,7 @@ static void process_frames_cache (GeglEDL *edl)
     edl->frame_no = clip_start;
     if (this_cacher (edl->frame_no))
     {
-      rig_frame (edl, edl->frame_no);
+      gedl_set_frame (edl, edl->frame_no);
     }
 
     clip_start += clip_frames;
@@ -939,7 +931,7 @@ static void process_frames_cache (GeglEDL *edl)
   {
     edl->frame_no = frame_no;
     if (this_cacher (edl->frame_no))
-      rig_frame (edl, edl->frame_no);
+      gedl_set_frame (edl, edl->frame_no);
     if (stop_cacher)
       return;
   }
@@ -947,7 +939,7 @@ static void process_frames_cache (GeglEDL *edl)
   {
     edl->frame_no = frame_no;
     if (this_cacher (edl->frame_no))
-      rig_frame (edl, edl->frame_no);
+      gedl_set_frame (edl, edl->frame_no);
     if (stop_cacher)
       return;
   }
