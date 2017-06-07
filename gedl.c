@@ -935,8 +935,7 @@ static void setup (GeglEDL *edl)
                                         NULL);
 
   edl->nop_transformed  = gegl_node_new_child (edl->gegl, "operation", "gegl:nop", NULL);
-  edl->opacity          = gegl_node_new_child (edl->gegl, "operation", "gegl:opacity", NULL);
-  /*"operation", "gegl:scale-size-keepaspect",
+          /*"operation", "gegl:scale-size-keepaspect",
                                           "y", 0.0, //
                                           "x", 1.0 * edl->width, NULL);*/
   edl->encode = gegl_node_new_child (edl->gegl, "operation", "gegl:ff-save",

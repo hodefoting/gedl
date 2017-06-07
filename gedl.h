@@ -228,7 +228,7 @@ struct _GeglEDL
   GeglNode   *nop_raw;
   GeglNode   *nop_transformed;
   GeglNode   *load_buf;
-  GeglNode   *result, *encode, *crop, *opacity;
+  GeglNode   *result, *encode, *crop;
   GeglNode   *store_buf;
   GeglNode   *source_store_buf;
   GeglNode   *cached_result;
