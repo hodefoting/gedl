@@ -24,8 +24,6 @@ static int audio_post   = 0;
 
 int16_t audio_data[AUDIO_BUF_LEN];
 
-GeglNode *preview_loader;
-
 void gedl_cache_invalid (GeglEDL *edl)
 {
   edl->frame = -1;
@@ -109,10 +107,6 @@ static gpointer renderer_thread (gpointer data)
 {
   GeglEDL *edl = data;
 
-  preview_loader = gegl_node_new_child (edl->gegl, "operation", "gegl:ff-load",
-                         "path", "/tmp", NULL);
-  gegl_node_connect_to (preview_loader, "output", edl->source_store_buf, "input");
-
   for (;;)
   {
     playing_iteration (edl->mrg, edl);
@@ -121,15 +115,11 @@ static gpointer renderer_thread (gpointer data)
       {
         rendering_frame = edl->frame_no;
 
-        {
-          GeglRectangle ext = {0,0,edl->video_width, edl->video_height};
-          gegl_buffer_set_extent (edl->buffer, &ext);
-        }
         gedl_set_frame (edl, edl->frame_no); /* this does the frame-set, which causes render  */
 #if 1
         {
           GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
-          gegl_buffer_set_extent (edl->buffer, &ext);
+          gegl_buffer_set_extent (edl->final_buffer, &ext);
         }
 #endif
 

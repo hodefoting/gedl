@@ -30,7 +30,8 @@ static void mrg_gegl_blit (Mrg *mrg,
                           float width, float height,
                           GeglNode *node,
                           float u, float v,
-                          float opacity)
+                          float opacity,
+                          GeglEDL *edl)
 {
   GeglRectangle bounds;
 
@@ -40,7 +41,7 @@ static void mrg_gegl_blit (Mrg *mrg,
   if (!node)
     return;
 
-  bounds = gegl_node_get_bounding_box (node);
+  bounds = *gegl_buffer_get_extent (edl->final_buffer);//gegl_node_get_bounding_box (node);
 
   if (width == -1 && height == -1)
   {
@@ -1885,7 +1886,7 @@ void gedl_ui (Mrg *mrg, void *data)
                       o->edl->cached_result,
                       0, 0,
         /* opacity */ 1.0 //edl->frame_no == done_frame?1.0:0.5
-                      );
+                      ,edl);
         break;
      case GEDL_UI_MODE_PART:
   mrg_gegl_blit (mrg, (int)(mrg_width (mrg) * 0.2), 0,
@@ -1895,7 +1896,7 @@ void gedl_ui (Mrg *mrg, void *data)
                       o->edl->cached_result,
                       0, 0,
         /* opacity */ 1.0 //edl->frame_no == done_frame?1.0:0.5
-                      );
+                      ,edl);
         break;
 
   }
