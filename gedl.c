@@ -253,8 +253,8 @@ void gedl_set_frame (GeglEDL *edl, int frame)
     Clip *clip = NULL;
     gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
     gegl_node_link_many (edl->cache_loader, edl->result, NULL);
-    while (!clip)
-      clip = edl_get_clip_for_frame (edl, edl->frame);
+    //while (!clip)
+    clip = edl_get_clip_for_frame (edl, edl->frame);
     if (clip->audio)
       {
         g_object_unref (clip->audio);
@@ -262,6 +262,8 @@ void gedl_set_frame (GeglEDL *edl, int frame)
       }
     clip->audio = gegl_audio_fragment_new (44100, 2, 0, 44100);
     gegl_meta_get_audio (cache_path, clip->audio);
+    GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
+    gegl_buffer_set_extent (edl->final_buffer, &ext);
     gegl_node_process (edl->store_final_buf);
     g_free (cache_path);
     return;
