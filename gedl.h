@@ -1,12 +1,10 @@
 #if PLAN
 
-        rename to gcut ? which can mean GEGL cut, goat cut or gnome cut
+        rename ui to gcut ? which can mean GEGL cut, goat cut or gnome cut
 
         bugs
-          bounding box of preview/proxy not working properly
-          huge video files cause thumtrack overflow, vertical instead of horizontal
-          might not have same scanline problem.
-          clipped left most clip cannot be scrubbed
+          huge video files cause (cairo) thumtrack overflow, vertical also hasa this problem.
+          left most-clip cannot be scrubbed (mrg misses evens here)
           audio glitches, gegl ff-load / ff-save should perhaps round all audio-frame
             counts up to a fixed amount, use correct start .. and drop frames when
             assembling
@@ -38,7 +36,6 @@
 
         refactor
            make each clip not have a loader but have a pool of loaders, that can be pre-seeded with right paths for upcoming clips during playback
-           make active_clip not be shared between renderer and ui, perhaps not even serialize it?
 
 #endif
 
