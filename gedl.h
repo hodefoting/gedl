@@ -183,15 +183,10 @@
           GeglNode          *full_loader;
           GeglNode          *proxy_loader;
           GeglNode          *loader; /* nop that one of the prior is linked to */
-
-          GeglNode   *nop_raw;
-          GeglNode   *nop_transformed;
-          GeglNode   *load_buf;
-          GeglNode   *crop;
-
-
-          char              *cached_filter_graph;
-
+          GeglNode          *load_buf;
+          GeglNode          *nop_raw;
+          GeglNode          *nop_transformed;
+          GeglNode          *crop;
           GMutex             mutex;
         };
 
