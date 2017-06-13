@@ -16,24 +16,22 @@ Clip *clip_new (GeglEDL *edl)
   clip->loader       = gegl_node_new_child (clip->gegl, "operation", "gegl:nop", NULL);
 
   clip->load_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:nop", NULL);
-  clip->crop     = gegl_node_new_child (clip->gegl, "operation", "gegl:crop", "x", 0.0, "y", 0.0, "width", 1.0 * edl->width,
-                                        "height", 1.0 * edl->height, NULL);
+  clip->crop_proxy = gegl_node_new_child (clip->gegl, "operation", "gegl:crop", NULL);
+  clip->crop     = gegl_node_new_child (clip->gegl, "operation", "gegl:crop", NULL);
   clip->nop_raw = gegl_node_new_child (clip->gegl, "operation", "gegl:scale-size-keepaspect",
-                                       "y", 0.0, //
-                                       "x", 1.0 * edl->width,
                                        "sampler", GEDL_SAMPLER,
                                        NULL);
 
   clip->nop_transformed = gegl_node_new_child (clip->gegl, "operation", "gegl:nop", NULL);
 
   gegl_node_link_many (clip->full_loader, clip->loader, NULL);
-  gegl_node_link_many (clip->load_buf, clip->nop_raw, clip->nop_transformed, clip->crop,
-                       NULL);
+  gegl_node_link_many (clip->load_buf, clip->nop_raw, clip->nop_transformed, clip->crop, NULL);
 
   g_mutex_init (&clip->mutex);
 
   return clip;
 }
+
 void clip_free (Clip *clip)
 {
   if (clip->path)
@@ -50,7 +48,7 @@ void clip_free (Clip *clip)
 void clip_set_path (Clip *clip, const char *in_path)
 {
   char *path = NULL;
-  if (in_path[0] == '/')
+  if (in_path[0] == '/' || !strcmp (in_path, "black"))
   {
     path = g_strdup (in_path);
   }
@@ -85,7 +83,18 @@ void clip_set_path (Clip *clip, const char *in_path)
    }
   else
    {
-     g_object_set (clip->full_loader, "operation", "gegl:ff-load", NULL);
+     if (strstr (path, "black"))
+     {
+       GeglColor *color = g_object_new (GEGL_TYPE_COLOR, "string", "black", NULL);
+       g_object_set (clip->full_loader, "operation", "gegl:color", NULL);
+       g_object_set (clip->proxy_loader, "operation", "gegl:color", NULL);
+       gegl_node_set (clip->full_loader, "value", color, NULL);
+       gegl_node_set (clip->proxy_loader, "value", color, NULL);
+     }
+     else
+     {
+       g_object_set (clip->full_loader, "operation", "gegl:ff-load", NULL);
+     }
      clip->static_source = 0;
    }
 }
@@ -248,8 +257,7 @@ void clip_render_frame (Clip *clip, int clip_frame_no, const char *cache_path)
                                NULL);
 
   gegl_node_set (clip->crop, "width", 1.0 * edl->width,
-                            "height", 1.0 * edl->height,
-                            NULL);
+                 "height", 1.0 * edl->height, NULL);
 
       if (clip->filter_graph)
         {
@@ -301,7 +309,6 @@ void clip_render_frame (Clip *clip, int clip_frame_no, const char *cache_path)
         }
       g_mutex_unlock (&clip->mutex);
 }
-
 
 gchar *clip_get_frame_hash (Clip *clip, int clip_frame_no)
 {
