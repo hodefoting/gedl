@@ -1061,6 +1061,7 @@ static void toggle_edit_source (MrgEvent *event, void *data1, void *data2)
 }
 #endif
 
+
 static void do_quit (MrgEvent *event, void *data1, void *data2)
 {
   exited = 1;
@@ -1069,6 +1070,7 @@ static void do_quit (MrgEvent *event, void *data1, void *data2)
 }
 
 long last_frame = 0;
+
 
 void gedl_ui (Mrg *mrg, void *data);
 
@@ -1219,6 +1221,8 @@ static void shuffle_back (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
   changed++;
 }
+
+
 
 static void slide_forward (MrgEvent *event, void *data1, void *data2)
 {
@@ -1443,6 +1447,10 @@ void gedl_draw (Mrg     *mrg,
     Clip *clip = l->data;
     int frames = clip_get_frames (clip);
 
+    //if (clip == edl->active_clip)
+    //  cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
+    //else
+    //  cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
     cairo_rectangle (cr, t, y, frames, scroll_height);
 
     cairo_stroke (cr);
@@ -1559,6 +1567,8 @@ void gedl_draw (Mrg     *mrg,
         }
      }
      cairo_fill (cr);
+
+     //g_free (bitmap);
   }
 
   double frame = edl->frame_no;

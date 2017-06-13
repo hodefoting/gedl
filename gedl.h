@@ -10,13 +10,12 @@
             assembling
 
         features
-          rewrite gedl-ui in lua, the c part can continue to be gedl,
-          while the ui becomes gcut, a lua script.
+          rewrite gedl-ui.c in lua
           add support for other frame sources.
              image
              video
              op-chain - or is it enough to permit opchain on empty source?
-             gedl
+             edl
 
           separate filters from clips,.. permitting different chains to apply over many clips
 
@@ -188,7 +187,6 @@
           GeglNode          *nop_raw;
           GeglNode          *nop_transformed;
           GeglNode          *crop;
-          GeglNode          *crop_proxy;
           GMutex             mutex;
         };
 
