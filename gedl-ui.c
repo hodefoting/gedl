@@ -719,7 +719,7 @@ static void save_edl (GeglEDL *edl)
   }
 }
 
-#if 0
+#if 1
 static void save (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -2038,7 +2038,7 @@ void gedl_ui (Mrg *mrg, void *data)
       else
         mrg_add_binding (mrg, "p", NULL, "use proxies", toggle_use_proxies, edl);
 
-      //mrg_add_binding (mrg, "s", NULL, "save", save, edl);
+      mrg_add_binding (mrg, "s", NULL, "save", save, edl);
       mrg_add_binding (mrg, "a", NULL, "select all", select_all, edl);
 
       mrg_add_binding (mrg, "left/right", NULL, "step frame", step_frame, edl);
