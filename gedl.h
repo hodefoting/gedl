@@ -183,10 +183,27 @@
           GeglNode          *full_loader;
           GeglNode          *proxy_loader;
           GeglNode          *loader; /* nop that one of the prior is linked to */
-          GeglNode          *load_buf;
-          GeglNode          *nop_raw;
-          GeglNode          *nop_transformed;
-          GeglNode          *crop;
+
+          GeglNode          *nop_scaled;
+          GeglNode          *nop_filtered;
+          GeglNode          *nop_crop;
+          GeglNode          *nop_store_buf;
+
+          GeglNode          *preview_scaled;
+          GeglNode          *preview_raw;
+          GeglNode          *preview_filtered;
+          GeglNode          *preview_crop;
+          GeglNode          *preview_store_buf;
+
+          // add a preview size, which is proxy or full scaled for render
+
+          GeglNode          *full_scaled;
+          GeglNode          *full_raw;
+          GeglNode          *full_filtered;
+          GeglNode          *full_crop;
+          GeglNode          *full_store_buf;
+
+
           GMutex             mutex;
         };
 
@@ -209,6 +226,7 @@
           int         frame; /* render thread, frame_no is ui side */
           double      fps;
           GeglBuffer *final_buffer;
+          GeglNode   *cached_result;
           GeglNode   *gegl;
           int         playing;
           int         width;
@@ -244,7 +262,6 @@
           GeglNode   *store_final_buf;
 
           GeglNode   *encode;
-  GeglNode   *cached_result;
   double      scale;
   double      t0;
   Clip       *active_clip;

@@ -466,7 +466,6 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
       Clip *clip = NULL;
       int ff_probe = 0;
 
-
      clip = clip_new_full (edl, path, start, end);
      if (!clip_is_static_source (clip) &&
          (start == 0 && end == 0))

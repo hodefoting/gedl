@@ -15,25 +15,32 @@ Clip *clip_new (GeglEDL *edl)
   clip->proxy_loader = gegl_node_new_child (clip->gegl, "operation", "gegl:ff-load", NULL);
   clip->loader       = gegl_node_new_child (clip->gegl, "operation", "gegl:nop", NULL);
 
-  clip->load_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:nop", NULL);
-  clip->crop     = gegl_node_new_child (clip->gegl, "operation", "gegl:crop", "x", 0.0, "y", 0.0, "width", 1.0 * edl->width,
-                                        "height", 1.0 * edl->height, NULL);
-  clip->nop_raw = gegl_node_new_child (clip->gegl, "operation", "gegl:scale-size-keepaspect",
+  clip->nop_scaled = gegl_node_new_child (clip->gegl, "operation", "gegl:scale-size-keepaspect",
                                        "y", 0.0, //
                                        "x", 1.0 * edl->width,
                                        "sampler", GEDL_SAMPLER,
                                        NULL);
+  clip->nop_filtered = gegl_node_new_child (clip->gegl, "operation", "gegl:nop", NULL);
+  clip->nop_crop     = gegl_node_new_child (clip->gegl, "operation", "gegl:crop", "x", 0.0, "y", 0.0, "width", 1.0 * edl->width,
+                                        "height", 1.0 * edl->height, NULL);
 
-  clip->nop_transformed = gegl_node_new_child (clip->gegl, "operation", "gegl:nop", NULL);
+  clip->nop_store_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:write-buffer", "buffer", edl->final_buffer, NULL);
+  clip->full_store_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:write-buffer", "buffer", edl->final_buffer, NULL);
+  clip->preview_store_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:write-buffer", "buffer", edl->final_buffer, NULL);
 
-  gegl_node_link_many (clip->full_loader, clip->loader, NULL);
-  gegl_node_link_many (clip->load_buf, clip->nop_raw, clip->nop_transformed, clip->crop,
+  gegl_node_link_many (clip->full_loader,
+                       clip->loader,
+                       clip->nop_scaled,
+                       clip->nop_filtered,
+                       clip->nop_crop,
+                       clip->nop_store_buf,
                        NULL);
 
   g_mutex_init (&clip->mutex);
 
   return clip;
 }
+
 void clip_free (Clip *clip)
 {
   if (clip->path)
@@ -50,7 +57,7 @@ void clip_free (Clip *clip)
 void clip_set_path (Clip *clip, const char *in_path)
 {
   char *path = NULL;
-  fprintf (stderr, "[%s]\n", in_path);
+  //fprintf (stderr, "[%s]\n", in_path);
   if (in_path[0] == '/')
   {
     path = g_strdup (in_path);
@@ -176,6 +183,14 @@ void clip_set_frame_no (Clip *clip, int clip_frame_no)
     clip_frame_no = 0;
 
   clip_set_proxied (clip);
+#if 0
+  {
+    gchar *old = NULL;
+    gegl_node_get (clip->full_loader, "path", &old, NULL);
+    if (!old || !strcmp (old, "") || !strcmp (clip->path, old))
+      gegl_node_set (clip->full_loader, "path", clip->path, NULL);
+  }
+#endif
 
   if (!clip_is_static_source (clip))
     {
@@ -212,18 +227,18 @@ void clip_fetch_audio (Clip *clip)
     }
 }
 
-void remove_in_betweens (GeglNode *nop_raw, GeglNode *nop_transformed);
-void remove_in_betweens (GeglNode *nop_raw, GeglNode *nop_transformed)
+void remove_in_betweens (GeglNode *nop_scaled, GeglNode *nop_filtered);
+void remove_in_betweens (GeglNode *nop_scaled, GeglNode *nop_filtered)
 {
- GeglNode *iter = nop_raw;
+ GeglNode *iter = nop_scaled;
  GList *collect = NULL;
- while (iter && iter != nop_transformed)
+ while (iter && iter != nop_filtered)
  {
    GeglNode **nodes = NULL;
    int count = gegl_node_get_consumers (iter, "output", &nodes, NULL);
    if (count) iter = nodes[0];
    g_free (nodes);
-   if (iter && iter != nop_transformed)
+   if (iter && iter != nop_filtered)
      collect = g_list_append (collect, iter);
  }
  while (collect)
@@ -239,23 +254,23 @@ void clip_render_frame (Clip *clip, int clip_frame_no, const char *cache_path)
   int use_proxies = edl->use_proxies;
   g_mutex_lock (&clip->mutex);
 
-  remove_in_betweens (clip->nop_raw, clip->nop_transformed);
-  gegl_node_link_many (clip->nop_raw, clip->nop_transformed, NULL);
+  remove_in_betweens (clip->nop_scaled, clip->nop_filtered);
+  gegl_node_link_many (clip->nop_scaled, clip->nop_filtered, NULL);
 
-  gegl_node_set (clip->nop_raw, "operation", "gegl:scale-size-keepaspect",
-                               "y", 0.0, //
+  gegl_node_set (clip->nop_scaled, "operation", "gegl:scale-size-keepaspect",
+                               "y", 0.0,
                                "x", 1.0 * edl->width,
                                "sampler", use_proxies?GEDL_SAMPLER:GEGL_SAMPLER_CUBIC,
                                NULL);
 
-  gegl_node_set (clip->crop, "width", 1.0 * edl->width,
-                            "height", 1.0 * edl->height,
-                            NULL);
+  gegl_node_set (clip->nop_crop, "width", 1.0 * edl->width,
+                                 "height", 1.0 * edl->height,
+                                 NULL);
 
       if (clip->filter_graph)
         {
            GError *error = NULL;
-           gegl_create_chain (clip->filter_graph, clip->nop_raw, clip->nop_transformed, clip_frame_no - clip->start, edl->height, NULL, &error);
+           gegl_create_chain (clip->filter_graph, clip->nop_scaled, clip->nop_filtered, clip_frame_no - clip->start, edl->height, NULL, &error);
            if (error)
              {
                /* should set error string */
@@ -265,12 +280,10 @@ void clip_render_frame (Clip *clip, int clip_frame_no, const char *cache_path)
          }
       /**********************************************************************/
 
-      gegl_node_link_many (clip->loader, clip->load_buf, NULL);
-      gegl_node_link_many (clip->crop, edl->result, NULL);
+
+      // flags,..    FULL   PREVIEW   FULL_CACHE|PREVIEW  STORE_FULL_CACHE
       clip_set_frame_no (clip, clip_frame_no);
-
-      gegl_node_process (edl->store_final_buf);
-
+      gegl_node_process (clip->nop_store_buf);
       clip_fetch_audio (clip);
 
       /* write cached render of this frame for this clip */
@@ -291,7 +304,7 @@ void clip_render_frame (Clip *clip, int clip_frame_no, const char *cache_path)
               {
                 gegl_node_set (save, "bitdepth", 8, NULL);
               }
-              gegl_node_link_many (edl->result, save, NULL);
+              gegl_node_link_many (clip->nop_crop, save, NULL);
               gegl_node_process (save);
               if (clip->audio)
                 gegl_meta_set_audio (cache_path, clip->audio);
