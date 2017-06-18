@@ -174,36 +174,32 @@
           int    fade_pad_start;
           int    fade_pad_end;
           int    static_source;
+          int    is_chain;
 
           int    abs_start;
 
           const char        *clip_path;
           GeglNode          *gegl;
           GeglAudioFragment *audio;
+          GeglNode          *chain_loader;
           GeglNode          *full_loader;
           GeglNode          *proxy_loader;
           GeglNode          *loader; /* nop that one of the prior is linked to */
 
           GeglNode          *nop_scaled;
-          GeglNode          *nop_filtered;
           GeglNode          *nop_crop;
           GeglNode          *nop_store_buf;
-
+#if 0
           GeglNode          *preview_scaled;
-          GeglNode          *preview_raw;
-          GeglNode          *preview_filtered;
           GeglNode          *preview_crop;
           GeglNode          *preview_store_buf;
 
           // add a preview size, which is proxy or full scaled for render
 
           GeglNode          *full_scaled;
-          GeglNode          *full_raw;
-          GeglNode          *full_filtered;
           GeglNode          *full_crop;
           GeglNode          *full_store_buf;
-
-
+#endif
           GMutex             mutex;
         };
 
@@ -277,5 +273,7 @@
 } _GeglEDL;
 
 void update_size (GeglEDL *edl, Clip *clip);
+void remove_in_betweens (GeglNode *nop_scaled, GeglNode *nop_filtered);
+int  is_connected (GeglNode *a, GeglNode *b);
 
 #endif

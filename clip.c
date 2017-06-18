@@ -11,6 +11,9 @@ Clip *clip_new (GeglEDL *edl)
   Clip *clip = g_malloc0 (sizeof (Clip));
   clip->edl  = edl;
   clip->gegl = gegl_node_new ();
+
+  clip->chain_loader = gegl_node_new_child (clip->gegl, "operation", "gegl:nop", NULL);
+
   clip->full_loader  = gegl_node_new_child (clip->gegl, "operation", "gegl:ff-load", NULL);
   clip->proxy_loader = gegl_node_new_child (clip->gegl, "operation", "gegl:ff-load", NULL);
   clip->loader       = gegl_node_new_child (clip->gegl, "operation", "gegl:nop", NULL);
@@ -20,18 +23,18 @@ Clip *clip_new (GeglEDL *edl)
                                        "x", 1.0 * edl->width,
                                        "sampler", GEDL_SAMPLER,
                                        NULL);
-  clip->nop_filtered = gegl_node_new_child (clip->gegl, "operation", "gegl:nop", NULL);
   clip->nop_crop     = gegl_node_new_child (clip->gegl, "operation", "gegl:crop", "x", 0.0, "y", 0.0, "width", 1.0 * edl->width,
                                         "height", 1.0 * edl->height, NULL);
 
   clip->nop_store_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:write-buffer", "buffer", edl->final_buffer, NULL);
+#if 0
   clip->full_store_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:write-buffer", "buffer", edl->final_buffer, NULL);
   clip->preview_store_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:write-buffer", "buffer", edl->final_buffer, NULL);
+#endif
 
   gegl_node_link_many (clip->full_loader,
                        clip->loader,
                        clip->nop_scaled,
-                       clip->nop_filtered,
                        clip->nop_crop,
                        clip->nop_store_buf,
                        NULL);
@@ -57,8 +60,14 @@ void clip_free (Clip *clip)
 void clip_set_path (Clip *clip, const char *in_path)
 {
   char *path = NULL;
-  //fprintf (stderr, "[%s]\n", in_path);
-  if (in_path[0] == '/')
+  clip->is_chain = 0;
+
+  if (!strcmp (in_path, "black") ||
+      !strcmp (in_path, "blue") ||
+      strstr (in_path, "gegl:"))
+    clip->is_chain = 1;
+
+  if (in_path[0] == '/' || clip->is_chain)
   {
     path = g_strdup (in_path);
   }
@@ -80,22 +89,42 @@ void clip_set_path (Clip *clip, const char *in_path)
     g_free (clip->path);
   clip->path = path;
 
+  if (clip->is_chain)
+  {
+    GError *error = NULL;
+    if (is_connected (clip->chain_loader, clip->loader))
+      remove_in_betweens (clip->chain_loader, clip->loader);
+    else
+      gegl_node_link_many (clip->chain_loader, clip->loader, NULL);
 
-  if (g_str_has_suffix (path, ".png") ||
-      g_str_has_suffix (path, ".jpg") ||
-      g_str_has_suffix (path, ".exr") ||
-      g_str_has_suffix (path, ".EXR") ||
-      g_str_has_suffix (path, ".PNG") ||
-      g_str_has_suffix (path, ".JPG"))
-   {
-     g_object_set (clip->full_loader, "operation", "gegl:load", NULL);
-     clip->static_source = 1;
-   }
+    gegl_create_chain (path, clip->chain_loader, clip->loader, 0,
+                       400, //edl->height,
+                       NULL, &error);
+    if (error)
+      {
+        /* should set error string */
+        fprintf (stderr, "chain source: %s\n", error->message);
+        g_error_free (error);
+      }
+  }
   else
-   {
-     g_object_set (clip->full_loader, "operation", "gegl:ff-load", NULL);
-     clip->static_source = 0;
-   }
+  {
+    if (g_str_has_suffix (path, ".png") ||
+        g_str_has_suffix (path, ".jpg") ||
+        g_str_has_suffix (path, ".exr") ||
+        g_str_has_suffix (path, ".EXR") ||
+        g_str_has_suffix (path, ".PNG") ||
+        g_str_has_suffix (path, ".JPG"))
+     {
+       g_object_set (clip->full_loader, "operation", "gegl:load", NULL);
+       clip->static_source = 1;
+     }
+    else
+     {
+       g_object_set (clip->full_loader, "operation", "gegl:ff-load", NULL);
+       clip->static_source = 0;
+     }
+  }
 }
 
 int clip_get_start (Clip *clip)
@@ -156,6 +185,9 @@ const char *clip_get_path (Clip *clip)
 
 static void clip_set_proxied (Clip *clip)
 {
+  if (clip->is_chain)
+    return;
+
   if (clip->edl->use_proxies)
     {
       char *path = gedl_make_proxy_path (clip->edl, clip->path);
@@ -227,7 +259,23 @@ void clip_fetch_audio (Clip *clip)
     }
 }
 
-void remove_in_betweens (GeglNode *nop_scaled, GeglNode *nop_filtered);
+int is_connected (GeglNode *a, GeglNode *b)
+{
+  GeglNode *iter = a;
+  while (iter && iter != b)
+  {
+    GeglNode **nodes = NULL;
+    int count = gegl_node_get_consumers (iter, "output", &nodes, NULL);
+    if (count) iter = nodes[0];
+    else
+            iter = NULL;
+    g_free (nodes);
+  }
+  if (iter == b)
+    return 1;
+  return 0;
+}
+
 void remove_in_betweens (GeglNode *nop_scaled, GeglNode *nop_filtered)
 {
  GeglNode *iter = nop_scaled;
@@ -246,6 +294,7 @@ void remove_in_betweens (GeglNode *nop_scaled, GeglNode *nop_filtered)
     g_object_unref (collect->data);
     collect = g_list_remove (collect, collect->data);
  }
+ gegl_node_link_many (nop_scaled, nop_filtered, NULL);
 }
 
 void clip_render_frame (Clip *clip, int clip_frame_no, const char *cache_path)
@@ -254,8 +303,7 @@ void clip_render_frame (Clip *clip, int clip_frame_no, const char *cache_path)
   int use_proxies = edl->use_proxies;
   g_mutex_lock (&clip->mutex);
 
-  remove_in_betweens (clip->nop_scaled, clip->nop_filtered);
-  gegl_node_link_many (clip->nop_scaled, clip->nop_filtered, NULL);
+  remove_in_betweens (clip->nop_scaled, clip->nop_crop);
 
   gegl_node_set (clip->nop_scaled, "operation", "gegl:scale-size-keepaspect",
                                "y", 0.0,
@@ -266,11 +314,22 @@ void clip_render_frame (Clip *clip, int clip_frame_no, const char *cache_path)
   gegl_node_set (clip->nop_crop, "width", 1.0 * edl->width,
                                  "height", 1.0 * edl->height,
                                  NULL);
+  if (clip->is_chain)
+  {
+    if (is_connected (clip->chain_loader, clip->loader))
+      remove_in_betweens (clip->chain_loader, clip->loader);
+    else
+      gegl_node_link_many (clip->chain_loader, clip->loader, NULL);
+
+    gegl_create_chain (clip->path, clip->chain_loader, clip->loader, clip_frame_no - clip->start,
+                       edl->height,
+                       NULL, NULL);//&error);
+  }
 
       if (clip->filter_graph)
         {
            GError *error = NULL;
-           gegl_create_chain (clip->filter_graph, clip->nop_scaled, clip->nop_filtered, clip_frame_no - clip->start, edl->height, NULL, &error);
+           gegl_create_chain (clip->filter_graph, clip->nop_scaled, clip->nop_crop, clip_frame_no - clip->start, edl->height, NULL, &error);
            if (error)
              {
                /* should set error string */
