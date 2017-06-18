@@ -1,6 +1,7 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <gegl.h>
 #include <gexiv2/gexiv2.h>
@@ -429,9 +430,34 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
    }
   if (strstr (line, "--"))
     rest = strstr (line, "--") + 2;
+
   if (rest) while (*rest == ' ')rest++;
 
-  sscanf (line, "%s %i %i", path, &start, &end);
+  {
+    const char *p = strstr (line, "--");
+    if (!p)
+      p = line + strlen(line)-1;
+    {
+      if (p>line) p --;
+      while (p>line && *p == ' ') p --;
+
+      while (p>line && isdigit (*p)) p --;
+      end = atoi (p+1);
+
+      if (p>line) p --;
+      while (p>line && *p == ' ') p --;
+
+      while (p>line && isdigit (*p)) p --;
+      start = atoi (p+1);
+
+      if (p>line) p --;
+      while (p>line && *p == ' ') p --;
+
+      memcpy (path, line, (p-line) + 1);
+      path[(p-line)+1]=0;
+    }
+  }
+
   if (strlen (path) > 3)
     {
       Clip *clip = NULL;

@@ -50,6 +50,7 @@ void clip_free (Clip *clip)
 void clip_set_path (Clip *clip, const char *in_path)
 {
   char *path = NULL;
+  fprintf (stderr, "[%s]\n", in_path);
   if (in_path[0] == '/')
   {
     path = g_strdup (in_path);
