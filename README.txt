@@ -48,8 +48,8 @@ if you just run:
 
 gedl test.edl
 
-gedl will launch in UI mode, importing clips is currently most easily
-done by editing the text file.
+gedl will launch in UI mode, videos can be added by drag and drop from
+file manager if starting out from scratch.
 
 when quitting gedl will have overwritten the original file
 with something like the following:

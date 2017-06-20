@@ -826,6 +826,7 @@ static void setup (GeglEDL *edl)
   edl->store_final_buf = gegl_node_new_child (edl->gegl, "operation", "gegl:write-buffer", "buffer", edl->final_buffer, NULL);
 
   gegl_node_link_many (edl->result, edl->store_final_buf, NULL);
+  gegl_node_link_many (edl->cached_result, edl->encode, NULL);
 }
 
 static void init (int argc, char **argv)
