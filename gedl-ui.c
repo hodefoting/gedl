@@ -233,6 +233,7 @@ static void drag_dropped (MrgEvent *ev, void *data1, void *data2)
 
   g_free (str);
 }
+static void scroll_to_fit (GeglEDL *edl, Mrg *mrg);
 
 static void clicked_clip (MrgEvent *e, void *data1, void *data2)
 {
@@ -244,6 +245,7 @@ static void clicked_clip (MrgEvent *e, void *data1, void *data2)
   edl->selection_end = edl->frame_no;
   edl->active_clip = clip;
   edl->playing = 0;
+  scroll_to_fit (edl, e->mrg);
   mrg_queue_draw (e->mrg, NULL);
   changed++;
 }
@@ -262,6 +264,7 @@ static void drag_clip (MrgEvent *e, void *data1, void *data2)
   {
     edl->selection_start = e->x;
   }
+  scroll_to_fit (edl, e->mrg);
   mrg_queue_draw (e->mrg, NULL);
   changed++;
 }
@@ -298,6 +301,7 @@ static void released_clip (MrgEvent *e, void *data1, void *data2)
     edl->selection_end = edl->selection_start;
     edl->selection_start = temp;
   }
+  scroll_to_fit (edl, e->mrg);
   mrg_queue_draw (e->mrg, NULL);
   changed++;
 }
@@ -327,7 +331,6 @@ static void select_all (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
-static void scroll_to_fit (GeglEDL *edl, Mrg *mrg);
 
 
 static void prev_cut (MrgEvent *event, void *data1, void *data2)
@@ -1021,9 +1024,9 @@ void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start,
 static void scroll_to_fit (GeglEDL *edl, Mrg *mrg)
 {
   /* scroll to fit playhead */
-  if ( (edl->frame_no - edl->t0) / edl->scale > mrg_width (mrg) * 1.0)
+  if ( (edl->frame_no - edl->t0) / edl->scale > mrg_width (mrg) * 0.9)
     edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.8) * edl->scale;
-  else if ( (edl->frame_no - edl->t0) / edl->scale < mrg_width (mrg) * 0.0)
+  else if ( (edl->frame_no - edl->t0) / edl->scale < mrg_width (mrg) * 0.1)
     edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.2) * edl->scale;
 }
 
@@ -1259,6 +1262,16 @@ static void slide_back (MrgEvent *event, void *data1, void *data2)
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
+}
+
+static void zoom_1 (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  gedl_cache_invalid (edl);
+  edl->scale = 1.0;
+  scroll_to_fit (edl, event->mrg);
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
 }
 
 static void zoom_fit (MrgEvent *event, void *data1, void *data2)
@@ -1878,7 +1891,8 @@ void gedl_ui (Mrg *mrg, void *data)
       mrg_add_binding (mrg, "space", NULL, "play", renderer_toggle_playing, edl);
 
       mrg_add_binding (mrg, "tab", NULL, "cycle ui amount", toggle_ui_mode, edl);
-      mrg_add_binding (mrg, "e", NULL, "zoom fit", zoom_fit, edl);
+      mrg_add_binding (mrg, "e", NULL, "zoom timeline to fit", zoom_fit, edl);
+      mrg_add_binding (mrg, "1", NULL, "zoom timeline 1px = 1 frame", zoom_1, edl);
       if (edl->use_proxies)
         mrg_add_binding (mrg, "p", NULL, "don't use proxies", toggle_use_proxies, edl);
       else
