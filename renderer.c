@@ -118,13 +118,13 @@ static gpointer renderer_thread (gpointer data)
         {
           GeglRectangle ext = {0,0,edl->width, edl->height};
           //GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
-          gegl_buffer_set_extent (edl->final_buffer, &ext);
+          gegl_buffer_set_extent (edl->buffer, &ext);
         }
         gedl_set_frame (edl, edl->frame_no); /* this does the frame-set, which causes render  */
 #if 0
         {
           GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
-          gegl_buffer_set_extent (edl->final_buffer, &ext);
+          gegl_buffer_set_extent (edl->buffer, &ext);
         }
 #endif
 

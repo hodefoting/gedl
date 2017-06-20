@@ -26,10 +26,10 @@ Clip *clip_new (GeglEDL *edl)
   clip->nop_crop     = gegl_node_new_child (clip->gegl, "operation", "gegl:crop", "x", 0.0, "y", 0.0, "width", 1.0 * edl->width,
                                         "height", 1.0 * edl->height, NULL);
 
-  clip->nop_store_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:write-buffer", "buffer", edl->final_buffer, NULL);
+  clip->nop_store_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:write-buffer", "buffer", edl->buffer, NULL);
 #if 0
-  clip->full_store_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:write-buffer", "buffer", edl->final_buffer, NULL);
-  clip->preview_store_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:write-buffer", "buffer", edl->final_buffer, NULL);
+  clip->full_store_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:write-buffer", "buffer", edl->buffer, NULL);
+  clip->preview_store_buf = gegl_node_new_child (clip->gegl, "operation", "gegl:write-buffer", "buffer", edl->buffer, NULL);
 #endif
 
   gegl_node_link_many (clip->full_loader,

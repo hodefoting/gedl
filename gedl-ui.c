@@ -41,7 +41,7 @@ static void mrg_gegl_blit (Mrg *mrg,
   if (!node)
     return;
 
-  bounds = *gegl_buffer_get_extent (edl->final_buffer);//gegl_node_get_bounding_box (node);
+  bounds = *gegl_buffer_get_extent (edl->buffer);//gegl_node_get_bounding_box (node);
 
   if (width == -1 && height == -1)
   {

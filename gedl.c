@@ -121,7 +121,7 @@ GeglEDL *gedl_new           (void)
   edl->frame = -1;            /* frame-no in renderer thread */
   edl->scale = 1.0;
 
-  edl->final_buffer = gegl_buffer_new (&roi, babl_format ("R'G'B'A u8"));
+  edl->buffer = gegl_buffer_new (&roi, babl_format ("R'G'B'A u8"));
 
   edl->clip_query = strdup ("");
   edl->use_proxies = 0;
@@ -149,7 +149,7 @@ void     gedl_free          (GeglEDL *edl)
     g_free (edl->parent_path);
 
   g_object_unref (edl->gegl);
-  g_object_unref (edl->final_buffer);
+  g_object_unref (edl->buffer);
   g_free (edl);
 }
 
@@ -267,7 +267,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
     gegl_meta_get_audio (cache_path, clip->audio);
     }
     GeglRectangle ext = gegl_node_get_bounding_box (edl->result);
-    gegl_buffer_set_extent (edl->final_buffer, &ext);
+    gegl_buffer_set_extent (edl->buffer, &ext);
     gegl_node_process (edl->store_final_buf);
     g_free (cache_path);
     return;
@@ -818,8 +818,8 @@ static void setup (GeglEDL *edl)
                                      "audio-codec",    edl->audio_codec,
                                      "video-codec",    edl->video_codec,
                                      NULL);
-  edl->cached_result = gegl_node_new_child (edl->gegl, "operation", "gegl:buffer-source", "buffer", edl->final_buffer, NULL);
-  edl->store_final_buf = gegl_node_new_child (edl->gegl, "operation", "gegl:write-buffer", "buffer", edl->final_buffer, NULL);
+  edl->cached_result = gegl_node_new_child (edl->gegl, "operation", "gegl:buffer-source", "buffer", edl->buffer, NULL);
+  edl->store_final_buf = gegl_node_new_child (edl->gegl, "operation", "gegl:write-buffer", "buffer", edl->buffer, NULL);
 
   gegl_node_link_many (edl->result, edl->store_final_buf, NULL);
   gegl_node_link_many (edl->cached_result, edl->encode, NULL);

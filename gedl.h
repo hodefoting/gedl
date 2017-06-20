@@ -1,21 +1,15 @@
 #if PLAN
 
-        rename ui to gcut ? which can mean GEGL cut, goat cut or gnome cut
-
         bugs
-          huge video files cause (cairo) thumtrack overflow, vertical also hasa this problem.
-          left most-clip cannot be scrubbed (mrg misses evens here)
+          huge video files cause (cairo) thumtrack overflow, vertical also has this problem - how to split?
+          left most-clip cannot be scrubbed (mrg misses events here)
           audio glitches, gegl ff-load / ff-save should perhaps round all audio-frame
             counts up to a fixed amount, use correct start .. and drop frames when
             assembling
 
         features
-          rewrite gedl-ui.c in lua
-          add support for other frame sources.
-             image
-             video
-             op-chain - or is it enough to permit opchain on empty source?
-             edl
+          rewrite gedl-ui.c in lua and call it gcut
+          using edl files as clip sources
 
           separate filters from clips,.. permitting different chains to apply over many clips
 
@@ -208,7 +202,8 @@ struct _GeglEDL
   GList        *clips;
   int           frame; /* render thread, frame_no is ui side */
   double        fps;
-  GeglBuffer   *final_buffer;
+  GeglBuffer   *buffer;
+  GeglBuffer   *buffer_copy;
   GeglNode     *cached_result;
   GeglNode     *gegl;
   int           playing;
