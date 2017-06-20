@@ -343,7 +343,19 @@ void clip_render_frame (Clip *clip, int clip_frame_no, const char *cache_path)
       // flags,..    FULL   PREVIEW   FULL_CACHE|PREVIEW  STORE_FULL_CACHE
       clip_set_frame_no (clip, clip_frame_no);
       gegl_node_process (clip->nop_store_buf);
+
+    g_mutex_lock (&edl->buffer_copy_mutex);
+    {
+      GeglBuffer *t = edl->buffer_copy;
+      edl->buffer_copy = gegl_buffer_dup (edl->buffer);
+      if (t)
+        g_object_unref (t);
+      gegl_node_set (edl->cached_result, "buffer", edl->buffer_copy, NULL);
+    }
+    g_mutex_unlock (&edl->buffer_copy_mutex);
+
       clip_fetch_audio (clip);
+
 
       /* write cached render of this frame for this clip */
       if (!strstr (clip->path, ".gedl/cache") && (!use_proxies))

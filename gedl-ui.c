@@ -41,7 +41,7 @@ static void mrg_gegl_blit (Mrg *mrg,
   if (!node)
     return;
 
-  bounds = *gegl_buffer_get_extent (edl->buffer);//gegl_node_get_bounding_box (node);
+  bounds = *gegl_buffer_get_extent (edl->buffer_copy);
 
   if (width == -1 && height == -1)
   {
@@ -1721,6 +1721,7 @@ void gedl_ui (Mrg *mrg, void *data)
     return;
   }
 
+  g_mutex_lock (&edl->buffer_copy_mutex);
   switch (edl->ui_mode)
   {
      case GEDL_UI_MODE_FULL:
@@ -1746,8 +1747,8 @@ void gedl_ui (Mrg *mrg, void *data)
         /* opacity */ 1.0 //edl->frame_no == done_frame?1.0:0.5
                       ,edl);
         break;
-
   }
+  g_mutex_unlock (&edl->buffer_copy_mutex);
 
 
   switch (edl->ui_mode)

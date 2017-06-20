@@ -11,25 +11,19 @@
           rewrite gedl-ui.c in lua and call it gcut
           using edl files as clip sources
 
-          separate filters from clips,.. permitting different chains to apply over many clips
+          separate filters from clips, permitting different chains to apply over many clips
 
           annotations
+          cross-fades for video and audio
           trimming by mouse / dragging clips around by mouse
           implement overlaying of audio from wav / mp3 files
-          re-enable cross-fades for video and audio
           templates - for both clips and filters - filters that can be chained
-          create thumbnails as well as thumbtracks for clips
-             related: also write a cache for proxy.. when heavily filtered it is neccesary, frames from here can form thumbtrack
           pcm cache / thumb cache would almost be...
           detect locked or crashed ui, kill and respawn
-          gaps in timeline (will be implemented as blank clips - but ui can be different)
+          gaps in timeline (will be implemented as blank clips - but ui could be different)
           better video file import
             insert videos from the commandline
-            ui for picking clips in current folder, possibly clib-db separate from video-project
-            clip database done on demand - files that appear in the timeline get enrolled, as well as files thatappearinthe working dir.
-
-        refactor
-           make each clip not have a loader but have a pool of loaders, that can be pre-seeded with right paths for upcoming clips during playback
+            internal clip database
 
 #endif
 
@@ -204,6 +198,7 @@ struct _GeglEDL
   double        fps;
   GeglBuffer   *buffer;
   GeglBuffer   *buffer_copy;
+  GMutex        buffer_copy_mutex;
   GeglNode     *cached_result;
   GeglNode     *gegl;
   int           playing;
