@@ -247,7 +247,6 @@ struct _GeglEDL
   double        scale;
   double        t0;
   Clip         *active_clip;
-  SourceClip   *active_source;
 
   void         *mrg;
 

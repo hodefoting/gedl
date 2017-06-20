@@ -370,10 +370,6 @@ void gedl_parse_clip (GeglEDL *edl, const char *line)
     {
       SourceClip *sclip = g_new0 (SourceClip, 1);
       edl->clip_db = g_list_append (edl->clip_db, sclip);
-      if (strstr (line, "[active]"))
-       {
-         edl->active_source = sclip;
-       }
       sclip->path = g_strdup (path);
       sclip->start = start;
       sclip->end = end;

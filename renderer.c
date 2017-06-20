@@ -262,16 +262,6 @@ void playing_iteration (Mrg *mrg, GeglEDL *edl)
         return;
       if (delta >= 1.0)
       {
-      if (edl->active_source)
-      {
-        edl->source_frame_no += delta;
-        if (edl->source_frame_no > edl->active_source->end)
-        {
-           edl->source_frame_no = 0;
-           edl->source_frame_no = edl->active_source->start;
-        }
-        prev_ticks = ticks;
-      }
 
       if (edl->active_clip)
       {
