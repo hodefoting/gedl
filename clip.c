@@ -61,6 +61,16 @@ void clip_set_path (Clip *clip, const char *in_path)
 {
   char *path = NULL;
   clip->is_chain = 0;
+  clip->is_meta = 0;
+
+  if (!in_path)
+  {
+    clip->is_meta = 1;
+    if (clip->path)
+      g_free (clip->path);
+    clip->path = NULL;
+    return;
+  }
 
   if (!strcmp (in_path, "black") ||
       !strcmp (in_path, "blue") ||
@@ -141,6 +151,8 @@ int clip_get_frames (Clip *clip)
 {
   int frames = clip_get_end (clip) - clip_get_start (clip) + 1;
   if (frames < 0) frames = 0;
+  if (clip->is_meta)
+    return 0;
   return frames;
 }
 

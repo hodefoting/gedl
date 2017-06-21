@@ -10,10 +10,9 @@
         features
           rewrite gedl-ui.c in lua and call it gcut
           using edl files as clip sources
-
-          separate filters from clips, permitting different chains to apply over many clips
-
+          support for other timecodes
           annotations
+          separate filters from clips, permitting different chains to apply over many clips
           cross-fades for video and audio
           trimming by mouse / dragging clips around by mouse
           implement overlaying of audio from wav / mp3 files
@@ -78,7 +77,7 @@ Clip       *gedl_get_clip           (GeglEDL *edl, int frame, int *clip_frame_no
 void        gedl_set_frame          (GeglEDL    *edl, int frame);
 void        gedl_set_time           (GeglEDL    *edl, double seconds);
 int         gedl_get_frame          (GeglEDL    *edl);
-char       *gedl_serialise          (GeglEDL    *edl);
+char       *gedl_serialize          (GeglEDL    *edl);
 
 void        gedl_set_range          (GeglEDL    *edl, int start_frame, int end_frame);
 void        gedl_get_range          (GeglEDL    *edl,
@@ -159,6 +158,7 @@ struct _Clip
   int    fade_pad_end;
   int    static_source;
   int    is_chain;
+  int    is_meta;
 
   int    abs_start;
 

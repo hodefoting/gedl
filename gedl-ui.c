@@ -478,6 +478,10 @@ static int are_mergable (Clip *clip1, Clip *clip2, int delta)
 {
   if (!clip1 || !clip2)
     return 0;
+  if (!clip1->path)
+    return 0;
+  if (!clip2->path)
+    return 0;
   if (strcmp (clip1->path, clip2->path))
     return 0;
   if (clip2->start != (clip1->end + 1 + delta))
@@ -986,7 +990,12 @@ int VID_HEIGHT=96; // XXX: ugly global
 
 void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start, int clip_frames, double x, double y)
 {
-  char *thumb_path = gedl_make_thumb_path (edl, clip_path);
+  char *thumb_path;
+  if (!clip_path)
+  {
+    return; // XXX: draw string!
+  }
+  thumb_path = gedl_make_thumb_path (edl, clip_path);
 
   cairo_t *cr = mrg_cr (mrg);
   cairo_rectangle (cr, x, y, clip_frames, VID_HEIGHT);
@@ -1393,7 +1402,20 @@ void gedl_draw (Mrg     *mrg,
   {
     Clip *clip = l->data;
     int frames = clip_get_frames (clip);
-    render_clip (mrg, edl, clip->path, clip->start, frames, t, y);
+    if (clip->is_meta)
+    {
+      double tx = t, ty = y;
+      cairo_save (cr);
+      cairo_user_to_device (cr, &tx, &ty);
+      cairo_identity_matrix (cr);
+      mrg_set_xy (mrg, tx, y + VID_HEIGHT);
+      mrg_printf (mrg, "%s", clip->filter_graph);
+      cairo_restore (cr);
+    }
+    else
+    {
+      render_clip (mrg, edl, clip->path, clip->start, frames, t, y);
+    }
     if (clip == edl->active_clip)
       cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
     else
@@ -1555,11 +1577,6 @@ void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, f
     cairo_fill (cr);
 
     cairo_restore (cr);
-    if (0) /* draw more aspect right selection (at least for start/end "frame aspect part..?) */
-    {
-    render_clip (mrg, edl, clip->path, clip->start, (clip->end - clip->start) * scale, clip->start * scale, y);
-    cairo_new_path (cr);
-    }
 
 #if 0
     cairo_move_to (cr, x, y + 10);
@@ -1809,7 +1826,7 @@ void gedl_ui (Mrg *mrg, void *data)
 #endif
   mrg_printf (mrg, " %i  ", edl->frame_no);
 
-  if (edl->active_clip)
+  if (edl->active_clip && edl->active_clip->path)
     {
       char *basename = g_path_get_basename (edl->active_clip->path);
       mrg_printf (mrg, "| %s %i-%i %i  ", basename,

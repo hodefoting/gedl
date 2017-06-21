@@ -177,6 +177,8 @@ Clip *gedl_get_clip (GeglEDL *edl, int frame, int *clip_frame_no)
   {
     Clip *clip = l->data;
     int clip_frames = clip_get_frames (clip);
+    if (clip->is_meta)
+      continue;
 
     if (frame - clip_start < clip_frames)
     {
@@ -295,6 +297,8 @@ void gedl_set_frame (GeglEDL *edl, int frame)
   {
     Clip *clip = l->data;
     int clip_frames = clip_get_frames (clip);
+    if (clip->is_meta)
+      continue;
     if (frame - clip_start < clip_frames)
     {
       int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
@@ -353,7 +357,7 @@ void gedl_get_video_info (const char *path, int *duration, double *fps)
   g_object_unref (gegl);
 }
 
-int    gedl_get_duration (GeglEDL *edl)
+int gedl_get_duration (GeglEDL *edl)
 {
   int count = 0;
   GList *l;
@@ -446,7 +450,6 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
   if (strstr (line, "--"))
     rest = strstr (line, "--") + 2;
 
-  if (rest) while (*rest == ' ')rest++;
 
   {
     const char *p = strstr (line, "--");
@@ -478,6 +481,9 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
       Clip *clip = NULL;
       int ff_probe = 0;
      clip = clip_new_full (edl, path, start, end);
+
+     if (rest) while (*rest == ' ')rest++;
+
      if (!clip_is_static_source (clip) &&
          (start == 0 && end == 0))
        ff_probe = 1;
@@ -534,9 +540,12 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
         clip->end = clip->duration;
      }
     }
-  /* todo: probe video file for length if any of arguments are nont present as 
-           integers.. alloving full clips and clips with mm:ss.nn timestamps,
-   */
+  else if (start == 0 && end == 0 && rest)
+  {
+    Clip *clip = clip_new_full (edl, NULL, 0, 0);
+    clip->filter_graph = g_strdup (rest);
+    edl->clips = g_list_append (edl->clips, clip);
+  }
 }
 
 #include <string.h>
@@ -614,7 +623,7 @@ GeglEDL *gedl_new_from_string (const char *string, const char *parent_path)
 void gedl_save_path (GeglEDL *edl, const char *path)
 {
   char *serialized;
-  serialized = gedl_serialise (edl);
+  serialized = gedl_serialize (edl);
 
   if (g_file_test (path, G_FILE_TEST_IS_REGULAR))
   {
@@ -1041,7 +1050,7 @@ void gedl_make_proxies (GeglEDL *edl)
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
-    if (clip->is_chain == 0 && clip->static_source == 0)
+    if (clip->is_chain == 0 && clip->static_source == 0 && clip->is_meta == 0)
     {
       char *proxy_path = gedl_make_proxy_path (edl, clip->path);
       char *thumb_path = gedl_make_thumb_path (edl, clip->path);
@@ -1133,10 +1142,12 @@ int main (int argc, char **argv)
 #define RUNMODE_RENDER 1
 #define RUNMODE_CACHE  2
 #define RUNMODE_CACHE_STAT  3
+#define RUNMODE_RESERIALIZE  4
     int runmode = RUNMODE_UI;
     for (int i = 0; argv[i]; i++)
     {
       if (!strcmp (argv[i], "render")) runmode = RUNMODE_RENDER;
+      if (!strcmp (argv[i], "reserialize")) runmode = RUNMODE_RESERIALIZE;
       if (!strcmp (argv[i], "cachestat")) runmode = RUNMODE_CACHE_STAT;
       if (!strcmp (argv[i], "cache"))
       {
@@ -1152,6 +1163,10 @@ int main (int argc, char **argv)
 
     switch (runmode)
     {
+      case RUNMODE_RESERIALIZE:
+        printf ("%s", gedl_serialize (edl));
+        exit (0);
+        break;
       case RUNMODE_UI:
 
         signal(SIGUSR2, nop_handler);
@@ -1184,7 +1199,7 @@ int main (int argc, char **argv)
   return -1;
 }
 
-char *gedl_serialise (GeglEDL *edl)
+char *gedl_serialize (GeglEDL *edl)
 {
   GList *l;
   char *ret;
@@ -1243,13 +1258,23 @@ char *gedl_serialise (GeglEDL *edl)
   {
     Clip *clip = l->data;
     gchar *path = clip->path;
+    if (!path)
+      path = "";
     if (!strncmp (path, edl->parent_path, strlen(edl->parent_path)))
       path += strlen (edl->parent_path);
-    g_string_append_printf (ser, "%s %d %d%s%s%s%s%s\n", path, clip->start, clip->end,
+
+    if (strlen(path)== 0 &&
+        clip->start == 0 &&
+        clip->end == 0 &&
+        clip->filter_graph)
+    {
+      g_string_append_printf (ser, "--%s\n", clip->filter_graph);
+    }
+    else
+    g_string_append_printf (ser, "%s %d %d%s%s%s%s\n", path, clip->start, clip->end,
         clip->fade_out?" [fade]":"",
         "", //(edl->active_clip == clip)?" [active]":"",
-        clip->filter_graph?" -- ":"",clip->filter_graph?clip->filter_graph:"",
-        clip->filter_graph?"\n":"\n");
+        clip->filter_graph?" -- ":"",clip->filter_graph?clip->filter_graph:"");
   }
   g_string_append_printf (ser, "-----\n");
   for (l = edl->clip_db; l; l = l->next)
