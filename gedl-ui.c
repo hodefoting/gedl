@@ -33,6 +33,7 @@ static void mrg_gegl_blit (Mrg *mrg,
                           float opacity,
                           GeglEDL *edl)
 {
+#if 0
   GeglRectangle bounds;
 
   cairo_t *cr = mrg_cr (mrg);
@@ -41,7 +42,63 @@ static void mrg_gegl_blit (Mrg *mrg,
   if (!node)
     return;
 
-  bounds = *gegl_buffer_get_extent (edl->buffer_copy);
+  bounds = *gegl_buffer_get_extent (edl->buffer_copy_temp);
+
+  if (width == -1 && height == -1)
+  {
+    width  = bounds.width;
+    height = bounds.height;
+  }
+
+  if (width == -1)
+    width = bounds.width * height / bounds.height;
+  if (height == -1)
+    height = bounds.height * width / bounds.width;
+
+  if (copy_buf_len < bounds.width * bounds.height * 4)
+  {
+    if (copy_buf)
+      free (copy_buf);
+    copy_buf_len = bounds.width * bounds.height * 4;
+    copy_buf = malloc (copy_buf_len);
+  }
+      float scale = 1.0;
+  {
+    static int foo = 0;
+    unsigned char *buf = copy_buf;
+    GeglRectangle roi = {u, v, bounds.width, bounds.height};
+    static const Babl *fmt = NULL;
+
+foo++;
+    if (!fmt) fmt = babl_format ("cairo-RGB24");
+
+    {
+      scale = width / bounds.width;
+      if (height / bounds.height < scale)
+        scale = height / bounds.height;
+
+      gegl_node_blit (node, 1.0, &roi, fmt, buf, bounds.width * 4,
+                      GEGL_BLIT_DEFAULT);
+    }
+
+  surface = cairo_image_surface_create_for_data (buf, CAIRO_FORMAT_RGB24, bounds.width, bounds.height, bounds.width * 4);
+  }
+
+  cairo_save (cr);
+  cairo_surface_set_device_scale (surface, 1.0/scale, 1.0/scale);
+
+  cairo_rectangle (cr, x0, y0, width, height);
+
+#else
+  GeglRectangle bounds;
+
+  cairo_t *cr = mrg_cr (mrg);
+  cairo_surface_t *surface = NULL;
+
+  if (!node)
+    return;
+
+  bounds = *gegl_buffer_get_extent (edl->buffer_copy_temp);
 
   if (width == -1 && height == -1)
   {
@@ -87,6 +144,8 @@ foo++;
   cairo_surface_set_device_scale (surface, 1.0, 1.0);
 
   cairo_rectangle (cr, x0, y0, width, height);
+#endif
+
 
   cairo_clip (cr);
   cairo_translate (cr, x0, y0);
@@ -1752,6 +1811,13 @@ void gedl_ui (Mrg *mrg, void *data)
   }
 
   g_mutex_lock (&edl->buffer_copy_mutex);
+  if (edl->buffer_copy_temp)
+    g_object_unref (edl->buffer_copy_temp);
+  edl->buffer_copy_temp = edl->buffer_copy;
+  g_object_ref (edl->buffer_copy);
+  gegl_node_set (edl->cached_result, "buffer", edl->buffer_copy_temp, NULL);
+  g_mutex_unlock (&edl->buffer_copy_mutex);
+
   switch (edl->ui_mode)
   {
      case GEDL_UI_MODE_FULL:
@@ -1778,7 +1844,6 @@ void gedl_ui (Mrg *mrg, void *data)
                       ,edl);
         break;
   }
-  g_mutex_unlock (&edl->buffer_copy_mutex);
 
 
   switch (edl->ui_mode)

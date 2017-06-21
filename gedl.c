@@ -123,6 +123,7 @@ GeglEDL *gedl_new           (void)
 
   edl->buffer = gegl_buffer_new (&roi, babl_format ("R'G'B'A u8"));
   edl->buffer_copy = gegl_buffer_new (&roi, babl_format ("R'G'B'A u8"));
+  edl->buffer_copy_temp = gegl_buffer_new (&roi, babl_format ("R'G'B'A u8"));
 
   edl->clip_query = strdup ("");
   edl->use_proxies = 0;
@@ -155,6 +156,8 @@ void     gedl_free          (GeglEDL *edl)
     g_object_unref (edl->buffer);
   if (edl->buffer_copy)
     g_object_unref (edl->buffer_copy);
+  if (edl->buffer_copy_temp)
+    g_object_unref (edl->buffer_copy_temp);
   g_mutex_clear (&edl->buffer_copy_mutex);
   g_free (edl);
 }
@@ -239,6 +242,17 @@ gchar *gedl_get_frame_hash (GeglEDL *edl, int frame)
   return NULL;
 }
 
+void gedl_update_buffer (GeglEDL *edl)
+{
+  g_mutex_lock (&edl->buffer_copy_mutex);
+  {
+    GeglBuffer *t = edl->buffer_copy;
+    edl->buffer_copy = gegl_buffer_dup (edl->buffer);
+    if (t)
+      g_object_unref (t);
+  }
+  g_mutex_unlock (&edl->buffer_copy_mutex);
+}
 /*  calling this causes gedl to rig up its graphs for providing/rendering this frame
  */
 void gedl_set_frame (GeglEDL *edl, int frame)
@@ -278,15 +292,7 @@ void gedl_set_frame (GeglEDL *edl, int frame)
     gegl_buffer_set_extent (edl->buffer, &ext);
     gegl_node_process (edl->store_final_buf);
 
-    g_mutex_lock (&edl->buffer_copy_mutex);
-    {
-      GeglBuffer *t = edl->buffer_copy;
-      edl->buffer_copy = gegl_buffer_dup (edl->buffer);
-      if (t)
-        g_object_unref (t);
-      gegl_node_set (edl->cached_result, "buffer", edl->buffer_copy, NULL);
-    }
-    g_mutex_unlock (&edl->buffer_copy_mutex);
+    gedl_update_buffer (edl);
     g_free (cache_path);
     return;
   }

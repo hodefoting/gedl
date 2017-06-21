@@ -197,6 +197,7 @@ struct _GeglEDL
   int           frame; /* render thread, frame_no is ui side */
   double        fps;
   GeglBuffer   *buffer;
+  GeglBuffer   *buffer_copy_temp;
   GeglBuffer   *buffer_copy;
   GMutex        buffer_copy_mutex;
   GeglNode     *cached_result;
@@ -248,5 +249,6 @@ struct _GeglEDL
 void update_size (GeglEDL *edl, Clip *clip);
 void remove_in_betweens (GeglNode *nop_scaled, GeglNode *nop_filtered);
 int  is_connected (GeglNode *a, GeglNode *b);
+void gedl_update_buffer (GeglEDL *edl);
 
 #endif
