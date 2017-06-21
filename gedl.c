@@ -1041,14 +1041,17 @@ void gedl_make_proxies (GeglEDL *edl)
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
-    char *proxy_path = gedl_make_proxy_path (edl, clip->path);
-    char *thumb_path = gedl_make_thumb_path (edl, clip->path);
-    if (!g_file_test (proxy_path, G_FILE_TEST_IS_REGULAR))
-       gegl_make_thumb_video (edl, clip->path, proxy_path);
-    if (!g_file_test (thumb_path, G_FILE_TEST_IS_REGULAR))
-       gegl_make_thumb_image(edl, proxy_path, thumb_path);
-    g_free (proxy_path);
-    g_free (thumb_path);
+    if (clip->is_chain == 0 && clip->static_source == 0)
+    {
+      char *proxy_path = gedl_make_proxy_path (edl, clip->path);
+      char *thumb_path = gedl_make_thumb_path (edl, clip->path);
+      if (!g_file_test (proxy_path, G_FILE_TEST_IS_REGULAR))
+        gegl_make_thumb_video (edl, clip->path, proxy_path);
+      if (!g_file_test (thumb_path, G_FILE_TEST_IS_REGULAR))
+        gegl_make_thumb_image(edl, proxy_path, thumb_path);
+      g_free (proxy_path);
+      g_free (thumb_path);
+    }
   }
 }
 

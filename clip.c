@@ -280,16 +280,6 @@ void remove_in_betweens (GeglNode *nop_scaled, GeglNode *nop_filtered)
 {
  GeglNode *iter = nop_scaled;
  GList *collect = NULL;
- while (iter && iter != nop_filtered)
- {
-   GeglNode **nodes = NULL;
-   int count = gegl_node_get_consumers (iter, "output", &nodes, NULL);
-   if (count) iter = nodes[0];
-   else iter = NULL;
-   g_free (nodes);
-   if (iter && iter != nop_filtered)
-     collect = g_list_append (collect, iter);
- }
 
  iter = nop_filtered;
  while (iter && iter != nop_scaled)

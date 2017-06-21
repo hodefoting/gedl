@@ -1904,16 +1904,24 @@ void gedl_ui (Mrg *mrg, void *data)
       mrg_add_binding (mrg, "left/right", NULL, "step frame", step_frame, edl);
       mrg_add_binding (mrg, "right", NULL, NULL, step_frame, edl);
       mrg_add_binding (mrg, "left", NULL, NULL, step_frame_back, edl);
+      mrg_add_binding (mrg, "l", NULL, NULL, step_frame, edl);
+      mrg_add_binding (mrg, "h", NULL, NULL, step_frame_back, edl);
 
       mrg_add_binding (mrg, "up/down", NULL, "previous/next cut", prev_cut, edl);
       mrg_add_binding (mrg, "up", NULL, NULL, prev_cut, edl);
+      mrg_add_binding (mrg, "k", NULL, NULL, prev_cut, edl);
       mrg_add_binding (mrg, "down", NULL, NULL, next_cut, edl);
+      mrg_add_binding (mrg, "j", NULL, NULL, next_cut, edl);
 
       mrg_add_binding (mrg, "shift-left/right", NULL, "extend selection", extend_selection_to_the_right, edl);
       mrg_add_binding (mrg, "shift-right", NULL, NULL, extend_selection_to_the_right, edl);
       mrg_add_binding (mrg, "shift-left", NULL, NULL,  extend_selection_to_the_left, edl);
       mrg_add_binding (mrg, "shift-up", NULL, NULL,    extend_selection_to_previous_cut, edl);
       mrg_add_binding (mrg, "shift-down", NULL, NULL,  extend_selection_to_next_cut, edl);
+      mrg_add_binding (mrg, "L", NULL, NULL, extend_selection_to_the_right, edl);
+      mrg_add_binding (mrg, "H", NULL, NULL,  extend_selection_to_the_left, edl);
+      mrg_add_binding (mrg, "K", NULL, NULL,    extend_selection_to_previous_cut, edl);
+      mrg_add_binding (mrg, "J", NULL, NULL,  extend_selection_to_next_cut, edl);
 
       if (empty_selection (edl))
       {
