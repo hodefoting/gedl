@@ -1,6 +1,8 @@
 #define _BSD_SOURCE
 #define _DEFAULT_SOURCE
 
+#define USE_CAIRO_SCALING 1
+
 #include <string.h>
 #include <signal.h>
 #include <stdio.h>
@@ -33,7 +35,6 @@ static void mrg_gegl_blit (Mrg *mrg,
                           float opacity,
                           GeglEDL *edl)
 {
-#if 0
   GeglRectangle bounds;
 
   cairo_t *cr = mrg_cr (mrg);
@@ -55,6 +56,7 @@ static void mrg_gegl_blit (Mrg *mrg,
   if (height == -1)
     height = bounds.height * width / bounds.width;
 
+#ifdef USE_CAIRO_SCALING
   if (copy_buf_len < bounds.width * bounds.height * 4)
   {
     if (copy_buf)
@@ -77,8 +79,8 @@ foo++;
       if (height / bounds.height < scale)
         scale = height / bounds.height;
 
-      gegl_node_blit (node, 1.0, &roi, fmt, buf, bounds.width * 4,
-                      GEGL_BLIT_DEFAULT);
+      // XXX: the 1.001 instead of 1.00 is to work around a gegl bug
+      gegl_buffer_get (edl->buffer_copy_temp, &roi, 1.001, fmt, buf, bounds.width * 4, GEGL_ABYSS_BLACK);
     }
 
   surface = cairo_image_surface_create_for_data (buf, CAIRO_FORMAT_RGB24, bounds.width, bounds.height, bounds.width * 4);
@@ -86,31 +88,7 @@ foo++;
 
   cairo_save (cr);
   cairo_surface_set_device_scale (surface, 1.0/scale, 1.0/scale);
-
-  cairo_rectangle (cr, x0, y0, width, height);
-
 #else
-  GeglRectangle bounds;
-
-  cairo_t *cr = mrg_cr (mrg);
-  cairo_surface_t *surface = NULL;
-
-  if (!node)
-    return;
-
-  bounds = *gegl_buffer_get_extent (edl->buffer_copy_temp);
-
-  if (width == -1 && height == -1)
-  {
-    width  = bounds.width;
-    height = bounds.height;
-  }
-
-  if (width == -1)
-    width = bounds.width * height / bounds.height;
-  if (height == -1)
-    height = bounds.height * width / bounds.width;
-
   if (copy_buf_len < width * height * 4)
   {
     if (copy_buf)
@@ -133,8 +111,7 @@ foo++;
       if (height / bounds.height < scale)
         scale = height / bounds.height;
 
-      gegl_node_blit (node, scale, &roi, fmt, buf, width * 4,
-                      GEGL_BLIT_DEFAULT);
+      gegl_buffer_get (edl->buffer_copy_temp, &roi, scale, fmt, buf, width * 4, GEGL_ABYSS_BLACK);
     }
 
   surface = cairo_image_surface_create_for_data (buf, CAIRO_FORMAT_RGB24, width, height, width * 4);
@@ -142,9 +119,8 @@ foo++;
 
   cairo_save (cr);
   cairo_surface_set_device_scale (surface, 1.0, 1.0);
-
-  cairo_rectangle (cr, x0, y0, width, height);
 #endif
+  cairo_rectangle (cr, x0, y0, width, height);
 
 
   cairo_clip (cr);
