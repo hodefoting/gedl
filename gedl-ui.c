@@ -1968,9 +1968,13 @@ void gedl_ui (Mrg *mrg, void *data)
             mrg_add_binding (mrg, "control-left/right", NULL, "adjust in", clip_start_inc, edl);
             mrg_add_binding (mrg, "control-right", NULL, NULL, clip_start_inc, edl);
             mrg_add_binding (mrg, "control-left", NULL, NULL, clip_start_dec, edl);
+            mrg_add_binding (mrg, "control-h", NULL, NULL, clip_start_inc, edl);
+            mrg_add_binding (mrg, "control-l", NULL, NULL, clip_start_dec, edl);
             mrg_add_binding (mrg, "control-up/down", NULL, "shuffle clip backward/forward", shuffle_back, edl);
             mrg_add_binding (mrg, "control-up", NULL, NULL, shuffle_back, edl);
             mrg_add_binding (mrg, "control-down", NULL, NULL, shuffle_forward, edl);
+            mrg_add_binding (mrg, "control-k", NULL, NULL, shuffle_back, edl);
+            mrg_add_binding (mrg, "control-j", NULL, NULL, shuffle_forward, edl);
           }
         }
         else
