@@ -217,8 +217,6 @@ void gedl_set_use_proxies (GeglEDL *edl, int use_proxies)
 
 }
 
-int do_encode = 1;
-
 /* computes the hash of a given rendered frame - without altering
  * any state
  */
@@ -309,12 +307,15 @@ void gedl_set_frame (GeglEDL *edl, int frame)
     {
       int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
       clip_render_frame (clip, clip_frame_no, cache_path);
-      g_free (cache_path);
-      return;
+      goto clip0_done;
     }
     clip_start += clip_frames;
   }
+clip0_done:
   g_free (cache_path);
+
+
+
 }
 
 void gedl_set_time (GeglEDL *edl, double seconds)
@@ -863,7 +864,7 @@ static void init (int argc, char **argv)
                 NULL);
 }
 
-static void process_frames (GeglEDL *edl)
+static void encode_frames (GeglEDL *edl)
 {
   int frame_no;
   for (frame_no = edl->range_start; frame_no <= edl->range_end; frame_no++)
@@ -875,11 +876,8 @@ static void process_frames (GeglEDL *edl)
      100.0 * (frame_no-edl->range_start) * 1.0 / (edl->range_end - edl->range_start),
      frame_no, edl->range_end);
 
-    if (do_encode)
-    {
-      gegl_node_set (edl->encode, "audio", gedl_get_audio (edl), NULL);
-      gegl_node_process (edl->encode);
-    }
+    gegl_node_set (edl->encode, "audio", gedl_get_audio (edl), NULL);
+    gegl_node_process (edl->encode);
     fflush (0);
   }
   fprintf (stdout, "\n");
@@ -1183,11 +1181,10 @@ int main (int argc, char **argv)
         tot_frames  = gedl_get_duration (edl);
         if (edl->range_end == 0)
           edl->range_end = tot_frames-1;
-        process_frames (edl);
+        encode_frames (edl);
         gedl_free (edl);
         return 0;
       case RUNMODE_CACHE:
-        do_encode  = 0;
         tot_frames  = gedl_get_duration (edl);
         if (edl->range_end == 0)
           edl->range_end = tot_frames-1;
@@ -1195,7 +1192,6 @@ int main (int argc, char **argv)
         gedl_free (edl);
         return 0;
       case RUNMODE_CACHE_STAT:
-        do_encode  = 0;
         process_frames_cache_stat (edl);
         gedl_free (edl);
         return 0;
