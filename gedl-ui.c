@@ -636,6 +636,27 @@ static void split_clip (MrgEvent *event, void *data1, void *data2)
   changed++;
 }
 
+
+static void toggle_fade (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+
+  if (!edl->active_clip)
+    return;
+  if (edl->active_clip->fade)
+  {
+    edl->active_clip->fade = 0;
+  }
+  else
+  {
+    edl->active_clip->fade = 23;
+  }
+  gedl_cache_invalid (edl);
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+  changed++;
+}
+
 static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -1791,6 +1812,7 @@ void gedl_ui (Mrg *mrg, void *data)
     g_object_unref (edl->buffer_copy_temp);
   edl->buffer_copy_temp = edl->buffer_copy;
   g_object_ref (edl->buffer_copy);
+  gegl_node_set (edl->cached_result, "buffer", edl->buffer_copy_temp, NULL);
   g_mutex_unlock (&edl->buffer_copy_mutex);
 
   switch (edl->ui_mode)
@@ -1803,7 +1825,7 @@ void gedl_ui (Mrg *mrg, void *data)
                       (int)(mrg_width (mrg) * 1.0),
                       mrg_height (mrg),// * SPLIT_VER,
 
-                      NULL,
+                      o->edl->cached_result,
                       0, 0,
         /* opacity */ 1.0 //edl->frame_no == done_frame?1.0:0.5
                       ,edl);
@@ -1813,7 +1835,7 @@ void gedl_ui (Mrg *mrg, void *data)
                       (int)(mrg_width (mrg) * 0.8),
                       mrg_height (mrg) * SPLIT_VER,
 
-                      NULL,
+                      o->edl->cached_result,
                       0, 0,
         /* opacity */ 1.0 //edl->frame_no == done_frame?1.0:0.5
                       ,edl);
@@ -1995,7 +2017,6 @@ void gedl_ui (Mrg *mrg, void *data)
             if (iter) iter = iter->prev;
             if (iter) clip2 = iter->data;
 
-            //mrg_add_binding (mrg, "f", NULL, "toggle fade", toggle_fade, edl);
 
             if (are_mergable (clip2, edl->active_clip, 0))
               mrg_add_binding (mrg, "v", NULL, "merge clip", merge_clip, edl);
@@ -2004,6 +2025,8 @@ void gedl_ui (Mrg *mrg, void *data)
           {
             mrg_add_binding (mrg, "v", NULL, "split clip", split_clip, edl);
           }
+          
+          mrg_add_binding (mrg, "f", NULL, "toggle fade", toggle_fade, edl);
         }
 
       }

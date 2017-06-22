@@ -311,7 +311,7 @@ void remove_in_betweens (GeglNode *nop_scaled, GeglNode *nop_filtered)
  gegl_node_link_many (nop_scaled, nop_filtered, NULL);
 }
 
-void clip_render_frame (Clip *clip, int clip_frame_no, const char *cache_path)
+void clip_render_frame (Clip *clip, int clip_frame_no)
 {
   GeglEDL *edl = clip->edl;
   int use_proxies = edl->use_proxies;
@@ -356,40 +356,9 @@ void clip_render_frame (Clip *clip, int clip_frame_no, const char *cache_path)
 
       // flags,..    FULL   PREVIEW   FULL_CACHE|PREVIEW  STORE_FULL_CACHE
       clip_set_frame_no (clip, clip_frame_no);
-      gegl_node_process (clip->nop_store_buf);
-
-      gedl_update_buffer (edl);
-
+      gegl_node_process (clip->loader); // for the audio fetch
       clip_fetch_audio (clip);
 
-
-      /* write cached render of this frame for this clip */
-      if (!strstr (clip->path, ".gedl/cache") && (!use_proxies))
-        {
-          const gchar *cache_path_final = cache_path;
-          gchar *cache_path       = g_strdup_printf ("%s~", cache_path_final);
-
-          if (!g_file_test (cache_path_final, G_FILE_TEST_IS_REGULAR) && !edl->playing)
-            {
-              GeglNode *save_graph = gegl_node_new ();
-              GeglNode *save;
-              save = gegl_node_new_child (save_graph,
-                          "operation", "gegl:" CACHE_FORMAT "-save",
-                          "path", cache_path,
-                          NULL);
-              if (!strcmp (CACHE_FORMAT, "png"))
-              {
-                gegl_node_set (save, "bitdepth", 8, NULL);
-              }
-              gegl_node_link_many (clip->nop_crop, save, NULL);
-              gegl_node_process (save);
-              if (clip->audio)
-                gegl_meta_set_audio (cache_path, clip->audio);
-              rename (cache_path, cache_path_final);
-              g_object_unref (save_graph);
-            }
-          g_free (cache_path);
-        }
       g_mutex_unlock (&clip->mutex);
 }
 

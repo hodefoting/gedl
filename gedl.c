@@ -220,24 +220,140 @@ void gedl_set_use_proxies (GeglEDL *edl, int use_proxies)
 /* computes the hash of a given rendered frame - without altering
  * any state
  */
-gchar *gedl_get_frame_hash (GeglEDL *edl, int frame)
+gchar *gedl_get_frame_hash_full (GeglEDL *edl, int frame,
+                                 Clip **clip0, int *clip0_frame,
+                                 Clip **clip1, int *clip1_frame,
+                                 double *mix)
 {
   GList *l;
   int clip_start = 0;
+  int prev_clip_start = 0;
+
+
 
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
     int clip_frames = clip_get_frames (clip);
 
+    if (clip->is_meta)
+      continue;
+
     if (frame - clip_start < clip_frames)
     {
       int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
-      return clip_get_frame_hash (clip, clip_frame_no);
+
+      GList *lp = l->prev;
+      GList *ln = l->next;
+      Clip *prev = lp?lp->data:NULL;
+      Clip *next = ln?ln->data:NULL;
+      int prev_fade_len;
+      int next_fade_len;
+
+      while (prev && prev->is_meta)
+      {
+        lp = lp->prev;
+        prev = lp?lp->data:NULL;
+      }
+
+      while (next && next->is_meta)
+      {
+        ln = ln->next;
+        next = ln?ln->data:NULL;
+      }
+
+      /* XXX: fade in from black if there is no previous clip */
+
+      prev_fade_len = prev ? clip_get_frames (prev) : clip_frames;
+      next_fade_len = next ? clip_get_frames (next) : clip_frames;
+
+      if (prev_fade_len > clip_frames) prev_fade_len = clip_frames;
+      if (next_fade_len > clip_frames) next_fade_len = clip_frames;
+
+      prev_fade_len /= 2;
+      next_fade_len /= 2;  /* 1/4 the length of the smallest of this or other
+                              clip is our maximum fade - should be adjusted to
+                              1/2 later - when perhaps a scaling factor or a
+                              per-case duration is set which gets maxed by this
+                              heuristic   */
+#if 1
+      if (clip->fade/2 < prev_fade_len)
+        prev_fade_len = clip->fade/2;
+
+      if (next)
+      {
+        if (next->fade/2 < next_fade_len)
+          next_fade_len = next->fade/2;
+      }
+#endif
+
+
+      if (prev && frame - clip_start < prev_fade_len)                   /* in */
+      {
+        char *clip0_hash = clip_get_frame_hash (clip, clip_frame_no);
+        char *clip1_hash = clip_get_frame_hash (prev, frame - prev_clip_start + clip_get_start (prev));
+        double ratio = 0.5 + ((frame-clip_start) * 1.0 / prev_fade_len)/2;
+        char *str = g_strdup_printf ("%s %s %f", clip1_hash, clip0_hash, ratio);
+        g_free (clip0_hash);
+        g_free (clip1_hash);
+        GChecksum *hash = g_checksum_new (G_CHECKSUM_MD5);
+        g_checksum_update (hash, (void*)str, -1);
+        g_free (str);
+        char *ret = g_strdup (g_checksum_get_string(hash));
+        g_checksum_free (hash);
+        if (clip0) *clip0 = prev;
+        if (clip0_frame) *clip0_frame = frame - prev_clip_start + clip_get_start (prev);
+        if (clip1) *clip1 = clip;
+        if (clip1_frame) *clip1_frame = clip_frame_no;
+        if (mix) *mix = ratio;
+
+        return ret;
+      }
+
+      if (next && frame - clip_start > clip_frames - next_fade_len)/* out*/
+      {
+        char *clip0_hash = clip_get_frame_hash (clip, clip_frame_no);
+        char *clip1_hash = clip_get_frame_hash (next, frame - (clip_start + clip_frames) + clip_get_start (next));
+        double ratio = (1.0-(clip_frames-(frame-clip_start)) * 1.0 / next_fade_len)/2;
+        char *str = g_strdup_printf ("%s %s %f", clip0_hash, clip1_hash, ratio);
+        g_free (clip0_hash);
+        g_free (clip1_hash);
+        GChecksum *hash = g_checksum_new (G_CHECKSUM_MD5);
+        g_checksum_update (hash, (void*)str, -1);
+        g_free (str);
+        char *ret = g_strdup (g_checksum_get_string(hash));
+        g_checksum_free (hash);
+        if (clip0) *clip0 = clip;
+        if (clip0_frame) *clip0_frame = clip_frame_no;
+        if (clip1_frame) *clip1_frame = frame - (clip_start +clip_frames) + clip_get_start (next);
+        if (clip1) *clip1 = next;
+        if (mix)   *mix = ratio;
+        return ret;
+      }
+      else
+      {
+        if (clip0) *clip0 = clip;
+        if (clip0_frame) *clip0_frame = clip_frame_no;
+        if (clip1) *clip1 = NULL;
+        if (mix)   *mix = 0.0;
+        return clip_get_frame_hash (clip, clip_frame_no);
+      }
     }
+    prev_clip_start = clip_start;
     clip_start += clip_frames;
   }
+
+  if (clip0) *clip0 = NULL;
+  if (clip0_frame) *clip0_frame = 0;
+  if (clip1_frame) *clip1_frame = 0;
+  if (clip1) *clip1 = NULL;
+  if (mix)   *mix = 0.0;
   return NULL;
+}
+
+gchar *gedl_get_frame_hash (GeglEDL *edl, int frame)
+{
+  return gedl_get_frame_hash_full (edl, frame, NULL, NULL, NULL, NULL, NULL);
 }
 
 void gedl_update_buffer (GeglEDL *edl)
@@ -255,9 +371,6 @@ void gedl_update_buffer (GeglEDL *edl)
  */
 void gedl_set_frame (GeglEDL *edl, int frame)
 {
-  GList *l;
-  int clip_start;
-
   if ((edl->frame) == frame && (frame != 0))
   {
     return;
@@ -265,8 +378,12 @@ void gedl_set_frame (GeglEDL *edl, int frame)
 
   edl->frame = frame;
 
-  char *frame_hash = gedl_get_frame_hash (edl, frame);
-  char *cache_path  = g_strdup_printf ("%s.gedl/cache/%s", edl->parent_path, frame_hash);
+  Clip *clip0; int clip0_frame;
+  Clip *clip1; int clip1_frame;
+  double mix;
+
+  char *frame_hash = gedl_get_frame_hash_full (edl, frame, &clip0, &clip0_frame, &clip1, &clip1_frame, &mix);
+  char *cache_path = g_strdup_printf ("%s.gedl/cache/%s", edl->parent_path, frame_hash);
   g_free (frame_hash);
   if (g_file_test (cache_path, G_FILE_TEST_IS_REGULAR) &&
       (edl->cache_flags & CACHE_TRY_ALL))
@@ -274,7 +391,6 @@ void gedl_set_frame (GeglEDL *edl, int frame)
     Clip *clip = NULL;
     gegl_node_set (edl->cache_loader, "path", cache_path, NULL);
     gegl_node_link_many (edl->cache_loader, edl->result, NULL);
-    //while (!clip)
     clip = edl_get_clip_for_frame (edl, edl->frame);
     if (clip)
     {
@@ -295,27 +411,60 @@ void gedl_set_frame (GeglEDL *edl, int frame)
     return;
   }
 
-  clip_start = 0;
-
-  for (l = edl->clips; l; l = l->next)
+  if (clip0 == NULL)
   {
-    Clip *clip = l->data;
-    int clip_frames = clip_get_frames (clip);
-    if (clip->is_meta)
-      continue;
-    if (frame - clip_start < clip_frames)
-    {
-      int clip_frame_no = (frame - clip_start) + clip_get_start (clip);
-      clip_render_frame (clip, clip_frame_no, cache_path);
-      goto clip0_done;
-    }
-    clip_start += clip_frames;
+    g_free (cache_path);
+    return;
   }
-clip0_done:
+
+  if (clip1 == NULL)
+  {
+    clip_render_frame (clip0, clip0_frame);
+    gegl_node_link_many (clip0->nop_crop, edl->result, NULL);
+  }
+  else
+  {
+    gegl_node_set (edl->mix, "ratio", mix, NULL);
+    clip_render_frame (clip0, clip0_frame);
+    clip_render_frame (clip1, clip1_frame);
+    gegl_node_link_many (clip0->nop_crop, edl->mix, edl->result, NULL);
+    gegl_node_connect_to (clip1->nop_crop, "output", edl->mix, "aux");
+  }
+  gegl_node_process (edl->store_final_buf);
+  gedl_update_buffer (edl);
+
+  /* write cached render of this frame */
+  if (cache_path &&
+      !strstr (clip0->path, ".gedl/cache") && (!edl->use_proxies))
+    {
+      const gchar *cache_path_final = cache_path;
+      gchar *cache_path       = g_strdup_printf ("%s~", cache_path_final);
+
+      if (!g_file_test (cache_path_final, G_FILE_TEST_IS_REGULAR) && !edl->playing)
+        {
+          GeglNode *save_graph = gegl_node_new ();
+          GeglNode *save;
+          save = gegl_node_new_child (save_graph,
+                      "operation", "gegl:" CACHE_FORMAT "-save",
+                      "path", cache_path,
+                      NULL);
+          if (!strcmp (CACHE_FORMAT, "png"))
+          {
+            gegl_node_set (save, "bitdepth", 8, NULL);
+          }
+          gegl_node_link_many (edl->result, save, NULL);
+          gegl_node_process (save);
+          if (clip1 && clip1->audio && mix > 0.5)
+            gegl_meta_set_audio (cache_path, clip1->audio);
+          else if (clip0->audio) // XXX: mix audio
+            gegl_meta_set_audio (cache_path, clip0->audio);
+          rename (cache_path, cache_path_final);
+          g_object_unref (save_graph);
+        }
+      g_free (cache_path);
+    }
+
   g_free (cache_path);
-
-
-
 }
 
 void gedl_set_time (GeglEDL *edl, double seconds)
@@ -489,7 +638,6 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
       int ff_probe = 0;
      clip = clip_new_full (edl, path, start, end);
 
-     if (rest) while (*rest == ' ')rest++;
 
      if (!clip_is_static_source (clip) &&
          (start == 0 && end == 0))
@@ -497,27 +645,13 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
      edl->clips = g_list_append (edl->clips, clip);
      if (strstr (line, "[fade]"))
        {
-         clip->fade_out = TRUE;
+         clip->fade = 23;
          ff_probe = 1;
+         rest = strstr (line, "[fade]") + strlen ("[fade]");
        }
-     if (strstr (line, "[active]"))
-       {
-         edl->active_clip = clip;
-       }
-     {
-       GList *self = g_list_find (edl->clips, clip);
-       GList *prev = self?self->prev: NULL;
-       Clip *prev_clip = prev?prev->data:NULL;
-       if (prev_clip && prev_clip->fade_out)
-       {
-         clip->fade_in = 1;
-         ff_probe = 1;
-       }
-       else
-       {
-         clip->fade_in = 0;
-       }
-     }
+
+     if (rest) while (*rest == ' ')rest++;
+
 
      if (clip == edl->clips->data)
      {
@@ -841,6 +975,7 @@ GeglEDL *gedl_new_from_path (const char *path)
 static void setup (GeglEDL *edl)
 {
   edl->result = gegl_node_new_child (edl->gegl, "operation", "gegl:nop", NULL);
+  edl->mix = gegl_node_new_child (edl->gegl, "operation", "gegl:mix", NULL);
   edl->encode = gegl_node_new_child (edl->gegl, "operation", "gegl:ff-save",
                                      "path",           edl->output_path,
                                      "frame-rate",     gedl_get_fps (edl),
@@ -850,10 +985,11 @@ static void setup (GeglEDL *edl)
                                      "audio-codec",    edl->audio_codec,
                                      "video-codec",    edl->video_codec,
                                      NULL);
+  edl->cached_result = gegl_node_new_child (edl->gegl, "operation", "gegl:buffer-source", "buffer", edl->buffer, NULL);
   edl->store_final_buf = gegl_node_new_child (edl->gegl, "operation", "gegl:write-buffer", "buffer", edl->buffer, NULL);
 
   gegl_node_link_many (edl->result, edl->store_final_buf, NULL);
-  gegl_node_link_many (edl->result, edl->encode, NULL);
+  gegl_node_link_many (edl->cached_result, edl->encode, NULL);
 }
 
 static void init (int argc, char **argv)
@@ -1273,9 +1409,10 @@ char *gedl_serialize (GeglEDL *edl)
     }
     else
     g_string_append_printf (ser, "%s %d %d%s%s%s%s\n", path, clip->start, clip->end,
-        clip->fade_out?" [fade]":"",
         "", //(edl->active_clip == clip)?" [active]":"",
-        clip->filter_graph?" -- ":"",clip->filter_graph?clip->filter_graph:"");
+        clip->filter_graph||clip->fade?" -- ":"",
+        clip->fade?" [fade]":"",
+        clip->filter_graph?clip->filter_graph:"");
   }
   g_string_append_printf (ser, "-----\n");
   for (l = edl->clip_db; l; l = l->next)

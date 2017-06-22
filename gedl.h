@@ -13,7 +13,6 @@
           support for other timecodes
           annotations
           separate filters from clips, permitting different chains to apply over many clips
-          cross-fades for video and audio
           trimming by mouse / dragging clips around by mouse
           implement overlaying of audio from wav / mp3 files
           templates - for both clips and filters - filters that can be chained
@@ -111,7 +110,7 @@ void   clip_set_full          (Clip *clip, const char *path, int start, int end)
 Clip  *clip_new_full          (GeglEDL *edl, const char *path, int start, int end);
 
 //void   clip_set_frame_no      (Clip *clip, int frame_no);
-void clip_render_frame (Clip *clip, int clip_frame_no, const char *cache_path);
+void clip_render_frame (Clip *clip, int clip_frame_no);
 
 
 Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame);
@@ -152,10 +151,7 @@ struct _Clip
   GeglEDL *edl;
 
   double fps;
-  int    fade_out; /* the main control for fading in.. */
-  int    fade_in;  /* implied by previous clip fading */
-  int    fade_pad_start;
-  int    fade_pad_end;
+  int    fade; /* the main control for fading in.. */
   int    static_source;
   int    is_chain;
   int    is_meta;
@@ -190,6 +186,7 @@ struct _GeglEDL
   GeglBuffer   *buffer_copy_temp;
   GeglBuffer   *buffer_copy;
   GMutex        buffer_copy_mutex;
+  GeglNode     *cached_result;
   GeglNode     *gegl;
   int           playing;
   int           width;
@@ -222,6 +219,7 @@ struct _GeglEDL
 
   GeglNode     *result;
   GeglNode     *store_final_buf;
+  GeglNode     *mix;
 
   GeglNode     *encode;
   double        scale;
