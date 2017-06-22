@@ -174,16 +174,6 @@ struct _Clip
   GeglNode          *nop_crop;
   GeglNode          *nop_store_buf;
 
-  GeglNode          *preview_scaled;
-  GeglNode          *preview_crop;
-  GeglNode          *preview_store_buf;
-
-  // add a preview size, which is proxy or full scaled for render
-
-  GeglNode          *full_scaled;
-  GeglNode          *full_crop;
-  GeglNode          *full_store_buf;
-
   GMutex             mutex;
 };
 
