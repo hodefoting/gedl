@@ -1791,7 +1791,6 @@ void gedl_ui (Mrg *mrg, void *data)
     g_object_unref (edl->buffer_copy_temp);
   edl->buffer_copy_temp = edl->buffer_copy;
   g_object_ref (edl->buffer_copy);
-  gegl_node_set (edl->cached_result, "buffer", edl->buffer_copy_temp, NULL);
   g_mutex_unlock (&edl->buffer_copy_mutex);
 
   switch (edl->ui_mode)
@@ -1804,7 +1803,7 @@ void gedl_ui (Mrg *mrg, void *data)
                       (int)(mrg_width (mrg) * 1.0),
                       mrg_height (mrg),// * SPLIT_VER,
 
-                      o->edl->cached_result,
+                      NULL,
                       0, 0,
         /* opacity */ 1.0 //edl->frame_no == done_frame?1.0:0.5
                       ,edl);
@@ -1814,7 +1813,7 @@ void gedl_ui (Mrg *mrg, void *data)
                       (int)(mrg_width (mrg) * 0.8),
                       mrg_height (mrg) * SPLIT_VER,
 
-                      o->edl->cached_result,
+                      NULL,
                       0, 0,
         /* opacity */ 1.0 //edl->frame_no == done_frame?1.0:0.5
                       ,edl);

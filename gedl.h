@@ -200,7 +200,6 @@ struct _GeglEDL
   GeglBuffer   *buffer_copy_temp;
   GeglBuffer   *buffer_copy;
   GMutex        buffer_copy_mutex;
-  GeglNode     *cached_result;
   GeglNode     *gegl;
   int           playing;
   int           width;

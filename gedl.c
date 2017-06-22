@@ -849,11 +849,10 @@ static void setup (GeglEDL *edl)
                                      "audio-codec",    edl->audio_codec,
                                      "video-codec",    edl->video_codec,
                                      NULL);
-  edl->cached_result = gegl_node_new_child (edl->gegl, "operation", "gegl:buffer-source", "buffer", edl->buffer, NULL);
   edl->store_final_buf = gegl_node_new_child (edl->gegl, "operation", "gegl:write-buffer", "buffer", edl->buffer, NULL);
 
   gegl_node_link_many (edl->result, edl->store_final_buf, NULL);
-  gegl_node_link_many (edl->cached_result, edl->encode, NULL);
+  gegl_node_link_many (edl->result, edl->encode, NULL);
 }
 
 static void init (int argc, char **argv)
