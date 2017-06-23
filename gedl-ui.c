@@ -643,13 +643,14 @@ static void toggle_fade (MrgEvent *event, void *data1, void *data2)
 
   if (!edl->active_clip)
     return;
+
   if (edl->active_clip->fade)
   {
     edl->active_clip->fade = 0;
   }
   else
   {
-    edl->active_clip->fade = 23;
+    edl->active_clip->fade = (edl->frame - edl->active_clip->abs_start)*2;
   }
   gedl_cache_invalid (edl);
   mrg_event_stop_propagate (event);
