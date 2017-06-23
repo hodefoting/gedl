@@ -29,7 +29,6 @@
 #define DEFAULT_video_tolerance   -1
 #define DEFAULT_audio_bitrate     64
 #define DEFAULT_audio_samplerate  64
-#define DEFAULT_fade_duration     20
 #define DEFAULT_frame_start       0
 #define DEFAULT_frame_end         0
 #define DEFAULT_selection_start   0
@@ -115,7 +114,6 @@ GeglEDL *gedl_new           (void)
   edl->video_tolerance  = DEFAULT_video_tolerance;;
   edl->audio_bitrate    = DEFAULT_audio_bitrate;
   edl->audio_samplerate = DEFAULT_audio_samplerate;
-  edl->fade_duration    = DEFAULT_fade_duration;
   edl->framedrop        = DEFAULT_framedrop;
   edl->frame_no         = 0;  /* frame-no in ui shell */
   edl->frame = -1;            /* frame-no in renderer thread */
@@ -576,7 +574,6 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
      while (value[strlen(value)-1]==' ' ||
             value[strlen(value)-1]=='\n')
             value[strlen(value)-1]='\0';
-     if (!strcmp (key, "fade-duration"))     edl->fade_duration = g_strtod (value, NULL);
      if (!strcmp (key, "fps"))               gedl_set_fps (edl, g_strtod (value, NULL));
      if (!strcmp (key, "framedrop"))         edl->framedrop     = g_strtod (value, NULL);
      if (!strcmp (key, "output-path"))       edl->output_path = g_strdup (value);
@@ -643,11 +640,13 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
          (start == 0 && end == 0))
        ff_probe = 1;
      edl->clips = g_list_append (edl->clips, clip);
-     if (strstr (line, "[fade]"))
+     if (strstr (line, "[fade="))
        {
-         clip->fade = 23;
          ff_probe = 1;
-         rest = strstr (line, "[fade]") + strlen ("[fade]");
+         rest = strstr (line, "[fade=") + strlen ("[fade=");
+         clip->fade = atoi (rest);
+         while (*rest && *rest != ']') rest++;
+         if (*rest == ']') rest++;
        }
 
      if (rest) while (*rest == ' ')rest++;
@@ -1369,8 +1368,6 @@ char *gedl_serialize (GeglEDL *edl)
     g_string_append_printf (ser, "audio-bitrate=%i\n",  edl->audio_bitrate);
   if (edl->audio_samplerate != DEFAULT_audio_samplerate)
     g_string_append_printf (ser, "audio-samplerate=%i\n",  edl->audio_samplerate);
-  if (edl->fade_duration != DEFAULT_fade_duration)
-    g_string_append_printf (ser, "fade-duration=%i\n",  edl->fade_duration);
 
   g_string_append_printf (ser, "fps=%f\n", gedl_get_fps (edl));
 
@@ -1408,11 +1405,16 @@ char *gedl_serialize (GeglEDL *edl)
       g_string_append_printf (ser, "--%s\n", clip->filter_graph);
     }
     else
-    g_string_append_printf (ser, "%s %d %d%s%s%s%s\n", path, clip->start, clip->end,
-        "", //(edl->active_clip == clip)?" [active]":"",
-        clip->filter_graph||clip->fade?" -- ":"",
-        clip->fade?" [fade]":"",
-        clip->filter_graph?clip->filter_graph:"");
+    {
+    g_string_append_printf (ser, "%s %d %d ", path, clip->start, clip->end);
+    if (clip->filter_graph||clip->fade)
+      g_string_append_printf (ser, "-- ");
+    if (clip->fade)
+      g_string_append_printf (ser, "[fade=%i] ", clip->fade);
+    if (clip->filter_graph)
+      g_string_append_printf (ser, "%s", clip->filter_graph);
+    g_string_append_printf (ser, "\n");
+    }
   }
   g_string_append_printf (ser, "-----\n");
   for (l = edl->clip_db; l; l = l->next)

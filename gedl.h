@@ -210,7 +210,6 @@ struct _GeglEDL
   int           video_tolerance;
   int           audio_bitrate;
   int           audio_samplerate;
-  int           fade_duration;
   int           frame_no;
   int           source_frame_no;
   int           use_proxies;
