@@ -1,27 +1,25 @@
 #if PLAN
 
-        bugs
-          huge video files cause (cairo) thumtrack overflow, vertical also has this problem - how to split?
-          left most-clip cannot be scrubbed (mrg misses events here)
-          audio glitches, gegl ff-load / ff-save should perhaps round all audio-frame
-            counts up to a fixed amount, use correct start .. and drop frames when
-            assembling
+  bugs
+    audio glitches, gegl ff-load / ff-save should perhaps round all audio-frame
+      counts up to a fixed amount, use correct start .. and drop frames when
+      assembling
+    huge video files cause (cairo) thumtrack overflow, vertical also has this problem - how to split?
+    left most-clip cannot be scrubbed (mrg misses events here)
 
-        features
-          rewrite gedl-ui.c in lua and call it gcut
-          using edl files as clip sources
-          support for other timecodes
-          annotations
-          separate filters from clips, permitting different chains to apply over many clips
-          trimming by mouse / dragging clips around by mouse
-          implement overlaying of audio from wav / mp3 files
-          templates - for both clips and filters - filters that can be chained
-          pcm cache / thumb cache would almost be...
-          detect locked or crashed ui, kill and respawn
-          gaps in timeline (will be implemented as blank clips - but ui could be different)
-          better video file import
-            insert videos from the commandline
-            internal clip database
+  features
+    rewrite gedl-ui.c in lua and call it gcut
+    using edl files as clip sources
+    support for other timecodes, mm:ss:ff and s
+    ui for adding/editing annotations, setting variables for
+      interpolation in annotations? -- maybe good for subtitles?
+    global filter(s) permitting different chains to apply over many clips
+    trimming by mouse / dragging clips around by mouse
+    implement overlaying of audio from wav / mp3 files - similar to annotations/global filters..
+    templates - for both clips and filters - filters that can be chained
+    detect locked or crashed ui, kill and respawn
+    gaps in timeline (will be implemented as blank clips - but ui could be different)
+    insert videos from the commandline
 
 #endif
 
