@@ -39,6 +39,10 @@
 
 char *gedl_binary_path = NULL;
 
+const char *gedl_default_edl =
+#include "default.edl.inc"
+;
+
 static char *escaped_base_path (GeglEDL *edl, const char *clip_path)
 {
   char *path0= g_strdup (clip_path);

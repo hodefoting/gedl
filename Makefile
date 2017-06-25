@@ -1,20 +1,15 @@
-gedl: *.c *.h Makefile
+gedl: *.c *.h Makefile default.edl.inc
 	gcc *.c `pkg-config gegl-0.3 sdl mrg gexiv2 --cflags --libs` -Wall -g -o gedl -O2
 clean:
 	rm gedl
 install: gedl
 	install gedl /usr/local/bin
 
-SOUNDTRACK=TheBlackGoat_64kb.mp3
-#SOUNDTRACK=HamboCorvette-Sweden-ViolaTurpeinensEnsStandardF5002b78-Couple-Advanced.mp3
-#SOUNDTRACK=folk.mp3
-#SOUNDTRACK=drmesno1.mp3
-
-ngegl-audio.mp4: gegl.mp4 Makefile $(SOUNDTRACK)
-	/usr/bin/ffmpeg -i gegl.mp4 -i $(SOUNDTRACK) -map 0:v -map 1:a -c:v copy -c:a copy gegl-audio.mp4
-
-gegl-audio.mp4: gegl.mp4 Makefile $(SOUNDTRACK)
-	/usr/bin/ffmpeg -i gegl.mp4 -i $(SOUNDTRACK) -map 0:v -map 1:a -c:v copy -c:a copy -shortest gegl-audio.mp4
-
-gimp.mp4: Split-Goat.webm Makefile
-	/usr/bin/ffmpeg -i Split-Goat.webm -filter:v "crop=1360:680:100:100" gimp.mp4
+default.edl.inc: default.edl
+	echo >> $@
+	cat $< | \
+	sed 's/\\/\\\\/g' | \
+	sed 's/\r/a/' | \
+	sed 's/"/\\"/g' | \
+	sed 's/^/"/' | \
+	sed 's/$$/\\n"/' >> $@
