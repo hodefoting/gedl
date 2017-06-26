@@ -39,7 +39,7 @@
 
 char *gedl_binary_path = NULL;
 
-const char *gedl_default_edl =
+const char *default_edl =
 #include "default.edl.inc"
 ;
 
@@ -1228,8 +1228,9 @@ int main (int argc, char **argv)
   init (argc, argv);
   if (!argv[1])
   {
-    fprintf (stderr, "usage: %s <project.edl>\n", argv[0]);
-    return -1;
+    argv[1]="default.edl";
+    argc++;
+    g_file_set_contents (argv[1], default_edl, -1, NULL);
   }
 
   edl_path = argv[1]; //realpath (argv[1], NULL);

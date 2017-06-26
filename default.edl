@@ -15,9 +15,8 @@ frame-no=203
 gegl:color value=black gegl:crop width=400 height=400 0 50 -- 
 gegl:color value=black gegl:crop width=400 height=400 0 50 -- [fade=34] over aux=[ text size=0.1rel string='introducing' color=white translate x=0.1rel y=0.2rel ]
 gegl:color value=black gegl:crop width=400 height=400 0 50 -- over aux=[ text size=0.2rel string='gedl/gcut' color=white gaussian-blur clip-extent=false std-dev-x={ 0=0.4rel 24=0.0 25=0.0 } std-dev-y={  0=0.2rel 24=0.0 25=0.0 26=0.0  } translate x=0.1rel y=0.3rel   ]
-
 gegl:color value=black gegl:crop width=400 height=400 0 50 -- [fade=34] over aux=[ text size=0.1rel string='format/ui\nfor video editing' color=white translate x=0.1rel y=0.6rel ]
-gegl:cell-noise translate x={0=0 500=50} y={0=0 500=500} gegl:crop width=400 height=400 0 40 -- [fade=23]
+gegl:cell-noise translate x={0=0 500=50} y={0=0 500=500} gegl:crop width=400 height=400 0 40 -- [fade=23] 
 gegl:simplex-noise gegl:crop width=400 height=400 0 25 -- 
 gegl:fractal-explorer zoom=120 shiftx=-320 shifty=-180 gegl:crop width=480 height=640 0 40 -- [fade=20] 
 -- fractal

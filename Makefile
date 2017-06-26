@@ -6,10 +6,9 @@ install: gedl
 	install gedl /usr/local/bin
 
 default.edl.inc: default.edl
-	echo >> $@
 	cat $< | \
 	sed 's/\\/\\\\/g' | \
 	sed 's/\r/a/' | \
 	sed 's/"/\\"/g' | \
 	sed 's/^/"/' | \
-	sed 's/$$/\\n"/' >> $@
+	sed 's/$$/\\n"/' > $@
