@@ -10,6 +10,7 @@ frame-scale=0.728446
 t0=-93.551330
 frame-no=15
 
+gegl:color value=black gegl:crop width=400 height=400 0 50 --
 gegl:color value=black gegl:crop width=400 height=400 0 50 -- [fade=34] over aux=[ text size=0.08rel string='note: this is a gedl video\nproject for testing features\nit relies on synthetic GEGL\npatterns instead of\nvideo footage\nto be to minimie size\nfor inclusion in gedl sources' color=white translate x=0.1rel y=0.15rel ]
 -- #annotations
 gegl:color value=black gegl:crop width=400 height=400 0 50 -- over aux=[ text size=0.2rel string='gedl/gcut' color=white gaussian-blur clip-extent=false std-dev-x={ 0=0.4rel 24=0.0 25=0.0 } std-dev-y={  0=0.2rel 24=0.0 25=0.0 26=0.0  } translate x=0.1rel y=0.3rel   ]
