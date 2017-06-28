@@ -1,11 +1,10 @@
 #if PLAN
 
   bugs
-    audio glitches, gegl ff-load / ff-save should perhaps round all audio-frame
+    !!audio glitches, gegl ff-load / ff-save should perhaps round all audio-frame
       counts up to a fixed amount, use correct start .. and drop frames when
       assembling
     huge video files cause (cairo) thumtrack overflow, vertical also has this problem - how to split?
-    left most-clip cannot be scrubbed (mrg misses events here)
 
   features
     rewrite gedl-ui.c in lua and call it gcut
