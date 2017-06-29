@@ -1,6 +1,6 @@
-gedl
-----
-GEGL Edit Decision List
+# gedl
+
+## GEGL Edit Decision List
 
 A simple commandline and start of ui frontend for video processing with GEGL.
 The gegl binary shipped with GEGL can process a single video through one chain
@@ -19,7 +19,7 @@ the ui/editing process, and rather be done by slave process(es) that kan be
 killed and spun up again, making it possible to have crashes or memory leaks in
 processing be separated from the ui process.
 
-Dependencies:
+### Dependencies:
 
 gegl-0.3.16  http://gegl.org/
 mrg          https://github.com/hodefoting/mrg/
@@ -28,25 +28,23 @@ ffmpeg
 
 
 An example gedl edl file is as follows:
-=============[ test.edl ]==================
 
-output-path=result.mp4
+    output-path=result.mp4
+    
+    A.mp4 200 341
+    A.mp4 514 732
+    B.mp4 45 123
 
-A.mp4 200 341
-A.mp4 514 732
-B.mp4 45 123
 
-=========================================
+If this was stored in a file, test.edl we can run:
 
-with this file we can run:
-
-gedl test.edl render
+    $ gedl test.edl render
 
 And gedl will put video and audio content belonging to times from frame no 200 to frame no 341, followed by frames from not 514 to 732 subsequently followed with frames 45-123 from another file B.mp4
 
 if you just run:
 
-gedl test.edl
+    $ gedl test.edl
 
 gedl will launch in UI mode, videos can be added by drag and drop from
 file manager if starting out from scratch.
@@ -56,23 +54,19 @@ with something like the following:
 
 =============[ test.edl ]==================
 
-output-path=example-output.mp4
-video-width=1920
-video-height=1080
-fps=59.940060
-frame-scale=1.293607
-t0=0.000000
-frame-no=311
-selection-start=216
-selection-end=216
-
-A.mp4 200 341
-
-A.mp4 514 732 [active]
-
-B.mp4 45 123
-
------
+    output-path=example-output.mp4
+    video-width=1920
+    video-height=1080
+    fps=59.940060
+    frame-scale=1.293607
+    t0=0.000000
+    frame-no=311
+    selection-start=216
+    selection-end=216
+    
+    A.mp4 200 341
+    A.mp4 514 732
+    B.mp4 45 123
 
 ============================================
 
@@ -111,7 +105,6 @@ video-tolerance -
 fps - target framerate
 audio-bit-rate - bit rate to use for encoded audio
 
-fade-duration
 selection-start
 selection-end
 range-start
