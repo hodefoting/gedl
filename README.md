@@ -123,14 +123,14 @@ longer than creating proxy videos.
 
 when the UI is running the following threads and processes exist:
 
-   gedl project.edl   mrg ui thread (cairo + gtk/raw fb)
-                      GEGL renderer/evaluation thread
+    gedl project.edl   mrg ui thread (cairo + gtk/raw fb)
+                       GEGL renderer/evaluation thread
 
-   gedl project.edl cache 0 4  background frame cache renderer processes
-   gedl project.edl cache 1 4  if frameno % 4 == 1 then this one considers
-   gedl project.edl cache 2 4  it its responsibility to render frameno, the
-   gedl project.edl cache 3 4  count of such processes is set to the number of
-                               cores/processors available.
+    gedl project.edl cache 0 4  background frame cache renderer processes
+    gedl project.edl cache 1 4  if frameno % 4 == 1 then this one considers
+    gedl project.edl cache 2 4  it its responsibility to render frameno, the
+    gedl project.edl cache 3 4  count of such processes is set to the number of
+                                cores/processors available.
 
 The background renderer processes are stopped when playback is initiated, as
 well as every 60 seconds, when a new set of caches (restarts to handle both
