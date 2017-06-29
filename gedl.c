@@ -1215,6 +1215,8 @@ int main (int argc, char **argv)
   int tot_frames;
 
   gedl_binary_path = realpath (argv[0], NULL);
+  if (!gedl_binary_path)
+    gedl_binary_path = "gedl";
 
   if (argv[1] && !strcmp (argv[1], "iconographer"))
   {
@@ -1228,7 +1230,9 @@ int main (int argc, char **argv)
   init (argc, argv);
   if (!argv[1])
   {
-    argv[1]="default.edl";
+    static char *new_argv[3]={NULL, "default.edl", NULL};
+    new_argv[0] = argv[0];
+    argv = new_argv;
     argc++;
     g_file_set_contents (argv[1], default_edl, -1, NULL);
   }

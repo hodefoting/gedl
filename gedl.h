@@ -2,6 +2,7 @@
 
   bugs
     !!audio glitches, gegl ff-load / ff-save should perhaps round all audio-frame
+    fix bug in background renderer when launched from PATH
       counts up to a fixed amount, use correct start .. and drop frames when
       assembling
     huge video files cause (cairo) thumtrack overflow, vertical also has this problem - how to split?
