@@ -5,7 +5,9 @@
 A simple commandline and start of ui frontend for video processing with GEGL.
 The gegl binary shipped with GEGL can process a single video through one chain
 of operations. This is an experimental editable text-file driven project that
-can assemble segements of multiple such processed clips to one bigger video.
+can assemble segements of multiple such processed clips to one bigger video,
+serving as an example/baseline demonstrating that GEGL based video editing is
+viable.
 
 The GEGL video from Libre Graphics Meeting 2016 in London,
 https://www.youtube.com/watch?v=GJJPgLGrSgc was made from raw footage using
@@ -104,16 +106,16 @@ GEDL project file, All the projects in a folder share the same .cache
 directory. The cache data is separated in subdirs for ease of development and
 debugging.
 
-.gedl/cache/   - contains the rendered frames - stored in files that are a hash
+**.gedl/cache/**   contains the rendered frames - stored in files that are a hash
 of a string containing , source clip/frame no and filter chain at given frame.
 Thus making returns to previous settings reuse previous values.
 
-.gedl/history/ - contains undo snapshots of files being edited (backups from
+**.gedl/history/**  contains undo snapshots of files being edited (backups from
 frequent auto-save)
 
-.gedl/proxy/ - contains scaled down to preview resolution video files
+**.gedl/proxy/**  contains scaled down to preview resolution video files
 
-.gedl/thumb/ - contains thumb tracks for video clips - thumb tracks are images
+**.gedl/thumb/**  contains thumb tracks for video clips - thumb tracks are images
 to show in the clips in the timeline, the thumb tracks are created using
 iconographer from the proxy videos - from original would be possible, but take
 longer than creating proxy videos.
