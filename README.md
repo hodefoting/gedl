@@ -11,20 +11,24 @@ The GEGL video from Libre Graphics Meeting 2016 in London,
 https://www.youtube.com/watch?v=GJJPgLGrSgc was made from raw footage using
 gedl.
 
-This project is shared in the public interest, both as a reference for people
-to study as well as backup, it is the core of a  GEGL based video editor.
+![screenshot](http://pippin.gimp.org/gedl/gedl-help.png)
 
-For further possible further development - processing should be split out of
-the ui/editing process, and rather be done by slave process(es) that kan be
-killed and spun up again, making it possible to have crashes or memory leaks in
-processing be separated from the ui process.
+### Features
+
+ - multi-process parallel background rendering
+ - content addressed caching scheme, suitable for network distributed background rendering.
+ - animated (key-framed) nodal video sources
+ - animated (key-framed) nodal per clip filters
+ - cross fading
+ - single track editing UI
+ - proxy editing, permitting editing high-res video results on low powered computers
 
 ### Dependencies:
 
-gegl-0.3.16  http://gegl.org/
-mrg          https://github.com/hodefoting/mrg/
-SDL-1.2
-ffmpeg
+   gegl-0.3.16  http://gegl.org/
+   mrg          https://github.com/hodefoting/mrg/
+   SDL-1.2
+   ffmpeg
 
 
 An example gedl edl file is as follows:
@@ -52,8 +56,6 @@ file manager if starting out from scratch.
 when quitting gedl will have overwritten the original file
 with something like the following:
 
-=============[ test.edl ]==================
-
     output-path=example-output.mp4
     video-width=1920
     video-height=1080
@@ -67,8 +69,6 @@ with something like the following:
     A.mp4 200 341
     A.mp4 514 732
     B.mp4 45 123
-
-============================================
 
 The output settings  for video-width, video-height and fps have been detected
 from the first video clip - gedl works well if all clips have the same fps.
@@ -89,35 +89,48 @@ containe keyframe=value pairs in a clip local interpolated time space {0=3.0
 3=0.2 10=}.
 
 
-=====================================
-Recognized global key/value pairs:
+### caching architecture
 
-use-proxies integer - generate and use prescaled video files in ui
-output-path string - the file to write the final rendered video to
-videoc-codec - video codec to use - or autodetect based on extension of
-               output-path
-audio-codec - audio codec to use - or autodetect based on extension of
-              output-path
-video-width - the width of the generated video, in pixels
-video-height - the height of the generated video, in pixels
-video-bufsize - the buffer size to use
-video-tolerance -
-fps - target framerate
-audio-bit-rate - bit rate to use for encoded audio
+The core of gedls architecture is the data storage model, the text file that
+the user sees as a project file contains - together with the referenced assets,
+the complete description of how to generate a video for a sequence.
 
-selection-start
-selection-end
-range-start
-range-end
-t0
-frame-scale
-frame-no
+This file is broken down into a set of global assignments of key/values, and
+lines describing clips with path, in/out point and associated GEGL filter
+stacks.
 
--------------------------------------
+GEDL keeps cached data in the .gedl subdir in the same directory as the loaded
+GEDL project file, All the projects in a folder share the same .cache
+directory. The cache data is separated in subdirs for ease of development and
+debugging.
 
-gedl keeps temporary files in the .gedl folder this folder contains subdirs
-with cached frames, proxy videos and thumbtrack images. To save disk space this
-folder can be removed and it will be regenerated, for now gedl works best if
-launched from the folder containing the edl file.
+.gedl/cache/   - contains the rendered frames - stored in files that are a hash
+of a string containing , source clip/frame no and filter chain at given frame.
+Thus making returns to previous settings reuse previous values.
 
+.gedl/history/ - contains undo snapshots of files being edited (backups from
+frequent auto-save)
+
+.gedl/proxy/ - contains scaled down to preview resolution video files
+
+.gedl/thumb/ - contains thumb tracks for video clips - thumb tracks are images
+to show in the clips in the timeline, the thumb tracks are created using
+iconographer from the proxy videos - from original would be possible, but take
+longer than creating proxy videos.
+
+
+when the UI is running the following threads and processes exist:
+
+   gedl project.edl   mrg ui thread (cairo + gtk/raw fb)
+                      GEGL renderer/evaluation thread
+
+   gedl project.edl cache 0 4  background frame cache renderer processes
+   gedl project.edl cache 1 4  if frameno % 4 == 1 then this one considers
+   gedl project.edl cache 2 4  it its responsibility to render frameno, the
+   gedl project.edl cache 3 4  count of such processes is set to the number of
+                               cores/processors available.
+
+The background renderer processes are stopped when playback is initiated, as
+well as every 60 seconds, when a new set of caches (restarts to handle both
+project file changes and possible memory leaks.)
 
