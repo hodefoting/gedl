@@ -126,3 +126,5 @@ gedl keeps temporary files in the .gedl folder this folder contains subdirs
 with cached frames, proxy videos and thumbtrack images. To save disk space this
 folder can be removed and it will be regenerated, for now gedl works best if
 launched from the folder containing the edl file.
+
+
