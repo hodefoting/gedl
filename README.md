@@ -11,9 +11,15 @@ viable.
 
 The GEGL video from Libre Graphics Meeting 2016 in London,
 https://www.youtube.com/watch?v=GJJPgLGrSgc was made from raw footage using
-gedl.
+gedl, the default testproject of gedl which is in this repo as default.edl
+produces the following video when rendered:
+https://www.youtube.com/watch?v=n91QbTMawuc
 
 ![screenshot](http://pippin.gimp.org/gedl/gedl-help.png)
+
+Creating this experiment and improving the underlying technologies to make it
+possible, was made possible through community sponsorship via
+https://patreon.com/pippin
 
 ### Features
 
