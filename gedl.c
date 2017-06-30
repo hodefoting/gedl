@@ -595,8 +595,8 @@ void gedl_parse_line (GeglEDL *edl, const char *line)
      if (!strcmp (key, "frame-end"))         edl->range_end = g_strtod (value, NULL);
      if (!strcmp (key, "selection-start"))   edl->selection_start = g_strtod (value, NULL);
      if (!strcmp (key, "selection-end"))     edl->selection_end = g_strtod (value, NULL);
-     if (!strcmp (key, "range-start"))       edl->range_start = g_strtod (value, NULL);
-     if (!strcmp (key, "range-end"))         edl->range_end = g_strtod (value, NULL);
+     //if (!strcmp (key, "range-start"))       edl->range_start = g_strtod (value, NULL);
+     //if (!strcmp (key, "range-end"))         edl->range_end = g_strtod (value, NULL);
      if (!strcmp (key, "frame-no"))          edl->frame_no = g_strtod (value, NULL);
      if (!strcmp (key, "frame-scale"))       edl->scale = g_strtod (value, NULL);
      if (!strcmp (key, "t0"))                edl->t0 = g_strtod (value, NULL);
