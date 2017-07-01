@@ -1045,7 +1045,7 @@ static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
 #define PAD_DIM     8
 int VID_HEIGHT=96; // XXX: ugly global
 
-void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start, int clip_frames, double x, double y)
+void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start, int clip_frames, double x, double y, gfloat fade)
 {
   char *thumb_path;
   if (!clip_path)
@@ -1471,7 +1471,7 @@ void gedl_draw (Mrg     *mrg,
     }
     else
     {
-      render_clip (mrg, edl, clip->path, clip->start, frames, t, y);
+      render_clip (mrg, edl, clip->path, clip->start, frames, t, y, clip->fade);
     }
     if (clip == edl->active_clip)
       cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
@@ -1559,15 +1559,6 @@ static const char *css =
 " document { background: black; }"
 "";
 
-static void update_clip_title (const char *new_string, void *user_data)
-{
-  SourceClip *clip = user_data;
-  if (clip->title)
-          g_free (clip->title);
-  clip->title = g_strdup (new_string);
-  changed++;
-}
-
 #if 0
 static void edit_filter_graph (MrgEvent *event, void *data1, void *data2)
 { //XXX
@@ -1578,15 +1569,6 @@ static void edit_filter_graph (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 #endif
-
-static void update_query (const char *new_string, void *user_data)
-{
-  GeglEDL *edl = user_data;
-  if (edl->clip_query)
-    g_free (edl->clip_query);
-  changed++;
-  edl->clip_query = g_strdup (new_string);
-}
 
 #if 0
 static void update_filter (const char *new_string, void *user_data)
@@ -1599,94 +1581,6 @@ static void update_filter (const char *new_string, void *user_data)
   mrg_queue_draw (edl->mrg, NULL);
 }
 #endif
-
-void render_clip2 (Mrg *mrg, GeglEDL *edl, SourceClip *clip, float x, float y, float w, float h)
-{
-    cairo_t *cr = mrg_cr (mrg);
-    if (clip->duration == 0)
-       {
-         GeglNode *gegl = gegl_node_new ();
-         GeglNode *probe = gegl_node_new_child (gegl, "operation",
-                          "gegl:ff-load", "path", clip->path, NULL);
-         gegl_node_process (probe);
-         gegl_node_get (probe, "frames", &clip->duration, NULL);
-         g_object_unref (gegl);
-       }
-
-    cairo_save (cr);
-    {
-      float scale = 1.0;
-      if (clip->duration > w)
-        scale = w / clip->duration;
-      cairo_scale (cr, scale, 1);
-
-      render_clip (mrg, edl, clip->path, 0, clip->duration, 0, y);
-
-    {
-      cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
-    }
-
-    cairo_new_path (cr);
-
-    cairo_set_source_rgba (cr, 0,0,0,0.75);
-    cairo_rectangle (cr, 0, y, clip->start, VID_HEIGHT);
-    cairo_rectangle (cr, clip->end, y, clip->duration - clip->end, VID_HEIGHT);
-    cairo_fill (cr);
-
-    cairo_restore (cr);
-
-#if 0
-    cairo_move_to (cr, x, y + 10);
-    cairo_set_source_rgba (cr, 0,0,0,0.8);
-    cairo_set_font_size (cr, 10.0);
-    cairo_show_text (cr, clip->title);
-    cairo_set_source_rgba (cr, 1,1,1,0.8);
-    cairo_move_to (cr, x - 1, y + 10 - 1);
-#endif
-
-    mrg_set_xy (mrg, x, y + 20);
-    if (clip->editing)
-      mrg_edit_start (mrg, update_clip_title, clip);
-    mrg_print (mrg, clip->title);
-    if (clip->editing)
-      mrg_edit_end (mrg);
-    }
-}
-
-void draw_clips (Mrg *mrg, GeglEDL *edl, float x, float y, float w, float h)
-{
-  GList *l;
-
-  cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1);
-  cairo_set_font_size (mrg_cr (mrg), y);
-
-  mrg_set_style (mrg, "background: transparent; color: white");
-
-  mrg_set_xy (mrg, x, y + 10);
-  if (edl->clip_query_edited)
-    mrg_edit_start (mrg, update_query, edl);
-  mrg_print (mrg, edl->clip_query);
-  if (edl->clip_query_edited)
-    mrg_edit_end (mrg);
-
-  y += 20;
-
-  for (l = edl->clip_db; l; l = l->next)
-  {
-    SourceClip *clip = l->data;
-
-    if (strlen (edl->clip_query) == 0 ||
-        strstr (clip->title, edl->clip_query))
-    {
-      render_clip2 (mrg, edl, clip, x, y, w, h);
-      y += VID_HEIGHT + PAD_DIM * 1;
-    }
-  }
-#if 0
-  if (edl->active_clip)
-    render_clip2 (mrg, edl, (void*)edl->active_clip, x, y, w, h);
-#endif
-}
 
 static void toggle_ui_mode  (MrgEvent *event, void *data1, void *data2)
 {
@@ -1859,9 +1753,6 @@ void gedl_ui (Mrg *mrg, void *data)
         break;
      break;
   }
-
-  if(0)draw_clips (mrg, edl, 10, mrg_height(mrg) * SPLIT_VER + VID_HEIGHT + PAD_DIM * 5, mrg_width(mrg) - 20, mrg_height(mrg) * SPLIT_VER - VID_HEIGHT + PAD_DIM * 5);
-
 
   if (edl->ui_mode != GEDL_UI_MODE_NONE)
   {

@@ -8,15 +8,18 @@
   features
 
     ui
+      rewrite gedl-ui.c in lua and call it gcut
+      slant clip transition for fade.
       detect locked or crashed ui, kill and respawn
       templates - for both clips and filters - filters that can be chained
-      rewrite gedl-ui.c in lua and call it gcut
-        trimming by mouse / dragging clips around by mouse
+      trimming by mouse / dragging clips around by mouse
       add chain editor(s)
+      show a modal ui-block when generating proxies/thumbtrack on media import, instead of blocking/being blank
       gaps in timeline (will be implemented as blank clips - but ui could be different)
       insert videos from the commandline
       ui for adding/editing annotations, setting variables for
         interpolation in annotations?
+      migrated gedl.c into GEGL?
 
     support for other timecodes, mm:ss:ff and s
     using edl files as clip sources - hopefully without even needing caches.
