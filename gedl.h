@@ -1,25 +1,29 @@
-#if PLAN
+#if TODO // this is the projects todo-list
 
   bugs
-    !!audio glitches, gegl ff-load / ff-save should perhaps round all audio-frame
-    fix bug in background renderer when launched from PATH
-      counts up to a fixed amount, use correct start .. and drop frames when
-      assembling
     huge video files cause (cairo) thumtrack overflow, vertical also has this problem - how to split?
+    if the initial frame is not a representative video frame of the comp, audio glitches
+    ogv render files are more compatible than generated mp4 files, firefox among few that renders the mp4 in audio sync
 
   features
-    rewrite gedl-ui.c in lua and call it gcut
-    using edl files as clip sources
+
+    ui
+      detect locked or crashed ui, kill and respawn
+      templates - for both clips and filters - filters that can be chained
+      rewrite gedl-ui.c in lua and call it gcut
+        trimming by mouse / dragging clips around by mouse
+      add chain editor(s)
+      gaps in timeline (will be implemented as blank clips - but ui could be different)
+      insert videos from the commandline
+      ui for adding/editing annotations, setting variables for
+        interpolation in annotations?
+
     support for other timecodes, mm:ss:ff and s
-    ui for adding/editing annotations, setting variables for
-      interpolation in annotations? -- maybe good for subtitles?
-    global filter(s) permitting different chains to apply over many clips
-    trimming by mouse / dragging clips around by mouse
-    implement overlaying of audio from wav / mp3 files - similar to annotations/global filters..
-    templates - for both clips and filters - filters that can be chained
-    detect locked or crashed ui, kill and respawn
-    gaps in timeline (will be implemented as blank clips - but ui could be different)
-    insert videos from the commandline
+    using edl files as clip sources - hopefully without even needing caches.
+
+    global filters
+      overlaying of audio from wav / mp3 files
+      subtitles - subitles should be easy to do across clips, thus belongs here
 
 #endif
 
