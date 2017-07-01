@@ -2,12 +2,14 @@
 
 ## GEGL Edit Decision List
 
-A simple commandline and start of ui frontend for video processing with GEGL.
-The gegl binary shipped with GEGL can process a single video through one chain
-of operations. This is an experimental editable text-file driven project that
-can assemble segements of multiple such processed clips to one bigger video,
-serving as an example/baseline demonstrating that GEGL based video editing is
-viable.
+GEGL is a video editing engine using GEGL. It uses video frame input and output
+sources in GEGL that decode and encode video frames along with gegl-chain to
+provide a system for using GIMPs image processing engine and operations also
+for processing video.
+
+A graphical user interface that is evolving together with a human readable and
+a custom human extendable text-file format is available for gedl, rewriting the
+UI in lua and calling it gcut is being considered.
 
 The GEGL video from Libre Graphics Meeting 2016 in London,
 https://www.youtube.com/watch?v=GJJPgLGrSgc was made from raw footage using
@@ -29,7 +31,17 @@ https://patreon.com/pippin
  - animated (key-framed) nodal per clip filters
  - cross fading
  - single track editing UI
+ - context sensitive keyboard help
+ - drag and drop of videos/images from file managers
  - proxy editing, permitting editing high-res video results on low powered computers
+
+### UI hints
+
+The current UI is the minimal amount of UI needed for keyboard centered editing
+with some mouse based scrubbing and positioning. The available keyboard actions
+are different for the first and last frames of a clip compared with the
+mid-clip frames, when jumping between clips with up/down arrows, one jumps
+between the first frames of clips.
 
 ### Dependencies:
 
@@ -38,15 +50,13 @@ https://patreon.com/pippin
    SDL-1.2
    ffmpeg
 
-
 An example gedl edl file is as follows:
 
     output-path=result.mp4
-    
+
     A.mp4 200 341
     A.mp4 514 732
     B.mp4 45 123
-
 
 If this was stored in a file, test.edl we can run:
 
@@ -92,16 +102,24 @@ for preview resolution.. and slave render / caching to target resolution.
 After each clip a gegl image processing chain following the format documented
 at http://gegl.org/gegl-chain.html
 
-with the addition that values can be keyframed when used inside curly brackets,
-containe keyframe=value pairs in a clip local interpolated time space {0=3.0
-3=0.2 10=}.
+One can for instance write:
 
+    A.mp4 200 341 -- gaussian-blur std-dev-x=0.1rel std-dev-y=0.1rel gegl:threshold value=0.3
+
+To threshold the clip, this feature can be used for using arbitrary GEGL
+pipelines with interpolated parameters as filters on a video clip. The suffix
+rel used in the gaussian blur is dependant on the height of the video - this
+permits the pipeline to be used for proxies as well as for full size video.
+
+Values can also be keyframed by supplying them inside inside curly brackets,
+containg keyframe=value pairs in a clip local interpolated time space {0=3.0
+3=0.2 10=}.
 
 ### caching architecture
 
 The core of gedls architecture is the data storage model, the text file that
-the user sees as a project file contains - together with the referenced assets,
-the complete description of how to generate a video for a sequence.
+the user sees as a project file contains - together with the referenced source
+assets, the complete description of how to generate a video for a sequence.
 
 This file is broken down into a set of global assignments of key/values, and
 lines describing clips with path, in/out point and associated GEGL filter
@@ -119,13 +137,12 @@ Thus making returns to previous settings reuse previous values.
 **.gedl/history/**  contains undo snapshots of files being edited (backups from
 frequent auto-save)
 
-**.gedl/proxy/**  contains scaled down to preview resolution video files
+**.gedl/proxy/**  contains scaled down to for quick preview/editing video files
 
 **.gedl/thumb/**  contains thumb tracks for video clips - thumb tracks are images
 to show in the clips in the timeline, the thumb tracks are created using
 iconographer from the proxy videos - from original would be possible, but take
 longer than creating proxy videos.
-
 
 when the UI is running the following threads and processes exist:
 
