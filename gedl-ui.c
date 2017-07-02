@@ -1045,7 +1045,7 @@ static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
 #define PAD_DIM     8
 int VID_HEIGHT=96; // XXX: ugly global
 
-void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start, int clip_frames, double x, double y, int fade)
+void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start, int clip_frames, double x, double y, int fade, int fade2)
 {
   char *thumb_path;
   if (!clip_path)
@@ -1055,13 +1055,12 @@ void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start,
   thumb_path = gedl_make_thumb_path (edl, clip_path);
 
   cairo_t *cr = mrg_cr (mrg);
-  if (fade)
+  if (fade || fade2)
   {
-    //cairo_rectangle (cr, x, y, clip_frames, VID_HEIGHT);
     cairo_move_to (cr, x, y + VID_HEIGHT/2);
     cairo_line_to (cr, x + fade/2, y);
-    cairo_line_to (cr, x + clip_frames, y);
-    cairo_line_to (cr, x + clip_frames, y + VID_HEIGHT);
+    cairo_line_to (cr, x + clip_frames + fade2/2, y);
+    cairo_line_to (cr, x + clip_frames - fade2/2, y + VID_HEIGHT);
     cairo_line_to (cr, x - fade/2, y + VID_HEIGHT);
     cairo_line_to (cr, x, y + VID_HEIGHT/2);
   }
@@ -1484,7 +1483,8 @@ void gedl_draw (Mrg     *mrg,
     }
     else
     {
-      render_clip (mrg, edl, clip->path, clip->start, frames, t, y, clip->fade);
+      Clip *next = clip_get_next (clip);
+      render_clip (mrg, edl, clip->path, clip->start, frames, t, y, clip->fade, next?next->fade:0);
     }
     if (clip == edl->active_clip)
       cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
