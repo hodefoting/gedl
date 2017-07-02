@@ -11,6 +11,16 @@ A graphical user interface that is evolving together with a human readable and
 a custom human extendable text-file format is available for gedl, rewriting the
 UI in lua and calling it gcut is being considered.
 
+The low-resolution editing proxies gedl makes it possible to edit fullhd videos from SLRs on lightweight underpowered computers - rendering out full resolution video that these devices can just about play.
+
+gedl stores cached rendered frames as single jpgs or pngs, the names are the
+hash of input data and relevant filters and frame. As meta-data for each image
+file the corresponding PCM data is stored as meta-data. This reproducible cache
+per frame permits shared multi-process background rendering, making good use of
+multi-core machines. (It is possible some clever use of shell-scripts and rsync
+would be enough to be able to use a more powerful server for doing the
+rendering and transfering rendered frames back into cache.)
+
 The GEGL video from Libre Graphics Meeting 2016 in London,
 https://www.youtube.com/watch?v=GJJPgLGrSgc was made from raw footage using
 gedl, the default testproject of gedl which is in this repo as default.edl
@@ -25,8 +35,6 @@ https://patreon.com/pippin
 
 ### Features
 
- - multi-process parallel background rendering
- - content addressed caching scheme, suitable for network distributed background rendering.
  - animated (key-framed) nodal video sources
  - animated (key-framed) nodal per clip filters
  - cross fading
