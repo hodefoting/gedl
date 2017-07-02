@@ -44,6 +44,48 @@ Clip *clip_new (GeglEDL *edl)
   return clip;
 }
 
+Clip *clip_get_prev (Clip *self)
+{
+  GList *l;
+  GeglEDL *edl;
+  if (!self)
+    return NULL;
+  edl = self->edl;
+  Clip *prev = NULL;
+
+  for (l = edl->clips; l; l = l->next)
+  {
+    Clip *clip = l->data;
+    if (clip->is_meta)
+      continue;
+    if (clip == self)
+      return prev;
+    prev = clip;
+  }
+  return NULL;
+}
+Clip *clip_get_next (Clip *self)
+{
+  GList *l;
+  GeglEDL *edl;
+  int found = 0;
+  if (!self)
+    return NULL;
+  edl = self->edl;
+
+  for (l = edl->clips; l; l = l->next)
+  {
+    Clip *clip = l->data;
+    if (clip->is_meta)
+      continue;
+    if (found)
+      return clip;
+    if (clip == self)
+      found = 1;
+  }
+  return NULL;
+}
+
 void clip_free (Clip *clip)
 {
   if (clip->path)

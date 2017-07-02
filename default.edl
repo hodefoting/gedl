@@ -4,13 +4,13 @@ output-path=gedl.mp4
 video-width=800
 video-height=600
 fps=25.000000
-selection-start=64
-selection-end=64
-frame-scale=0.728446
-t0=-93.551330
-frame-no=64
+selection-start=448
+selection-end=448
+frame-scale=0.788493
+t0=96.364239
+frame-no=448
 
-gegl:color value=black gegl:crop width=400 height=400 0 50 -- 
+gegl:color value=black gegl:crop width=400 height=400 31 50 -- 
 gegl:color value=black gegl:crop width=400 height=400 0 50 -- [fade=26] over aux=[ text size=0.08rel string='note: this is a gedl video\nproject for testing features\nit relies on synthetic GEGL\npatterns instead of\nvideo footage\nto be to minimie size\nfor inclusion in gedl sources' color=white translate x=0.1rel y=0.15rel ]
 -- #annotations
 gegl:color value=black gegl:crop width=400 height=400 0 50 -- over aux=[ text size=0.2rel string='gedl/gcut' color=white gaussian-blur clip-extent=false std-dev-x={ 0=0.4rel 24=0.0 25=0.0 } std-dev-y={  0=0.2rel 24=0.0 25=0.0 26=0.0  } translate x=0.1rel y=0.3rel   ]
@@ -26,14 +26,15 @@ gegl:simplex-noise gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ t
 gegl:simplex-noise gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ text size=0.1rel string='all GEGL filters' color=yellow translate x=0.06rel y=0.7rel ]
 gegl:simplex-noise gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ text size=0.1rel string='single track editing' color=yellow translate x=0.06rel y=0.8rel ]
 gegl:simplex-noise gegl:crop width=400 height=400 0 25 -- [fade=34] 
+gegl:noise-solid gegl:crop width=400 height=400 30 25 -- [fade=34] over aux=[ text size=0.1rel string='TODO' color=yellow translate x=0.06rel y=0.1rel ]
 gegl:fractal-explorer zoom={ 0=120 60=1300} shiftx={ 0=-320 60=-2500} shifty=-180 gegl:crop width=480 height=640 0 60 -- [fade=20] 
-gegl:sinus complexity={ 0=0.5 40=4.0 80=0.2 } gegl:crop width=400 height=400 0 80 -- [fade=6] 
-gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ text size=0.1rel string='TODO' color=yellow translate x=0.06rel y=0.1rel ]
+gegl:sinus complexity={ 1=0.5 40=4.0 80=0.2 } gegl:crop width=400 height=400 0 80 -- [fade=60] 
 gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ text size=0.1rel string='port ui to lua' color=yellow translate x=0.1rel y=0.3rel ]
 gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ text size=0.1rel string='graph/node ui for filters' color=yellow translate x=0.1rel y=0.4rel ]
 gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ text size=0.1rel string='clip database' color=yellow translate x=0.1rel y=0.5rel ]
 gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ text size=0.1rel string='audio overlay' color=yellow translate x=0.1rel y=0.6rel ]
+gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] 
 gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ text size=0.1rel string='subtitle baking' color=yellow translate x=0.1rel y=0.7rel ]
 gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ text size=0.1rel string='network rendering' color=yellow translate x=0.1rel y=0.8rel ]
-gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] 
 -----
+fnord.mp4 40 140 0 -- 

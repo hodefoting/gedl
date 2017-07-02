@@ -9,7 +9,6 @@
 
     ui
       rewrite gedl-ui.c in lua and call it gcut
-      slant clip transition for fade.
       detect locked or crashed ui, kill and respawn
       templates - for both clips and filters - filters that can be chained
       trimming by mouse / dragging clips around by mouse
@@ -109,6 +108,8 @@ void   clip_set_range         (Clip *clip, int start, int end);
 int    clip_is_static_source  (Clip *clip);
 gchar *clip_get_frame_hash    (Clip *clip, int clip_frame_no);
 
+Clip *clip_get_next (Clip *self);
+Clip *clip_get_prev (Clip *self);
 
 void   clip_fetch_audio       (Clip *clip);
 void   clip_set_full          (Clip *clip, const char *path, int start, int end);

@@ -165,14 +165,6 @@ void     gedl_free          (GeglEDL *edl)
 }
 
 
-/* XXX: oops global state */
-
-
-#if 0
-GeglEDL *edl;
-#endif
-
-
 Clip *gedl_get_clip (GeglEDL *edl, int frame, int *clip_frame_no)
 {
   GList *l;
@@ -278,7 +270,6 @@ gchar *gedl_get_frame_hash_full (GeglEDL *edl, int frame,
                               1/2 later - when perhaps a scaling factor or a
                               per-case duration is set which gets maxed by this
                               heuristic   */
-#if 1
       if (clip->fade/2 < prev_fade_len)
         prev_fade_len = clip->fade/2;
 
@@ -287,8 +278,6 @@ gchar *gedl_get_frame_hash_full (GeglEDL *edl, int frame,
         if (next->fade/2 < next_fade_len)
           next_fade_len = next->fade/2;
       }
-#endif
-
 
       if (prev && frame - clip_start < prev_fade_len)                   /* in */
       {
@@ -1050,12 +1039,10 @@ static void process_frames_cache (GeglEDL *edl)
   signal(SIGUSR2, handler1);
   duration = gedl_get_duration (edl);
 
-  /* XXX: should probably do first frame of each clip - since
-          these are used for quick keyboard navigation of the
-          project
-   */
   GList *l;
   int clip_start = 0;
+
+  // TODO: use bitmap from ui to speed up check
 
   for (l = edl->clips; l; l = l->next)
   {
