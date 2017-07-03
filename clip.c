@@ -353,10 +353,11 @@ void remove_in_betweens (GeglNode *nop_scaled, GeglNode *nop_filtered)
  gegl_node_link_many (nop_scaled, nop_filtered, NULL);
 }
 
-void clip_render_frame (Clip *clip, int clip_frame_no)
+void clip_rig_chain (Clip *clip, int clip_frame_no)
 {
   GeglEDL *edl = clip->edl;
   int use_proxies = edl->use_proxies;
+
   g_mutex_lock (&clip->mutex);
 
   remove_in_betweens (clip->nop_scaled, clip->nop_crop);
@@ -398,6 +399,13 @@ void clip_render_frame (Clip *clip, int clip_frame_no)
 
       // flags,..    FULL   PREVIEW   FULL_CACHE|PREVIEW  STORE_FULL_CACHE
       clip_set_frame_no (clip, clip_frame_no);
+  g_mutex_unlock (&clip->mutex);
+}
+
+void clip_render_frame (Clip *clip, int clip_frame_no)
+{
+      clip_rig_chain (clip, clip_frame_no);
+      g_mutex_lock (&clip->mutex);
       gegl_node_process (clip->loader); // for the audio fetch
       clip_fetch_audio (clip);
 

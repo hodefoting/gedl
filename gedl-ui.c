@@ -1362,6 +1362,47 @@ static void zoom_fit (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
+float print_nodes (Mrg *mrg, GeglNode *node, float x, float y)
+{
+    while (node)
+    {
+        mrg_set_xy (mrg, x, y);
+        mrg_printf (mrg, "%s", gegl_node_get_operation (node));
+        y -= mrg_em (mrg) * 2;
+
+      GeglNode **nodes = NULL;
+      const gchar **pads = NULL;
+
+      int count = gegl_node_get_consumers (node, "output", &nodes, &pads);
+      if (count)
+      {
+        node = nodes[0];
+        if (strcmp (pads[0], "input"))
+          node = NULL;
+      }
+      else
+        node = NULL;
+      g_free (nodes);
+      g_free (pads);
+      //if (node && node == clip->nop_crop)
+       // node = NULL;
+      if (node)
+      {
+        GeglNode *iter = gegl_node_get_producer (node, "aux", NULL);
+        if (iter)
+        {
+          GeglNode *next;
+          do {
+            next = gegl_node_get_producer (iter, "input", NULL);
+            if (next) iter = next;
+          } while(next);
+
+          y = print_nodes (mrg, iter, x + mrg_em (mrg) * 2, y);
+        }//
+      }
+    }
+    return y;
+}
 
 void gedl_draw (Mrg     *mrg,
                 GeglEDL *edl,
@@ -1382,6 +1423,31 @@ void gedl_draw (Mrg     *mrg,
 
   if (duration == 0)
     return;
+
+  float y2 = y - mrg_em (mrg) * 1.5;
+
+  if (edl->active_clip && edl->active_clip->filter_graph)
+  {
+    Clip *clip = edl->active_clip;
+    GError *error = NULL;
+    
+    GeglNode *node_start = gegl_node_new ();
+    GeglNode *node_end = gegl_node_new ();
+
+    gegl_node_set (node_start, "operation", "gegl:nop", NULL);
+    gegl_node_set (node_end, "operation", "gegl:nop", NULL);
+
+    gegl_node_link_many (node_start, node_end, NULL);
+    gegl_create_chain (clip->filter_graph, node_start, node_end, 0, 480, NULL, &error);
+
+    y2 = print_nodes (mrg, node_start, mrg_em (mrg), y2);
+
+
+    remove_in_betweens (node_start, node_end);
+    g_object_unref (node_start);
+    g_object_unref (node_end);
+  }
+
 
   cairo_set_source_rgba (cr, 1, 1,1, 1);
 
@@ -1447,6 +1513,8 @@ void gedl_draw (Mrg     *mrg,
 
   cairo_restore (cr);
   y -= VID_HEIGHT;
+
+
   t = 0;
 
   cairo_move_to (cr, x0 + PAD_DIM, y + VID_HEIGHT + PAD_DIM * 3);
@@ -1549,8 +1617,6 @@ void gedl_draw (Mrg     *mrg,
         }
      }
      cairo_fill (cr);
-
-     //g_free (bitmap);
   }
 
   double frame = edl->frame_no;
@@ -1560,7 +1626,6 @@ void gedl_draw (Mrg     *mrg,
     cairo_rectangle (cr, frame, y-PAD_DIM, fpx, VID_HEIGHT + PAD_DIM * 2);
   cairo_set_source_rgba (cr,1,0,0,1);
   cairo_fill (cr);
-
   cairo_restore (cr);
 
   cairo_rectangle (cr, 0, y - PAD_DIM, mrg_width (mrg), VID_HEIGHT + PAD_DIM * 4);
