@@ -1419,7 +1419,7 @@ float print_nodes (Mrg *mrg, GeglNode *node, float x, float y)
 {
     while (node)
     {
-      y = print_props (mrg, node, x + mrg_em(mrg) * 0.5, y);
+      if (0) y = print_props (mrg, node, x + mrg_em(mrg) * 0.5, y);
       mrg_set_xy (mrg, x, y);
       mrg_printf (mrg, "%s", gegl_node_get_operation (node));
       y -= mrg_em (mrg) * 1.5;
@@ -1484,6 +1484,19 @@ void gedl_draw (Mrg     *mrg,
   {
     Clip *clip = edl->active_clip;
     GError *error = NULL;
+
+    if (clip->is_chain)
+    {
+      mrg_set_xy (mrg, mrg_em(mrg) * 1, y2);
+      mrg_printf (mrg, "%s", clip->path);
+      y2 -= mrg_em (mrg) * 1.5;
+    }
+    else
+    {
+      mrg_set_xy (mrg, mrg_em(mrg) * 1, y2);
+      mrg_printf (mrg, "%s", clip->path);
+      y2 -= mrg_em (mrg) * 1.5;
+    }
     
     GeglNode *node_start = gegl_node_new ();
     GeglNode *node_end = gegl_node_new ();
@@ -1576,7 +1589,6 @@ void gedl_draw (Mrg     *mrg,
   cairo_move_to (cr, x0 + PAD_DIM, y + VID_HEIGHT + PAD_DIM * 3);
 
 
-  //cairo_show_text (cr, edl->path);
   cairo_save (cr);
   cairo_translate (cr,  x0, 0);
   cairo_scale (cr, 1.0/fpx, 1);
@@ -1728,61 +1740,6 @@ static void toggle_ui_mode  (MrgEvent *event, void *data1, void *data2)
   changed++;
 }
 
-void trim_ui (Mrg *mrg, GeglEDL *edl)
-{
-  float h = mrg_height (mrg);
-  float w = mrg_width (mrg);
-  mrg_start (mrg, "trim-ui", NULL);
-  mrg_set_style (mrg, "color: white;background: transparent; text-stroke: 1.5px #000");
-  mrg_set_font_size (mrg, h / 14.0);
-  mrg_set_edge_right (mrg, w);
-  mrg_set_edge_left (mrg, 0);
-
-#define print_str_at(x,y,str) do{\
-   mrg_set_xy (mrg, w * x, h * y);\
-     mrg_printf (mrg, str); } while(0)
-
-  print_str_at (0.1, 0.3, "(insert)");
-  print_str_at (0.3, 0.3, "cut");
-  print_str_at (0.6, 0.3, "split");
-  print_str_at (0.8, 0.3, "ui");
-
-  print_str_at (0.1, 0.4, "copy");
-  print_str_at (0.3, 0.4, "paste");
-  print_str_at (0.6, 0.4, "(merge)");
-  print_str_at (0.8, 0.4, "(filters)");
-
-  print_str_at (0.1, 0.7, "|<");
-  print_str_at (0.3, 0.7, "<");
-
-  if (edl->playing)
-    print_str_at (0.5, 0.7, "||");
-  else
-    print_str_at (0.5, 0.7, "|>");
-
-  print_str_at (0.7, 0.7, ">");
-  print_str_at (0.9, 0.7, ">|");
-
-  print_str_at (0.1, 0.6, "]");
-  print_str_at (0.3, 0.6, "[");
-
-
-  print_str_at (0.5, 0.6, "][");
-  print_str_at (0.6, 0.6, "slip");
-  print_str_at (0.8, 0.6, "slide");
-
-#if 0
-
- |<-        |>         ->|
-
- ]     [          ]      [
-
- ][   slip    slide     ][
-#endif
-    mrg_end (mrg);
-
-}
-
 void help_ui (Mrg *mrg, GeglEDL *edl)
 {
   if (help)
@@ -1914,41 +1871,6 @@ void gedl_ui (Mrg *mrg, void *data)
 #endif
   mrg_printf (mrg, " %i  ", edl->frame_no);
 
-  if (edl->active_clip && edl->active_clip->path)
-    {
-      char *basename = g_path_get_basename (edl->active_clip->path);
-      mrg_printf (mrg, "| %s %i-%i %i  ", basename,
-                  edl->active_clip->start, edl->active_clip->end,
-                  0//gedl_get_clip_frame_no (edl)
-                 );
-      g_free (basename);
-
-#if 0
-      if (edl->active_clip->filter_graph)
-      {
-        if (edl->filter_edited)
-        {
-          mrg_edit_start (mrg, update_filter, edl);
-          mrg_printf (mrg, "%s", edl->active_clip->filter_graph);
-          mrg_edit_end (mrg);
-        }
-        else 
-        {
-          mrg_text_listen (mrg, MRG_PRESS, 
-                           edit_filter_graph, edl, NULL);
-          if (edl->active_clip->filter_graph && strlen (edl->active_clip->filter_graph) > 2)
-            mrg_printf (mrg, " %s", edl->active_clip->filter_graph);
-          else
-            mrg_printf (mrg, " %s", "[click to add filter]\n");
-          mrg_text_listen_done (mrg);
-        }
-      }
-      else
-      {
-        mrg_printf (mrg, " %s", "[click to add filter]\n");
-      }
-#endif
-    }
 #if 0
   if (edl->active_source)
   {
@@ -1961,21 +1883,7 @@ void gedl_ui (Mrg *mrg, void *data)
   //mrg_printf (mrg, "%i %i %i %i %i\n", edl->frame, edl->frame_no, edl->source_frame_no, rendering_frame, done_frame);
 
   if (!renderer_done (edl))
-    mrg_printf (mrg, "rendering ");
-
-  switch (edl->ui_mode)
-  {
-     case GEDL_UI_MODE_FULL:
-       if (!edl->playing && 0)
-          trim_ui (mrg, edl);
-     case GEDL_UI_MODE_TIMELINE:
-     case GEDL_UI_MODE_PART:
-  break;
-     case GEDL_UI_MODE_NONE:
-        break;
-     break;
-  }
-
+    mrg_printf (mrg, "... ");
 
   }
 
