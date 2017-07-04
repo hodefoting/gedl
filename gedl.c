@@ -1195,11 +1195,24 @@ void gedl_make_proxies (GeglEDL *edl)
 
 void gedl_start_sanity (void)
 {
+  int fails = 0;
   if (system("which ffmpeg > /dev/null") != 0)
   {
-    fprintf (stderr, "gedl requires an ffmpeg command in PATH\n");
-    exit (-1);
+    fprintf (stderr, "gedl missing runtime dependency: ffmpeg command in PATH\n");
+    fails ++;
   }
+  if (!gegl_has_operation ("gegl:ff-load"))
+  {
+    fprintf (stderr, "gedl missing runtime dependenct: gegl:ff-load operation\n");
+    fails ++;
+  }
+  if (!gegl_has_operation ("gegl:ff-save"))
+  {
+    fprintf (stderr, "gedl missing runtime dependenct: gegl:ff-save operation\n");
+    fails ++;
+  }
+  if (fails)
+    exit (-1);
 }
 
 gint iconographer_main (gint    argc, gchar **argv);
@@ -1209,8 +1222,6 @@ int main (int argc, char **argv)
   GeglEDL *edl = NULL;
   const char *edl_path = "input.edl";
   int tot_frames;
-
-  gedl_start_sanity ();
 
   gedl_binary_path = realpath (argv[0], NULL);
   if (!gedl_binary_path)
@@ -1226,6 +1237,8 @@ int main (int argc, char **argv)
   setenv ("GEGL_MIPMAP_RENDERING", "1", 1);
 
   init (argc, argv);
+  gedl_start_sanity ();
+
   if (!argv[1])
   {
     static char *new_argv[3]={NULL, "default.edl", NULL};
