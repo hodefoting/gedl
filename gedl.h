@@ -5,7 +5,7 @@
     if the initial frame is not a representative video frame of the comp, audio glitches
     ogv render files are more compatible than generated mp4 files, firefox among few that renders the mp4 in audio sync
 
-  features
+  roadmap/missing features
 
     ui
       rewrite gedl-ui.c in lua and call it gcut
@@ -18,7 +18,7 @@
       insert videos from the commandline
       ui for adding/editing annotations, setting variables for
         interpolation in annotations?
-      migrated gedl.c into GEGL?
+      move gedl to gegl git repo
 
     support for other timecodes, mm:ss:ff and s
     using edl files as clip sources - hopefully without even needing caches.

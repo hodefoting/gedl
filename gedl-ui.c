@@ -1419,7 +1419,7 @@ float print_nodes (Mrg *mrg, GeglNode *node, float x, float y)
 {
     while (node)
     {
-      if (0) y = print_props (mrg, node, x + mrg_em(mrg) * 0.5, y);
+      if (1) y = print_props (mrg, node, x + mrg_em(mrg) * 0.5, y);
       mrg_set_xy (mrg, x, y);
       mrg_printf (mrg, "%s", gegl_node_get_operation (node));
       y -= mrg_em (mrg) * 1.5;
