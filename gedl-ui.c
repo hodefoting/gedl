@@ -1362,13 +1362,28 @@ static void zoom_fit (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
+float print_props (Mrg *mrg, GeglNode *node, float x, float y)
+{
+  unsigned int n_props; 
+  GParamSpec ** props = gegl_operation_list_properties (gegl_node_get_operation (node),
+                      &n_props);
+  for (int i = 0; i <n_props; i ++)
+  {
+    mrg_set_xy (mrg, x, y);
+    mrg_printf (mrg, "%s", props[i]->name);
+    y -= mrg_em (mrg) * 1;
+  }
+  return y;
+}
+
 float print_nodes (Mrg *mrg, GeglNode *node, float x, float y)
 {
     while (node)
     {
-        mrg_set_xy (mrg, x, y);
-        mrg_printf (mrg, "%s", gegl_node_get_operation (node));
-        y -= mrg_em (mrg) * 2;
+      //y = print_props (mrg, node, x + mrg_em(mrg) * 0.5, y);
+      mrg_set_xy (mrg, x, y);
+      mrg_printf (mrg, "%s", gegl_node_get_operation (node));
+      y -= mrg_em (mrg) * 2;
 
       GeglNode **nodes = NULL;
       const gchar **pads = NULL;

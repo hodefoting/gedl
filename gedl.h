@@ -56,12 +56,12 @@ const char *compute_cache_path    (const char *path);
 
 enum {
   GEDL_UI_MODE_FULL = 0,
-  GEDL_UI_MODE_TIMELINE = 1,
-  GEDL_UI_MODE_NONE = 2,
+  GEDL_UI_MODE_NONE = 1,
+  GEDL_UI_MODE_TIMELINE = 2,
   GEDL_UI_MODE_PART = 3,
 };
 
-#define GEDL_LAST_UI_MODE 2
+#define GEDL_LAST_UI_MODE 1
 
 GeglEDL    *gedl_new                (void);
 void        gedl_free               (GeglEDL    *edl);

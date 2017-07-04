@@ -4,11 +4,11 @@ output-path=gedl.mp4
 video-width=800
 video-height=600
 fps=25.000000
-selection-start=213
-selection-end=213
-frame-scale=0.788493
-t0=25.841120
-frame-no=213
+selection-start=839
+selection-end=840
+frame-scale=1.550000
+t0=0.000000
+frame-no=839
 
 gegl:color value=black gegl:crop width=400 height=400 31 50 -- 
 gegl:color value=black gegl:crop width=400 height=400 0 50 -- [fade=26] over aux=[ text size=0.08rel string='note: this is a gedl video\nproject for testing features\nit relies on synthetic GEGL\npatterns instead of\nvideo footage\nto be to minimie size\nfor inclusion in gedl sources' color=white translate x=0.1rel y=0.15rel ]
@@ -35,5 +35,6 @@ gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ tex
 gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] 
 gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ text size=0.1rel string='subtitle baking' color=yellow translate x=0.1rel y=0.7rel ]
 gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ text size=0.1rel string='network rendering' color=yellow translate x=0.1rel y=0.8rel ]
+gegl:color value=black gegl:crop width=400 height=400 0 200 -- over aux=[ text size=0.04rel string='end titles\n\nfull of newlines\n\nand some images and more\n\nmost of the time\n\n\nthough\n\nusing an image that one pans\nwill provide better typographic control\nperhaps based on a pdf/svg\n\nthis is is also where I should stick in list of people contributing' color=white translate x=0.1rel y={ 0=1.0rel 200=-2rel }  ]
 -----
 fnord.mp4 40 140 0 -- 
