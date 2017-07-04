@@ -1406,10 +1406,27 @@ float print_props (Mrg *mrg, GeglNode *node, float x, float y)
 
     if (str)
     {
+      mrg_set_xy (mrg, x, y);
       mrg_printf (mrg, "%s", str);
       g_free (str);
       y -= mrg_em (mrg) * 1.2;
     }
+
+    char tmpbuf[1024];
+    sprintf (tmpbuf, "%s-rel", props[i]->name);
+    GQuark rel_quark = g_quark_from_string (tmpbuf);
+    sprintf (tmpbuf, "%s-anim", props[i]->name);
+    GQuark anim_quark = g_quark_from_string (tmpbuf);
+
+    if (g_object_get_qdata (G_OBJECT (node), rel_quark))
+       mrg_printf (mrg, "{ relative }");
+    if (g_object_get_qdata (G_OBJECT (node), anim_quark))
+    {
+       //GeglPath *path = g_object_get_qdata (G_OBJECT (node), anim_quark);
+       mrg_printf (mrg, "{ animated }");
+    }
+    if (g_object_get_qdata (G_OBJECT (node), g_quark_from_string (props[i]->name)))
+       mrg_printf (mrg, "{ untagged }");
   }
 
   return y;
@@ -1419,7 +1436,7 @@ float print_nodes (Mrg *mrg, GeglNode *node, float x, float y)
 {
     while (node)
     {
-      if (1) y = print_props (mrg, node, x + mrg_em(mrg) * 0.5, y);
+      if (0) y = print_props (mrg, node, x + mrg_em(mrg) * 0.5, y);
       mrg_set_xy (mrg, x, y);
       mrg_printf (mrg, "%s", gegl_node_get_operation (node));
       y -= mrg_em (mrg) * 1.5;
@@ -1458,6 +1475,9 @@ float print_nodes (Mrg *mrg, GeglNode *node, float x, float y)
     return y;
 }
 
+static Clip *ui_clip = NULL;
+
+
 void gedl_draw (Mrg     *mrg,
                 GeglEDL *edl,
                 double   x0,
@@ -1484,12 +1504,33 @@ void gedl_draw (Mrg     *mrg,
   {
     Clip *clip = edl->active_clip;
     GError *error = NULL;
+  
+    mrg_set_style (mrg, "font-size: 3%; background-color: #0008; color: #fff");
 
     if (clip->is_chain)
     {
-      mrg_set_xy (mrg, mrg_em(mrg) * 1, y2);
-      mrg_printf (mrg, "%s", clip->path);
-      y2 -= mrg_em (mrg) * 1.5;
+      GeglNode *source_start = gegl_node_new ();
+      GeglNode *source_end = gegl_node_new ();
+
+      gegl_node_set (source_start, "operation", "gegl:nop", NULL);
+      gegl_node_set (source_end, "operation", "gegl:nop", NULL);
+
+      gegl_node_link_many (source_start, source_end, NULL);
+    gegl_create_chain (clip->path, source_start, source_end,
+                    edl->frame_no - clip->abs_start,
+                       480, NULL, &error);
+
+    GeglNode *iter = source_end;
+    while (gegl_node_get_producer (iter, "input", NULL))
+    {
+      iter = gegl_node_get_producer (iter, "input", NULL);
+    }
+
+    y2 = print_nodes (mrg, iter, mrg_em (mrg), y2);
+
+    remove_in_betweens (source_start, source_end);
+    g_object_unref (source_start);
+    g_object_unref (source_end);
     }
     else
     {
@@ -1498,23 +1539,23 @@ void gedl_draw (Mrg     *mrg,
       y2 -= mrg_em (mrg) * 1.5;
     }
     
-    GeglNode *node_start = gegl_node_new ();
-    GeglNode *node_end = gegl_node_new ();
+    GeglNode *filter_start = gegl_node_new ();
+    GeglNode *filter_end = gegl_node_new ();
 
-    gegl_node_set (node_start, "operation", "gegl:nop", NULL);
-    gegl_node_set (node_end, "operation", "gegl:nop", NULL);
+    gegl_node_set (filter_start, "operation", "gegl:nop", NULL);
+    gegl_node_set (filter_end, "operation", "gegl:nop", NULL);
 
-    gegl_node_link_many (node_start, node_end, NULL);
-    gegl_create_chain (clip->filter_graph, node_start, node_end,
+    gegl_node_link_many (filter_start, filter_end, NULL);
+    gegl_create_chain (clip->filter_graph, filter_start, filter_end,
                     edl->frame_no - clip->abs_start,
                        480, NULL, &error);
 
-    y2 = print_nodes (mrg, node_start, mrg_em (mrg), y2);
+    y2 = print_nodes (mrg, filter_start, mrg_em (mrg), y2);
 
 
-    remove_in_betweens (node_start, node_end);
-    g_object_unref (node_start);
-    g_object_unref (node_end);
+    remove_in_betweens (filter_start, filter_end);
+    g_object_unref (filter_start);
+    g_object_unref (filter_end);
   }
 
 
