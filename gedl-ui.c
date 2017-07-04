@@ -1452,7 +1452,7 @@ float print_nodes (Mrg *mrg, GeglNode *node, float x, float y)
           } while(next);
 
           y = print_nodes (mrg, iter, x + mrg_em (mrg) * 2, y);
-        }//
+        }
       }
     }
     return y;

@@ -1193,6 +1193,15 @@ void gedl_make_proxies (GeglEDL *edl)
   }
 }
 
+void gedl_start_sanity (void)
+{
+  if (system("which ffmpeg > /dev/null") != 0)
+  {
+    fprintf (stderr, "gedl requires an ffmpeg command in PATH\n");
+    exit (-1);
+  }
+}
+
 gint iconographer_main (gint    argc, gchar **argv);
 
 int main (int argc, char **argv)
@@ -1200,6 +1209,8 @@ int main (int argc, char **argv)
   GeglEDL *edl = NULL;
   const char *edl_path = "input.edl";
   int tot_frames;
+
+  gedl_start_sanity ();
 
   gedl_binary_path = realpath (argv[0], NULL);
   if (!gedl_binary_path)
