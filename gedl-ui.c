@@ -1369,10 +1369,49 @@ float print_props (Mrg *mrg, GeglNode *node, float x, float y)
                       &n_props);
   for (int i = 0; i <n_props; i ++)
   {
+    char *str = NULL;
     mrg_set_xy (mrg, x, y);
-    mrg_printf (mrg, "%s", props[i]->name);
-    y -= mrg_em (mrg) * 1;
+    GType type = props[i]->value_type;
+
+    if (g_type_is_a (type, G_TYPE_DOUBLE) ||
+        g_type_is_a (type, G_TYPE_FLOAT))
+    {
+      double val;
+      gegl_node_get (node, props[i]->name, &val, NULL);
+      str = g_strdup_printf ("%s:%f", props[i]->name, val);
+    }
+    else if (g_type_is_a (type, G_TYPE_INT))
+    {
+      gint val;
+      gegl_node_get (node, props[i]->name, &val, NULL);
+      str = g_strdup_printf ("%s:%d", props[i]->name, val);
+    }
+    else if (g_type_is_a (type, G_TYPE_BOOLEAN))
+    {
+      gboolean val;
+      gegl_node_get (node, props[i]->name, &val, NULL);
+      str = g_strdup_printf ("%s:%s", props[i]->name, val?"yes":"no");
+    }
+    else if (g_type_is_a (type, G_TYPE_STRING))
+    {
+      char *val = NULL;
+      gegl_node_get (node, props[i]->name, &val, NULL);
+      str = g_strdup_printf ("%s: \"%s\"", props[i]->name, val);
+      g_free (val);
+    }
+    else
+    {
+      str = g_strdup_printf ("%s: --", props[i]->name);
+    }
+
+    if (str)
+    {
+      mrg_printf (mrg, "%s", str);
+      g_free (str);
+      y -= mrg_em (mrg) * 1.2;
+    }
   }
+
   return y;
 }
 
@@ -1380,10 +1419,10 @@ float print_nodes (Mrg *mrg, GeglNode *node, float x, float y)
 {
     while (node)
     {
-      //y = print_props (mrg, node, x + mrg_em(mrg) * 0.5, y);
+      y = print_props (mrg, node, x + mrg_em(mrg) * 0.5, y);
       mrg_set_xy (mrg, x, y);
       mrg_printf (mrg, "%s", gegl_node_get_operation (node));
-      y -= mrg_em (mrg) * 2;
+      y -= mrg_em (mrg) * 1.5;
 
       GeglNode **nodes = NULL;
       const gchar **pads = NULL;
@@ -1453,7 +1492,9 @@ void gedl_draw (Mrg     *mrg,
     gegl_node_set (node_end, "operation", "gegl:nop", NULL);
 
     gegl_node_link_many (node_start, node_end, NULL);
-    gegl_create_chain (clip->filter_graph, node_start, node_end, 0, 480, NULL, &error);
+    gegl_create_chain (clip->filter_graph, node_start, node_end,
+                    edl->frame_no - clip->abs_start,
+                       480, NULL, &error);
 
     y2 = print_nodes (mrg, node_start, mrg_em (mrg), y2);
 
