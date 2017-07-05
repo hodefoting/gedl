@@ -1362,6 +1362,21 @@ static void zoom_fit (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
+static void toggle_bool (MrgEvent *e, void *data1, void *data2)
+{
+  GeglNode *node = data1;
+  const char *prop = data2;
+  gboolean old_value;
+  gboolean new_value; 
+  gegl_node_get (node, prop, &old_value, NULL);
+  new_value = !old_value;
+  gegl_node_set (node, prop, new_value, NULL);
+
+  mrg_event_stop_propagate (e);
+  mrg_queue_draw (e->mrg, NULL);
+}
+
+
 float print_props (Mrg *mrg, GeglNode *node, float x, float y)
 {
   unsigned int n_props; 
@@ -1373,41 +1388,49 @@ float print_props (Mrg *mrg, GeglNode *node, float x, float y)
     mrg_set_xy (mrg, x, y);
     GType type = props[i]->value_type;
 
+
+    mrg_set_xy (mrg, x, y);
+
     if (g_type_is_a (type, G_TYPE_DOUBLE) ||
         g_type_is_a (type, G_TYPE_FLOAT))
     {
       double val;
       gegl_node_get (node, props[i]->name, &val, NULL);
       str = g_strdup_printf ("%s:%f", props[i]->name, val);
+      mrg_printf (mrg, "%s", str);
     }
     else if (g_type_is_a (type, G_TYPE_INT))
     {
       gint val;
       gegl_node_get (node, props[i]->name, &val, NULL);
       str = g_strdup_printf ("%s:%d", props[i]->name, val);
+      mrg_printf (mrg, "%s", str);
     }
     else if (g_type_is_a (type, G_TYPE_BOOLEAN))
     {
       gboolean val;
       gegl_node_get (node, props[i]->name, &val, NULL);
       str = g_strdup_printf ("%s:%s", props[i]->name, val?"yes":"no");
+      mrg_text_listen (mrg, MRG_CLICK, toggle_bool, node, g_intern_string(props[i]->name));
+      mrg_printf (mrg, "%s", str);
+      mrg_text_listen_done (mrg);
     }
     else if (g_type_is_a (type, G_TYPE_STRING))
     {
       char *val = NULL;
       gegl_node_get (node, props[i]->name, &val, NULL);
       str = g_strdup_printf ("%s: \"%s\"", props[i]->name, val);
+      mrg_printf (mrg, "%s", str);
       g_free (val);
     }
     else
     {
-      str = g_strdup_printf ("%s: --", props[i]->name);
+      str = g_strdup_printf ("%s: [unhandled property type]", props[i]->name);
+      mrg_printf (mrg, "%s", str);
     }
 
     if (str)
     {
-      mrg_set_xy (mrg, x, y);
-      mrg_printf (mrg, "%s", str);
       g_free (str);
       y -= mrg_em (mrg) * 1.2;
     }
