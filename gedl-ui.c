@@ -10,6 +10,7 @@
 #include <gegl.h>
 #include "gedl.h"
 #include "renderer.h"
+#include <gegl-paramspecs.h>
 
 
 static int exited = 0;
@@ -1391,18 +1392,59 @@ float print_props (Mrg *mrg, GeglNode *node, float x, float y)
 
     mrg_set_xy (mrg, x, y);
 
-    if (g_type_is_a (type, G_TYPE_DOUBLE) ||
-        g_type_is_a (type, G_TYPE_FLOAT))
+    if (g_type_is_a (type, G_TYPE_DOUBLE))
     {
+      GeglParamSpecDouble *gspec = (void*)props[i];
       double val;
       gegl_node_get (node, props[i]->name, &val, NULL);
+      double width = mrg_width (mrg) - x - mrg_em(mrg) * 15;
+
+      cairo_save (mrg_cr (mrg));
+      cairo_translate (mrg_cr (mrg), x + mrg_em(mrg) * 10, y - mrg_em(mrg));
+      cairo_rectangle (mrg_cr (mrg), 0, 0,
+                       width,
+                       mrg_em (mrg));
+      cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1.0); 
+      cairo_stroke (mrg_cr (mrg));
+
+      cairo_rectangle (mrg_cr (mrg), 0,
+                       0, 
+                       (val - gspec->ui_minimum) /
+                       (gspec->ui_maximum - gspec->ui_minimum) * width,
+                       mrg_em (mrg)  );
+      cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1.0); 
+      cairo_fill (mrg_cr (mrg));
+
+      cairo_restore (mrg_cr (mrg));
+
       str = g_strdup_printf ("%s:%f", props[i]->name, val);
       mrg_printf (mrg, "%s", str);
     }
     else if (g_type_is_a (type, G_TYPE_INT))
     {
+      GeglParamSpecInt *gspec = (void*)props[i];
       gint val;
       gegl_node_get (node, props[i]->name, &val, NULL);
+      double width = mrg_width (mrg) - x - mrg_em(mrg) * 15;
+
+      cairo_save (mrg_cr (mrg));
+      cairo_translate (mrg_cr (mrg), x + mrg_em(mrg) * 10, y - mrg_em(mrg));
+      cairo_rectangle (mrg_cr (mrg), 0, 0,
+                       width,
+                       mrg_em (mrg));
+      cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1.0); 
+      cairo_stroke (mrg_cr (mrg));
+
+      cairo_rectangle (mrg_cr (mrg), 0,
+                       0, 
+                       (val - gspec->ui_minimum) /
+                       (gspec->ui_maximum - gspec->ui_minimum) * width,
+                       mrg_em (mrg)  );
+      cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1.0); 
+      cairo_fill (mrg_cr (mrg));
+
+      cairo_restore (mrg_cr (mrg));
+
       str = g_strdup_printf ("%s:%d", props[i]->name, val);
       mrg_printf (mrg, "%s", str);
     }
