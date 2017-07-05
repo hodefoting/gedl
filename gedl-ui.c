@@ -1438,6 +1438,19 @@ static GeglNode *source_end;
 static GeglNode *filter_start;
 static GeglNode *filter_end;
 
+static GeglNode *selected_node = NULL;
+
+static void select_node (MrgEvent *e, void *data1, void *data2)
+{
+  if (selected_node == data1)
+    selected_node = NULL;
+  else
+    selected_node = data1;
+
+  mrg_event_stop_propagate (e);
+  mrg_queue_draw (e->mrg, NULL);
+}
+
 float print_nodes (Mrg *mrg, GeglNode *node, float x, float y)
 {
     while (node)
@@ -1448,10 +1461,13 @@ float print_nodes (Mrg *mrg, GeglNode *node, float x, float y)
           (node != filter_start) &&
           (node != filter_end))
       {
-        if (0) y = print_props (mrg, node, x + mrg_em(mrg) * 0.5, y);
+        if (node == selected_node)
+          y = print_props (mrg, node, x + mrg_em(mrg) * 0.5, y);
 
         mrg_set_xy (mrg, x, y);
+        mrg_text_listen (mrg, MRG_CLICK, select_node, node, NULL);
         mrg_printf (mrg, "%s", gegl_node_get_operation (node));
+        mrg_text_listen_done (mrg);
         y -= mrg_em (mrg) * 1.5;
       }
 
@@ -1489,35 +1505,9 @@ float print_nodes (Mrg *mrg, GeglNode *node, float x, float y)
     return y;
 }
 
-
-
-void gedl_draw (Mrg     *mrg,
-                GeglEDL *edl,
-                double   x0,
-                double    y,
-                double  fpx,
-                double   t0)
-{
-
-  GList *l;
-  cairo_t *cr = mrg_cr (mrg);
-  double t;
-  int duration = gedl_get_duration (edl); // causes update of abs_start
-
-  VID_HEIGHT = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.8;
-  int scroll_height = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.2;
-  t = 0;
-
-  if (duration == 0)
-    return;
-
-  float y2 = y - mrg_em (mrg) * 1.5;
-
-  if (edl->active_clip && edl->active_clip->filter_graph)
-  {
-    Clip *clip = edl->active_clip;
+void update_ui_clip (Clip *clip, int clip_frame_no)
+    {
     GError *error = NULL;
-
     if (ui_clip == NULL ||
         ui_clip != clip)
     {
@@ -1545,7 +1535,7 @@ void gedl_draw (Mrg     *mrg,
       gegl_node_set (source_end, "operation", "gegl:nop", NULL);
       gegl_node_link_many (source_start, source_end, NULL);
       gegl_create_chain (clip->path, source_start, source_end,
-                    edl->frame_no - clip->abs_start,
+                    clip->edl->frame_no - clip->abs_start,
                        480, NULL, &error);
 
       filter_start = gegl_node_new ();
@@ -1556,10 +1546,41 @@ void gedl_draw (Mrg     *mrg,
 
       gegl_node_link_many (filter_start, filter_end, NULL);
       gegl_create_chain (clip->filter_graph, filter_start, filter_end,
-                    edl->frame_no - clip->abs_start,
+                    clip->edl->frame_no - clip->abs_start,
                        480, NULL, &error);
       ui_clip = clip;
     }
+    }
+
+void gedl_draw (Mrg     *mrg,
+                GeglEDL *edl,
+                double   x0,
+                double    y,
+                double  fpx,
+                double   t0)
+{
+
+  GList *l;
+  cairo_t *cr = mrg_cr (mrg);
+  double t;
+  int duration = gedl_get_duration (edl); // causes update of abs_start
+
+  VID_HEIGHT = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.8;
+  int scroll_height = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.2;
+  t = 0;
+
+  if (duration == 0)
+    return;
+
+  float y2 = y - mrg_em (mrg) * 1.5;
+
+  if (edl->active_clip && edl->active_clip->filter_graph)
+  {
+    Clip *clip = edl->active_clip;
+
+    /* XXX: turn into a function */
+    update_ui_clip (clip, 23); // XXX :compute frameno
+    
 
     mrg_set_style (mrg, "font-size: 3%; background-color: #0008; color: #fff");
 
