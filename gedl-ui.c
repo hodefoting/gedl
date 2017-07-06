@@ -1410,11 +1410,18 @@ float print_props (Mrg *mrg, GeglNode *node, float x, float y)
   unsigned int n_props;
   GParamSpec ** props = gegl_operation_list_properties (gegl_node_get_operation (node),
                       &n_props);
+
   for (int i = 0; i <n_props; i ++)
   {
     char *str = NULL;
     mrg_set_xy (mrg, x, y);
     GType type = props[i]->value_type;
+  char tmpbuf[1024];
+  sprintf (tmpbuf, "%s-rel", props[i]->name);
+  GQuark rel_quark = g_quark_from_string (tmpbuf);
+  sprintf (tmpbuf, "%s-anim", props[i]->name);
+  GQuark anim_quark = g_quark_from_string (tmpbuf);
+
 
     mrg_set_xy (mrg, x, y);
 
@@ -1519,11 +1526,6 @@ float print_props (Mrg *mrg, GeglNode *node, float x, float y)
       y -= mrg_em (mrg) * 1.2;
     }
 
-    char tmpbuf[1024];
-    sprintf (tmpbuf, "%s-rel", props[i]->name);
-    GQuark rel_quark = g_quark_from_string (tmpbuf);
-    sprintf (tmpbuf, "%s-anim", props[i]->name);
-    GQuark anim_quark = g_quark_from_string (tmpbuf);
 
     if (g_object_get_qdata (G_OBJECT (node), rel_quark))
        mrg_printf (mrg, "rel");
@@ -1531,10 +1533,11 @@ float print_props (Mrg *mrg, GeglNode *node, float x, float y)
     {
        //GeglPath *path = g_object_get_qdata (G_OBJECT (node), anim_quark);
        mrg_printf (mrg, "{anim}");
- 
+    }
     if (g_object_get_qdata (G_OBJECT (node), g_quark_from_string (props[i]->name)))
-       mrg_printf (mrg, "{ ???}");
+       mrg_printf (mrg, "{???}");
   }
+
 
   return y;
 }
@@ -1613,52 +1616,53 @@ float print_nodes (Mrg *mrg, GeglNode *node, float x, float y)
 }
 
 void update_ui_clip (Clip *clip, int clip_frame_no)
-    {
-    GError *error = NULL;
-    if (ui_clip == NULL ||
-        ui_clip != clip)
-    {
-       if (source_start)
-        {
-          remove_in_betweens (source_start, source_end);
-          g_object_unref (source_start);
-          source_start = NULL;
-          g_object_unref (source_end);
-          source_end = NULL;
-        }
-       if (filter_start)
-        {
-          remove_in_betweens (filter_start, filter_end);
-          g_object_unref (filter_start);
-          filter_start = NULL;
-          g_object_unref (filter_end);
-          filter_end = NULL;
-        }
+{
+  GError *error = NULL;
+  if (ui_clip == NULL ||
+      ui_clip != clip)
+  {
+     if (source_start)
+      {
+        remove_in_betweens (source_start, source_end);
+        g_object_unref (source_start);
+        source_start = NULL;
+        g_object_unref (source_end);
+        source_end = NULL;
+      }
+     if (filter_start)
+      {
+        remove_in_betweens (filter_start, filter_end);
+        g_object_unref (filter_start);
+        filter_start = NULL;
+        g_object_unref (filter_end);
+        filter_end = NULL;
+      }
 
-      source_start = gegl_node_new ();
-      source_end = gegl_node_new ();
+    source_start = gegl_node_new ();
+    source_end   = gegl_node_new ();
 
-      gegl_node_set (source_start, "operation", "gegl:nop", NULL);
-      gegl_node_set (source_end, "operation", "gegl:nop", NULL);
-      gegl_node_link_many (source_start, source_end, NULL);
-      gegl_create_chain (clip->path, source_start, source_end,
-                         clip->edl->frame_no - clip->abs_start,
-                         1.0, NULL, &error);
+    gegl_node_set (source_start, "operation", "gegl:nop", NULL);
+    gegl_node_set (source_end, "operation", "gegl:nop", NULL);
+    gegl_node_link_many (source_start, source_end, NULL);
+    gegl_create_chain (clip->path, source_start, source_end,
+                       clip->edl->frame_no - clip->abs_start,
+                       1.0, NULL, &error);
 
-      filter_start = gegl_node_new ();
-      filter_end = gegl_node_new ();
+    filter_start = gegl_node_new ();
+    filter_end = gegl_node_new ();
 
-      gegl_node_set (filter_start, "operation", "gegl:nop", NULL);
-      gegl_node_set (filter_end, "operation", "gegl:nop", NULL);
+    gegl_node_set (filter_start, "operation", "gegl:nop", NULL);
+    gegl_node_set (filter_end,   "operation", "gegl:nop", NULL);
 
-      gegl_node_link_many (filter_start, filter_end, NULL);
-      gegl_create_chain (clip->filter_graph, filter_start, filter_end,
-                         clip->edl->frame_no - clip->abs_start,
-                         1.0, NULL, &error);
-      ui_clip = clip;
-    }
-    }
+    gegl_node_link_many (filter_start, filter_end, NULL);
+    gegl_create_chain (clip->filter_graph, filter_start, filter_end,
+                       clip->edl->frame_no - clip->abs_start,
+                       1.0, NULL, &error);
+    ui_clip = clip;
+  }
+  fprintf (stderr, "%i\n", clip_frame_no);
 
+}
 void gedl_draw (Mrg     *mrg,
                 GeglEDL *edl,
                 double   x0,
@@ -1675,18 +1679,21 @@ void gedl_draw (Mrg     *mrg,
   VID_HEIGHT = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.8;
   int scroll_height = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.2;
   t = 0;
+  int clip_frame_no;
 
   if (duration == 0)
     return;
 
   float y2 = y - mrg_em (mrg) * 1.5;
 
+  edl->active_clip = gedl_get_clip (edl, edl->frame_no, &clip_frame_no);
+
   if (edl->active_clip && edl->active_clip->filter_graph)
   {
     Clip *clip = edl->active_clip;
 
     /* XXX: turn into a function */
-    update_ui_clip (clip, 23); // XXX :compute frameno
+    update_ui_clip (clip, clip_frame_no); // XXX :compute frameno
 
     mrg_set_style (mrg, "font-size: 3%; background-color: #0008; color: #fff");
 
