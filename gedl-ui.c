@@ -1377,10 +1377,37 @@ static void toggle_bool (MrgEvent *e, void *data1, void *data2)
   mrg_queue_draw (e->mrg, NULL);
 }
 
+static void drag_double_slider (MrgEvent *e, void *data1, void *data2)
+{
+  GeglParamSpecDouble *gspec = (void*)data2;
+  GParamSpec          *spec  = (void*)data2;
+  GeglNode            *node  = (void*)data1;
+
+  float new_val = e->x * (gspec->ui_maximum - gspec->ui_minimum) + gspec->ui_minimum;
+  gegl_node_set (node, spec->name, new_val, NULL);
+
+  mrg_queue_draw (e->mrg, NULL);
+  mrg_event_stop_propagate (e);
+  changed++;
+}
+
+static void drag_int_slider (MrgEvent *e, void *data1, void *data2)
+{
+  GeglParamSpecInt *gspec = (void*)data2;
+  GParamSpec       *spec  = (void*)data2;
+  GeglNode         *node  = (void*)data1;
+
+  gint new_val = e->x * (gspec->ui_maximum - gspec->ui_minimum) + gspec->ui_minimum;
+  gegl_node_set (node, spec->name, new_val, NULL);
+
+  mrg_queue_draw (e->mrg, NULL);
+  mrg_event_stop_propagate (e);
+  changed++;
+}
 
 float print_props (Mrg *mrg, GeglNode *node, float x, float y)
 {
-  unsigned int n_props; 
+  unsigned int n_props;
   GParamSpec ** props = gegl_operation_list_properties (gegl_node_get_operation (node),
                       &n_props);
   for (int i = 0; i <n_props; i ++)
@@ -1388,7 +1415,6 @@ float print_props (Mrg *mrg, GeglNode *node, float x, float y)
     char *str = NULL;
     mrg_set_xy (mrg, x, y);
     GType type = props[i]->value_type;
-
 
     mrg_set_xy (mrg, x, y);
 
@@ -1404,25 +1430,36 @@ float print_props (Mrg *mrg, GeglNode *node, float x, float y)
       cairo_rectangle (mrg_cr (mrg), 0, 0,
                        width,
                        mrg_em (mrg));
-      cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1.0); 
+      cairo_save (mrg_cr (mrg));
+      cairo_scale (mrg_cr (mrg), width, 1.0);
+
+      mrg_listen (mrg, MRG_DRAG, drag_double_slider, node, gspec);
+      cairo_restore (mrg_cr (mrg));
+      cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1.0);
       cairo_stroke (mrg_cr (mrg));
 
       cairo_rectangle (mrg_cr (mrg), 0,
-                       0, 
+                       0,
                        (val - gspec->ui_minimum) /
                        (gspec->ui_maximum - gspec->ui_minimum) * width,
                        mrg_em (mrg)  );
-      cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1.0); 
+      cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1.0);
       cairo_fill (mrg_cr (mrg));
 
       cairo_restore (mrg_cr (mrg));
 
       str = g_strdup_printf ("%s:%f", props[i]->name, val);
+      while (str[strlen(str)-1]=='0')
+      {
+        if (str[strlen(str)-2]=='.')
+          break;
+        str[strlen(str)-1]='\0';
+      }
       mrg_printf (mrg, "%s", str);
     }
     else if (g_type_is_a (type, G_TYPE_INT))
     {
-      GeglParamSpecInt *gspec = (void*)props[i];
+      GeglParamSpecDouble *gspec = (void*)props[i];
       gint val;
       gegl_node_get (node, props[i]->name, &val, NULL);
       double width = mrg_width (mrg) - x - mrg_em(mrg) * 15;
@@ -1432,15 +1469,20 @@ float print_props (Mrg *mrg, GeglNode *node, float x, float y)
       cairo_rectangle (mrg_cr (mrg), 0, 0,
                        width,
                        mrg_em (mrg));
-      cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1.0); 
+      cairo_save (mrg_cr (mrg));
+      cairo_scale (mrg_cr (mrg), width, 1.0);
+
+      mrg_listen (mrg, MRG_DRAG, drag_int_slider, node, gspec);
+      cairo_restore (mrg_cr (mrg));
+      cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1.0);
       cairo_stroke (mrg_cr (mrg));
 
       cairo_rectangle (mrg_cr (mrg), 0,
-                       0, 
+                       0,
                        (val - gspec->ui_minimum) /
                        (gspec->ui_maximum - gspec->ui_minimum) * width,
                        mrg_em (mrg)  );
-      cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1.0); 
+      cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1.0);
       cairo_fill (mrg_cr (mrg));
 
       cairo_restore (mrg_cr (mrg));
@@ -1453,7 +1495,7 @@ float print_props (Mrg *mrg, GeglNode *node, float x, float y)
       gboolean val;
       gegl_node_get (node, props[i]->name, &val, NULL);
       str = g_strdup_printf ("%s:%s", props[i]->name, val?"yes":"no");
-      mrg_text_listen (mrg, MRG_CLICK, toggle_bool, node, g_intern_string(props[i]->name));
+      mrg_text_listen (mrg, MRG_CLICK, toggle_bool, node, (void*)g_intern_string(props[i]->name));
       mrg_printf (mrg, "%s", str);
       mrg_text_listen_done (mrg);
     }
@@ -1467,7 +1509,7 @@ float print_props (Mrg *mrg, GeglNode *node, float x, float y)
     }
     else
     {
-      str = g_strdup_printf ("%s: [unhandled property type]", props[i]->name);
+      str = g_strdup_printf ("%s: [todo: handle this property type]", props[i]->name);
       mrg_printf (mrg, "%s", str);
     }
 
@@ -1484,14 +1526,14 @@ float print_props (Mrg *mrg, GeglNode *node, float x, float y)
     GQuark anim_quark = g_quark_from_string (tmpbuf);
 
     if (g_object_get_qdata (G_OBJECT (node), rel_quark))
-       mrg_printf (mrg, "{ relative }");
+       mrg_printf (mrg, "rel");
     if (g_object_get_qdata (G_OBJECT (node), anim_quark))
     {
        //GeglPath *path = g_object_get_qdata (G_OBJECT (node), anim_quark);
-       mrg_printf (mrg, "{ animated }");
-    }
+       mrg_printf (mrg, "{anim}");
+ 
     if (g_object_get_qdata (G_OBJECT (node), g_quark_from_string (props[i]->name)))
-       mrg_printf (mrg, "{ untagged }");
+       mrg_printf (mrg, "{ ???}");
   }
 
   return y;
@@ -1600,8 +1642,8 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
       gegl_node_set (source_end, "operation", "gegl:nop", NULL);
       gegl_node_link_many (source_start, source_end, NULL);
       gegl_create_chain (clip->path, source_start, source_end,
-                    clip->edl->frame_no - clip->abs_start,
-                       480, NULL, &error);
+                         clip->edl->frame_no - clip->abs_start,
+                         1.0, NULL, &error);
 
       filter_start = gegl_node_new ();
       filter_end = gegl_node_new ();
@@ -1611,8 +1653,8 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
 
       gegl_node_link_many (filter_start, filter_end, NULL);
       gegl_create_chain (clip->filter_graph, filter_start, filter_end,
-                    clip->edl->frame_no - clip->abs_start,
-                       480, NULL, &error);
+                         clip->edl->frame_no - clip->abs_start,
+                         1.0, NULL, &error);
       ui_clip = clip;
     }
     }
@@ -1645,7 +1687,6 @@ void gedl_draw (Mrg     *mrg,
 
     /* XXX: turn into a function */
     update_ui_clip (clip, 23); // XXX :compute frameno
-    
 
     mrg_set_style (mrg, "font-size: 3%; background-color: #0008; color: #fff");
 
