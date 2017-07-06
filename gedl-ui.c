@@ -1363,18 +1363,24 @@ static void zoom_fit (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
+static void tweaked_state (Mrg *mrg)
+{
+}
+
 static void toggle_bool (MrgEvent *e, void *data1, void *data2)
 {
   GeglNode *node = data1;
   const char *prop = data2;
   gboolean old_value;
-  gboolean new_value; 
+  gboolean new_value;
   gegl_node_get (node, prop, &old_value, NULL);
   new_value = !old_value;
   gegl_node_set (node, prop, new_value, NULL);
 
+  changed++;
   mrg_event_stop_propagate (e);
   mrg_queue_draw (e->mrg, NULL);
+  tweaked_state (e->mrg);
 }
 
 static void drag_double_slider (MrgEvent *e, void *data1, void *data2)
@@ -1389,6 +1395,7 @@ static void drag_double_slider (MrgEvent *e, void *data1, void *data2)
   mrg_queue_draw (e->mrg, NULL);
   mrg_event_stop_propagate (e);
   changed++;
+  tweaked_state (e->mrg);
 }
 
 static void drag_int_slider (MrgEvent *e, void *data1, void *data2)
@@ -1403,6 +1410,7 @@ static void drag_int_slider (MrgEvent *e, void *data1, void *data2)
   mrg_queue_draw (e->mrg, NULL);
   mrg_event_stop_propagate (e);
   changed++;
+  tweaked_state (e->mrg);
 }
 
 float print_props (Mrg *mrg, GeglNode *node, float x, float y)
@@ -1674,11 +1682,9 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
     for (int i = 0; i <n_props; i ++)
     {
       char tmpbuf[1024];
-  //  sprintf (tmpbuf, "%s-rel", props[i]->name);
-  //  GQuark rel_quark = g_quark_from_string (tmpbuf);
       sprintf (tmpbuf, "%s-anim", props[i]->name);
       GQuark anim_quark = g_quark_from_string (tmpbuf);
-    
+
       if (g_object_get_qdata (G_OBJECT (selected_node), anim_quark))
       {
         GeglPath *path = g_object_get_qdata (G_OBJECT (selected_node), anim_quark);
