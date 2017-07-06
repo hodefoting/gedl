@@ -4,16 +4,16 @@ output-path=gedl.mp4
 video-width=800
 video-height=600
 fps=25.000000
-selection-start=184
-selection-end=184
+selection-start=85
+selection-end=85
 frame-scale=1.550000
 t0=-132.000000
-frame-no=184
+frame-no=85
 
 gegl:color value=black gegl:crop width=400 height=400 31 50 -- 
 gegl:color value=black gegl:crop width=400 height=400 0 50 -- [fade=26] over aux=[ text size=0.08rel string='note: this is a gedl video\nproject for testing features\nit relies on synthetic GEGL\npatterns instead of\nvideo footage\nto be to minimie size\nfor inclusion in gedl sources' color=white translate x=0.1rel y=0.15rel ]
 -- #annotations
-gegl:color value=black gegl:crop width=400 height=400 0 80 -- over aux=[ text size=0.2rel string='gedl/gcut' color=white gaussian-blur clip-extent=false std-dev-x={ 0=0.4rel 24=0.0 25=0.0 } std-dev-y={  0=0.2rel 24=0.0 25=0.0 26=0.0  } translate x=0.1rel y=0.3rel   ]  lens-flare pos-x={ 0=-2.0 100=2.0 } pos-y={0=0.1 100=0.91 }
+gegl:color value=black gegl:crop width=400 height=400 0 80 -- over aux=[ text size=0.2rel string='gedl/gcut' color=white gaussian-blur clip-extent=false std-dev-x={ 0=0.4rel 24=0.0 25=0.0 } std-dev-y={  0=0.2rel 24=0.0 25=0.0 26=0.0  } translate x=0.1rel y=0.3rel   ]  lens-flare pos-x={ 0=-2.0 100=2.0 } pos-y={ 0=0.1 100=0.91 }
 gegl:color value=black gegl:crop width=400 height=400 0 50 -- [fade=64] over aux=[ text size=0.1rel string='video editing\nfileformat+render / ui' color=white translate x=0.1rel y=0.6rel ]
 gegl:cell-noise shape={ 0=1.0 40=1.85 } rank=2 translate x={0=0 500=50} y={0=0 500=500} gegl:crop width=400 height=400 0 40 -- [fade=23] 
 gegl:simplex-noise gegl:crop width=400 height=400 0 25 -- [fade=14] 

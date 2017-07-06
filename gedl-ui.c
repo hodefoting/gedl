@@ -1621,6 +1621,7 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
   if (ui_clip == NULL ||
       ui_clip != clip)
   {
+    selected_node = NULL;
      if (source_start)
       {
         remove_in_betweens (source_start, source_end);
@@ -1646,7 +1647,7 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
     gegl_node_link_many (source_start, source_end, NULL);
     gegl_create_chain (clip->path, source_start, source_end,
                        clip->edl->frame_no - clip->abs_start,
-                       1.0, NULL, &error);
+                       100.0, NULL, &error);
 
     filter_start = gegl_node_new ();
     filter_end = gegl_node_new ();
@@ -1657,11 +1658,37 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
     gegl_node_link_many (filter_start, filter_end, NULL);
     gegl_create_chain (clip->filter_graph, filter_start, filter_end,
                        clip->edl->frame_no - clip->abs_start,
-                       1.0, NULL, &error);
+                       100.0, NULL, &error);
     ui_clip = clip;
   }
-  fprintf (stderr, "%i\n", clip_frame_no);
 
+
+  if (selected_node)
+  {
+  //  fprintf (stderr, "%p %i\n", selected_node, clip_frame_no);
+
+    unsigned int n_props;
+    GParamSpec ** props = gegl_operation_list_properties (gegl_node_get_operation (selected_node),
+                      &n_props);
+
+    for (int i = 0; i <n_props; i ++)
+    {
+      char tmpbuf[1024];
+  //  sprintf (tmpbuf, "%s-rel", props[i]->name);
+  //  GQuark rel_quark = g_quark_from_string (tmpbuf);
+      sprintf (tmpbuf, "%s-anim", props[i]->name);
+      GQuark anim_quark = g_quark_from_string (tmpbuf);
+    
+      if (g_object_get_qdata (G_OBJECT (selected_node), anim_quark))
+      {
+        GeglPath *path = g_object_get_qdata (G_OBJECT (selected_node), anim_quark);
+        gdouble val = 0.0;
+        gegl_path_calc_y_for_x (path, clip_frame_no * 1.0, &val);
+
+        gegl_node_set (selected_node, props[i]->name, val, NULL);
+      }
+    }
+  }
 }
 void gedl_draw (Mrg     *mrg,
                 GeglEDL *edl,
