@@ -12,7 +12,6 @@
 #include "renderer.h"
 #include <gegl-paramspecs.h>
 
-
 static int exited = 0;
 long babl_ticks (void);
 
@@ -1363,8 +1362,11 @@ static void zoom_fit (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
+static int ui_tweaks = 0;
+
 static void tweaked_state (Mrg *mrg)
 {
+  ui_tweaks++;
 }
 
 static void toggle_bool (MrgEvent *e, void *data1, void *data2)
@@ -1413,7 +1415,7 @@ static void drag_int_slider (MrgEvent *e, void *data1, void *data2)
   tweaked_state (e->mrg);
 }
 
-float print_props (Mrg *mrg, GeglNode *node, float x, float y)
+float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
 {
   unsigned int n_props;
   GParamSpec ** props = gegl_operation_list_properties (gegl_node_get_operation (node),
@@ -1424,13 +1426,13 @@ float print_props (Mrg *mrg, GeglNode *node, float x, float y)
     char *str = NULL;
     mrg_set_xy (mrg, x, y);
     GType type = props[i]->value_type;
-  char tmpbuf[1024];
-  sprintf (tmpbuf, "%s-rel", props[i]->name);
-  GQuark rel_quark = g_quark_from_string (tmpbuf);
-  sprintf (tmpbuf, "%s-anim", props[i]->name);
-  GQuark anim_quark = g_quark_from_string (tmpbuf);
 
+    char tmpbuf[1024];
 
+    sprintf (tmpbuf, "%s-rel", props[i]->name);
+    GQuark rel_quark = g_quark_from_string (tmpbuf);
+    sprintf (tmpbuf, "%s-anim", props[i]->name);
+    GQuark anim_quark = g_quark_from_string (tmpbuf);
     mrg_set_xy (mrg, x, y);
 
     if (g_type_is_a (type, G_TYPE_DOUBLE))
@@ -1534,7 +1536,6 @@ float print_props (Mrg *mrg, GeglNode *node, float x, float y)
       y -= mrg_em (mrg) * 1.2;
     }
 
-
     if (g_object_get_qdata (G_OBJECT (node), rel_quark))
        mrg_printf (mrg, "rel");
     if (g_object_get_qdata (G_OBJECT (node), anim_quark))
@@ -1569,7 +1570,7 @@ static void select_node (MrgEvent *e, void *data1, void *data2)
   mrg_queue_draw (e->mrg, NULL);
 }
 
-float print_nodes (Mrg *mrg, GeglNode *node, float x, float y)
+float print_nodes (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
 {
     while (node)
     {
@@ -1580,7 +1581,7 @@ float print_nodes (Mrg *mrg, GeglNode *node, float x, float y)
           (node != filter_end))
       {
         if (node == selected_node)
-          y = print_props (mrg, node, x + mrg_em(mrg) * 0.5, y);
+          y = print_props (mrg, edl, node, x + mrg_em(mrg) * 0.5, y);
 
         mrg_set_xy (mrg, x, y);
         mrg_text_listen (mrg, MRG_CLICK, select_node, node, NULL);
@@ -1616,7 +1617,7 @@ float print_nodes (Mrg *mrg, GeglNode *node, float x, float y)
             if (next) iter = next;
           } while(next);
 
-          y = print_nodes (mrg, iter, x + mrg_em (mrg) * 2, y);
+          y = print_nodes (mrg, edl, iter, x + mrg_em (mrg) * 2, y);
         }
       }
     }
@@ -1670,12 +1671,17 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
     ui_clip = clip;
   }
 
-
   if (selected_node)
   {
     unsigned int n_props;
-    GParamSpec ** props = gegl_operation_list_properties (gegl_node_get_operation (selected_node),
-                      &n_props);
+
+    if (ui_tweaks)
+    {
+        fprintf (stderr, "commiting %i tweaks\n", ui_tweaks);
+        ui_tweaks = 0;
+    }
+
+    GParamSpec ** props = gegl_operation_list_properties (gegl_node_get_operation (selected_node), &n_props);
 
     for (int i = 0; i <n_props; i ++)
     {
@@ -1736,7 +1742,7 @@ void gedl_draw (Mrg     *mrg,
       {
         iter = gegl_node_get_producer (iter, "input", NULL);
       }
-      y2 = print_nodes (mrg, iter, mrg_em (mrg), y2);
+      y2 = print_nodes (mrg, edl, iter, mrg_em (mrg), y2);
     }
     else
     {
@@ -1744,7 +1750,7 @@ void gedl_draw (Mrg     *mrg,
       mrg_printf (mrg, "%s", clip->path);
       y2 -= mrg_em (mrg) * 1.5;
     }
-    y2 = print_nodes (mrg, filter_start, mrg_em (mrg), y2);
+    y2 = print_nodes (mrg, edl, filter_start, mrg_em (mrg), y2);
   }
 
   cairo_set_source_rgba (cr, 1, 1,1, 1);
