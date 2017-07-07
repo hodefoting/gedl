@@ -546,6 +546,7 @@ static void clip_remove (Clip *clip)
   edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
 }
 
+static GeglNode *selected_node = NULL;
 
 static void remove_clip (MrgEvent *event, void *data1, void *data2)
 {
@@ -554,7 +555,31 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
   if (!edl->active_clip)
     return;
 
-  clip_remove (edl->active_clip);
+  if (selected_node)
+  {
+    GeglNode *producer = NULL;
+    GeglNode *consumer = NULL;
+    GeglNode **nodes = NULL;
+    const gchar **pads = NULL;
+
+    int count = gegl_node_get_consumers (selected_node, "output", &nodes, &pads);
+    if (count)
+      {
+        consumer= nodes[0];
+        if (strcmp (pads[0], "input"))
+          producer = NULL;
+      }
+    producer = gegl_node_get_producer (selected_node, "input", NULL);
+
+    if (producer && consumer)
+      gegl_node_link_many (producer, consumer, NULL);
+
+    selected_node = NULL;
+  }
+  else
+  {
+    clip_remove (edl->active_clip);
+  }
   gedl_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -1589,7 +1614,6 @@ static GeglNode *source_end;
 static GeglNode *filter_start;
 static GeglNode *filter_end;
 
-static GeglNode *selected_node = NULL;
 
 static void select_node (MrgEvent *e, void *data1, void *data2)
 {
@@ -1737,10 +1761,12 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
       }
       ui_tweaks = 0;
 
+#if 0
       int old_frame = gedl_get_frame (clip->edl);
       gedl_set_frame (clip->edl, old_frame - 1);
       gedl_set_frame (clip->edl, old_frame);
-
+#endif
+      gedl_cache_invalid (clip->edl);
     }
 
     GParamSpec ** props = gegl_operation_list_properties (gegl_node_get_operation (selected_node), &n_props);
