@@ -1284,57 +1284,56 @@ static void slide_back (MrgEvent *event, void *data1, void *data2)
     next = self->next;
     prev = self->prev;
 
-
-  if (self && next && prev)
-  {
-    Clip *prev_clip = prev->data;
-    Clip *next_clip = next->data;
-    Clip *self_clip = self->data;
-
-    if (are_mergable (prev_clip, next_clip, 0))
+    if (self && next && prev)
     {
-      if (clip_get_frames (prev_clip) == 1)
+      Clip *prev_clip = prev->data;
+      Clip *next_clip = next->data;
+      Clip *self_clip = self->data;
+
+      if (are_mergable (prev_clip, next_clip, 0))
       {
-        next_clip->start --;
-        edl->clips = g_list_remove (edl->clips, prev_clip);
-        edl->frame_no --;
+        if (clip_get_frames (prev_clip) == 1)
+        {
+          next_clip->start --;
+          edl->clips = g_list_remove (edl->clips, prev_clip);
+          edl->frame_no --;
+        }
+        else
+        {
+          prev_clip->end --;
+          next_clip->start --;
+          edl->frame_no --;
+        }
+      } else if (are_mergable (prev_clip, next_clip, clip_get_frames (self_clip)))
+      {
+        if (clip_get_frames (prev_clip) == 1)
+        {
+          prev_clip->end--;
+          edl->clips = g_list_remove (edl->clips, prev_clip);
+          edl->frame_no --;
+        }
+        else
+        {
+          prev_clip->end --;
+          next_clip->start --;
+          edl->frame_no --;
+        }
       }
       else
       {
-        prev_clip->end --;
-        next_clip->start --;
-        edl->frame_no --;
-      }
-    } else if (are_mergable (prev_clip, next_clip, clip_get_frames (self_clip)))
-    {
-      if (clip_get_frames (prev_clip) == 1)
-      {
-        prev_clip->end--;
-        edl->clips = g_list_remove (edl->clips, prev_clip);
-        edl->frame_no --;
-      }
-      else
-      {
-        prev_clip->end --;
-        next_clip->start --;
-        edl->frame_no --;
-      }
-    }
-    else {
-      if (clip_get_frames (prev_clip) == 1)
-      {
+        if (clip_get_frames (prev_clip) == 1)
+        {
         int frame_no = edl->frame_no - 1;
         shuffle_back (event, data1, data2);
         edl->frame_no = frame_no;
-      } else {
+        } else {
         int frame_no = edl->frame_no - 1;
         clip_split (prev_clip, prev_clip->end );
         shuffle_back (event, data1, data2);
         edl->frame_no = frame_no;
+        }
       }
     }
-  }
-
   }
 
   mrg_event_stop_propagate (event);
