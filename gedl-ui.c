@@ -604,26 +604,16 @@ static void insert_filter (MrgEvent *event, void *data1, void *data2)
   }
 
   {
-    GeglNode *producer = NULL;
-    GeglNode *consumer = NULL;
     GeglNode **nodes = NULL;
     GeglNode *new = NULL;
     const gchar **pads = NULL;
 
     int count = gegl_node_get_consumers (selected_node, "output", &nodes, &pads);
-    if (count)
-      {
-        consumer= nodes[0];
-//        if (strcmp (pads[0], "input"))
- //         producer = NULL;
-      }
-    producer = gegl_node_get_producer (selected_node, "input", NULL);
-
-    new = gegl_node_new_child (edl->gegl, "operation", "gegl:invert-gamma", NULL);
+    new = gegl_node_new_child (edl->gegl, "operation", "gegl:newsprint", NULL);
     gegl_node_link_many (selected_node, new, NULL);
-    if (consumer)
+    if (count)
     {
-      gegl_node_connect_to (new, "output", consumer, count?pads[0]:"input");
+      gegl_node_connect_to (new, "output", nodes[0], pads[0]);
     }
     selected_node = new;
   }
