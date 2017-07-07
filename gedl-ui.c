@@ -1441,6 +1441,14 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
       double val;
       gegl_node_get (node, props[i]->name, &val, NULL);
       double width = mrg_width (mrg) - x - mrg_em(mrg) * 15;
+      double ui_min = gspec->ui_minimum;
+      double ui_max = gspec->ui_maximum;
+
+      if (g_object_get_qdata (G_OBJECT (node), rel_quark) && 0)
+      {
+        ui_min /= 1000.0;
+        ui_max /= 1000.0;
+      }
 
       cairo_save (mrg_cr (mrg));
       cairo_translate (mrg_cr (mrg), x + mrg_em(mrg) * 10, y - mrg_em(mrg));
@@ -1456,9 +1464,7 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
       cairo_stroke (mrg_cr (mrg));
 
       cairo_rectangle (mrg_cr (mrg), 0,
-                       0,
-                       (val - gspec->ui_minimum) /
-                       (gspec->ui_maximum - gspec->ui_minimum) * width,
+                       0, (val - ui_min) / (ui_max - ui_min) * width,
                        mrg_em (mrg)  );
       cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1.0);
       cairo_fill (mrg_cr (mrg));
@@ -1480,6 +1486,14 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
       gint val;
       gegl_node_get (node, props[i]->name, &val, NULL);
       double width = mrg_width (mrg) - x - mrg_em(mrg) * 15;
+      double ui_min = gspec->ui_minimum;
+      double ui_max = gspec->ui_maximum;
+
+      if (g_object_get_qdata (G_OBJECT (node), rel_quark) && 0)
+      {
+        ui_min /= 1000.0;
+        ui_max /= 1000.0;
+      }
 
       cairo_save (mrg_cr (mrg));
       cairo_translate (mrg_cr (mrg), x + mrg_em(mrg) * 10, y - mrg_em(mrg));
@@ -1496,8 +1510,7 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
 
       cairo_rectangle (mrg_cr (mrg), 0,
                        0,
-                       (val - gspec->ui_minimum) /
-                       (gspec->ui_maximum - gspec->ui_minimum) * width,
+                       (val - ui_min) / (ui_max - ui_min) * width,
                        mrg_em (mrg)  );
       cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1.0);
       cairo_fill (mrg_cr (mrg));
@@ -1704,6 +1717,11 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
         }
       }
       ui_tweaks = 0;
+
+      int old_frame = gedl_get_frame (clip->edl);
+      gedl_set_frame (clip->edl, old_frame - 1);
+      gedl_set_frame (clip->edl, old_frame);
+
     }
 
     GParamSpec ** props = gegl_operation_list_properties (gegl_node_get_operation (selected_node), &n_props);
