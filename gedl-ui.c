@@ -1390,8 +1390,18 @@ static void drag_double_slider (MrgEvent *e, void *data1, void *data2)
   GeglParamSpecDouble *gspec = (void*)data2;
   GParamSpec          *spec  = (void*)data2;
   GeglNode            *node  = (void*)data1;
+  char tmpbuf[1024];
+  sprintf (tmpbuf, "%s-rel", spec->name);
+  GQuark rel_quark = g_quark_from_string (tmpbuf);
+  double ui_min = gspec->ui_minimum;
+  double ui_max = gspec->ui_maximum;
+  if (g_object_get_qdata (G_OBJECT (node), rel_quark) && 1)
+    {
+      ui_min /= 1000.0;
+      ui_max /= 1000.0;
+    }
 
-  float new_val = e->x * (gspec->ui_maximum - gspec->ui_minimum) + gspec->ui_minimum;
+  float new_val = e->x * (ui_max - ui_min) + ui_min;
   gegl_node_set (node, spec->name, new_val, NULL);
 
   mrg_queue_draw (e->mrg, NULL);
@@ -1405,8 +1415,18 @@ static void drag_int_slider (MrgEvent *e, void *data1, void *data2)
   GeglParamSpecInt *gspec = (void*)data2;
   GParamSpec       *spec  = (void*)data2;
   GeglNode         *node  = (void*)data1;
+  char tmpbuf[1024];
+  sprintf (tmpbuf, "%s-rel", spec->name);
+  GQuark rel_quark = g_quark_from_string (tmpbuf);
+  double ui_min = gspec->ui_minimum;
+  double ui_max = gspec->ui_maximum;
+  if (g_object_get_qdata (G_OBJECT (node), rel_quark) && 1)
+    {
+      ui_min /= 1000.0;
+      ui_max /= 1000.0;
+    }
 
-  gint new_val = e->x * (gspec->ui_maximum - gspec->ui_minimum) + gspec->ui_minimum;
+  gint new_val = e->x * (ui_max - ui_min) + ui_min;
   gegl_node_set (node, spec->name, new_val, NULL);
 
   mrg_queue_draw (e->mrg, NULL);
@@ -1444,7 +1464,7 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
       double ui_min = gspec->ui_minimum;
       double ui_max = gspec->ui_maximum;
 
-      if (g_object_get_qdata (G_OBJECT (node), rel_quark) && 0)
+      if (g_object_get_qdata (G_OBJECT (node), rel_quark) && 1)
       {
         ui_min /= 1000.0;
         ui_max /= 1000.0;
@@ -1489,7 +1509,7 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
       double ui_min = gspec->ui_minimum;
       double ui_max = gspec->ui_maximum;
 
-      if (g_object_get_qdata (G_OBJECT (node), rel_quark) && 0)
+      if (g_object_get_qdata (G_OBJECT (node), rel_quark) && 1)
       {
         ui_min /= 1000.0;
         ui_max /= 1000.0;

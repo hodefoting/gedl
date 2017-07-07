@@ -1044,6 +1044,12 @@ static void process_frames_cache (GeglEDL *edl)
 
   // TODO: use bitmap from ui to speed up check
 
+  edl->frame_no = frame_start;
+  if (this_cacher (edl->frame_no))
+    gedl_set_frame (edl, edl->frame_no);
+   if (stop_cacher)
+    return;
+
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
