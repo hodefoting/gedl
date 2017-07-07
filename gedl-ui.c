@@ -509,6 +509,7 @@ static void extend_selection_to_the_right (MrgEvent *event, void *data1, void *d
   changed++;
 }
 
+static int ui_tweaks = 0;
 static int are_mergable (Clip *clip1, Clip *clip2, int delta)
 {
   if (!clip1 || !clip2)
@@ -562,6 +563,7 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
     GeglNode **nodes = NULL;
     const gchar **pads = NULL;
 
+
     int count = gegl_node_get_consumers (selected_node, "output", &nodes, &pads);
     if (count)
       {
@@ -575,6 +577,7 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
       gegl_node_link_many (producer, consumer, NULL);
 
     selected_node = NULL;
+    ui_tweaks++;
   }
   else
   {
@@ -583,6 +586,52 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
   gedl_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
+}
+
+static GeglNode *filter_start;
+
+static void insert_filter (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+
+  if (!edl->active_clip)
+    return;
+
+  if (!selected_node)
+  {
+    selected_node = filter_start;
+    fprintf (stderr, "%p\n", filter_start);
+  }
+
+  {
+    GeglNode *producer = NULL;
+    GeglNode *consumer = NULL;
+    GeglNode **nodes = NULL;
+    GeglNode *new = NULL;
+    const gchar **pads = NULL;
+
+    int count = gegl_node_get_consumers (selected_node, "output", &nodes, &pads);
+    if (count)
+      {
+        consumer= nodes[0];
+//        if (strcmp (pads[0], "input"))
+ //         producer = NULL;
+      }
+    producer = gegl_node_get_producer (selected_node, "input", NULL);
+
+    new = gegl_node_new_child (edl->gegl, "operation", "gegl:invert-gamma", NULL);
+    gegl_node_link_many (selected_node, new, NULL);
+    if (consumer)
+    {
+      gegl_node_connect_to (new, "output", consumer, count?pads[0]:"input");
+    }
+    selected_node = new;
+  }
+  ui_tweaks++;
+  gedl_cache_invalid (edl);
+  mrg_event_stop_propagate (event);
+  mrg_queue_draw (event->mrg, NULL);
+
 }
 
 static void merge_clip (MrgEvent *event, void *data1, void *data2)
@@ -1386,7 +1435,6 @@ static void zoom_fit (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
-static int ui_tweaks = 0;
 
 static void tweaked_state (Mrg *mrg)
 {
@@ -1611,7 +1659,6 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
 static Clip *ui_clip = NULL;
 static GeglNode *source_start;
 static GeglNode *source_end;
-static GeglNode *filter_start;
 static GeglNode *filter_end;
 
 
@@ -1814,7 +1861,7 @@ void gedl_draw (Mrg     *mrg,
 
   edl->active_clip = gedl_get_clip (edl, edl->frame_no, &clip_frame_no);
 
-  if (edl->active_clip && edl->active_clip->filter_graph)
+  if (edl->active_clip) // && edl->active_clip->filter_graph)
   {
     Clip *clip = edl->active_clip;
 
@@ -2286,6 +2333,7 @@ void gedl_ui (Mrg *mrg, void *data)
 
       if (edl->active_clip)
       {
+        mrg_add_binding (mrg, "i", NULL, "insert filter", insert_filter, edl);
 
         if (edl->frame_no == edl->active_clip->abs_start)
         {
@@ -2342,6 +2390,7 @@ void gedl_ui (Mrg *mrg, void *data)
             }
           }
         }
+
       }
     }
   }
