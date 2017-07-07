@@ -1677,8 +1677,33 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
 
     if (ui_tweaks)
     {
-        fprintf (stderr, "commiting %i tweaks\n", ui_tweaks);
-        ui_tweaks = 0;
+      char *serialized_filter = NULL;
+      char *serialized_source = NULL;
+      serialized_filter = gegl_serialize (filter_start, filter_end,
+                                   NULL,GEGL_SERIALIZE_TRIM_DEFAULTS|GEGL_SERIALIZE_VERSION);
+      serialized_source = gegl_serialize (source_start, source_end,
+                                   NULL,GEGL_SERIALIZE_TRIM_DEFAULTS|GEGL_SERIALIZE_VERSION);
+
+      if (clip->filter_graph)
+      {
+        g_free (clip->filter_graph);
+        clip->filter_graph = serialized_filter;
+
+        if (g_str_has_suffix (clip->filter_graph, "gegl:nop opi=0:0"))
+        {
+          clip->filter_graph[strlen(clip->filter_graph)-strlen("gegl:nop opi=0:0")]='\0';
+        }
+      }
+      if (clip->is_chain)
+      {
+       g_free (clip->path);
+        clip->path = serialized_source;
+        if (g_str_has_suffix (clip->path, "gegl:nop opi=0:0"))
+        {
+          clip->path[strlen(clip->path)-strlen("gegl:nop opi=0:0")]='\0';
+        }
+      }
+      ui_tweaks = 0;
     }
 
     GParamSpec ** props = gegl_operation_list_properties (gegl_node_get_operation (selected_node), &n_props);
@@ -1730,8 +1755,7 @@ void gedl_draw (Mrg     *mrg,
   {
     Clip *clip = edl->active_clip;
 
-    /* XXX: turn into a function */
-    update_ui_clip (clip, clip_frame_no); // XXX :compute frameno
+    update_ui_clip (clip, clip_frame_no);
 
     mrg_set_style (mrg, "font-size: 3%; background-color: #0008; color: #fff");
 
@@ -1780,21 +1804,16 @@ void gedl_draw (Mrg     *mrg,
   mrg_listen (mrg, MRG_DRAG, drag_fpx, edl, edl);
   cairo_fill (cr);
 
+  /* we could cull drawing already here, we let cairo do it for now, */
+
   for (l = edl->clips; l; l = l->next)
   {
     Clip *clip = l->data;
     int frames = clip_get_frames (clip);
-
-    //if (clip == edl->active_clip)
-    //  cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
-    //else
-    //  cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
     cairo_rectangle (cr, t, y, frames, scroll_height);
-
     cairo_stroke (cr);
     t += frames;
   }
-
 
   int start = 0, end = 0;
   gedl_get_range (edl, &start, &end);
@@ -1805,24 +1824,20 @@ void gedl_draw (Mrg     *mrg,
   cairo_stroke (cr);
 
   {
-  double frame = edl->frame_no;
-  if (fpx < 1.0)
-    cairo_rectangle (cr, frame, y-5, 1.0, 5 + scroll_height);
-  else
-    cairo_rectangle (cr, frame, y-5, fpx, 5 + scroll_height);
-  cairo_set_source_rgba (cr,1,0,0,0.85);
-  cairo_fill (cr);
+    double frame = edl->frame_no;
+    if (fpx < 1.0)
+      cairo_rectangle (cr, frame, y-5, 1.0, 5 + scroll_height);
+    else
+      cairo_rectangle (cr, frame, y-5, fpx, 5 + scroll_height);
+    cairo_set_source_rgba (cr,1,0,0,0.85);
+    cairo_fill (cr);
   }
-
 
   cairo_restore (cr);
   y -= VID_HEIGHT;
-
-
   t = 0;
 
   cairo_move_to (cr, x0 + PAD_DIM, y + VID_HEIGHT + PAD_DIM * 3);
-
 
   cairo_save (cr);
   cairo_translate (cr,  x0, 0);
