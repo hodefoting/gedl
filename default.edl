@@ -4,11 +4,11 @@ output-path=gedl.mp4
 video-width=800
 video-height=600
 fps=25.000000
-selection-start=347
-selection-end=347
-frame-scale=0.944773
-t0=99.345361
-frame-no=468
+selection-start=450
+selection-end=450
+frame-scale=0.963668
+t0=87.745969
+frame-no=450
 
 gegl:color value=black gegl:crop width=400 height=400 31 50 -- 
 gegl:color value=black gegl:crop width=400 height=400 0 50 -- [fade=26] over aux=[ text size=0.08rel string='note: this is a gedl video\nproject for testing features\nit relies on synthetic GEGL\npatterns instead of\nvideo footage\nto be to minimie size\nfor inclusion in gedl sources' color=white translate x=0.1rel y=0.15rel ]
@@ -23,13 +23,13 @@ gegl:simplex-noise opi=0:0 scale=2.982180118560791 gegl:crop opi=0:0 width=400 h
 gegl:simplex-noise opi=0:0 seed=1031312640 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='proxy editing' size=0.10000000000000001rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.059999999999999998rel y=0.40000000000000002rel ]
 gegl:simplex-noise opi=0:0 seed=186518848 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='content addressed caching scheme' size=0.070000000000000007rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.059999999999999998rel y=0.50016283988952637rel ]
 gegl:simplex-noise opi=0:0 scale=1.7226827144622803 seed=587856256 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='ffmpeg video en/de-code' size=0.10000000000000001rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.04365992546081543rel y=0.59999999999999998rel ]
-gegl:simplex-noise opi=0:0 seed=188018752 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='all GEGL filters' size=0.10000000000000001rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.059999999999999998rel y=0.69999999999999996rel ]
+gegl:simplex-noise opi=0:0 seed=188018752 gegl:crop opi=0:0 width=400 height=400  0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='all GEGL filters' size=0.10298541188240051rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.059999999999999998rel y=0.69999999999999996rel ]  
 gegl:simplex-noise opi=0:0 seed=331734624 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='single track editing' size=0.10000000000000001rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.059999999999999998rel y=0.80000000000000004rel ]
 gegl:simplex-noise gegl:crop width=400 height=400 0 36 -- [fade=34] 
 gegl:fractal-explorer zoom={ 0=120 60=1300} shiftx={ 0=-320 60=-2500} shifty=-180 gegl:crop width=480 height=640 0 60 -- [fade=30] 
 gegl:sinus complexity={ 1=0.5 40=4.0 80=0.2 } gegl:crop width=400 height=400 0 80 -- [fade=60] 
 gegl:noise-solid opi=0:0 y-size=4.6258320808410645 seed=668093247 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='TODO' size=0.10000000000000001rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.050000000000000003rel y=0.29999999999999999rel ]
-gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ text size=0.1rel string='graph/node ui for filters' color=yellow translate x=0.1rel y=0.4rel ]
+gegl:noise-solid opi=0:0 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='graph/node ui for filters' size=0.10728198289871216rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.10000000000000001rel y=0.40000000000000002rel ]
 gegl:noise-solid opi=0:0 height=2201 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='clip database' size=0.10000000000000001rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.10000000000000001rel y=0.5rel ]
 gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ text size=0.1rel string='audio overlay' color=yellow translate x=0.1rel y=0.6rel ]
 gegl:noise-solid opi=0:0 x-size=3.060732364654541 y-size=2.842573881149292 seed=490063231 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] 
