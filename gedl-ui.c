@@ -1655,7 +1655,7 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
     gegl_node_link_many (source_start, source_end, NULL);
     gegl_create_chain (clip->path, source_start, source_end,
                        clip->edl->frame_no - clip->abs_start,
-                       100.0, NULL, &error);
+                       1.0, NULL, &error);
 
     filter_start = gegl_node_new ();
     filter_end = gegl_node_new ();
@@ -1666,15 +1666,13 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
     gegl_node_link_many (filter_start, filter_end, NULL);
     gegl_create_chain (clip->filter_graph, filter_start, filter_end,
                        clip->edl->frame_no - clip->abs_start,
-                       100.0, NULL, &error);
+                       1.0, NULL, &error);
     ui_clip = clip;
   }
 
 
   if (selected_node)
   {
-  //  fprintf (stderr, "%p %i\n", selected_node, clip_frame_no);
-
     unsigned int n_props;
     GParamSpec ** props = gegl_operation_list_properties (gegl_node_get_operation (selected_node),
                       &n_props);
@@ -1696,6 +1694,7 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
     }
   }
 }
+
 void gedl_draw (Mrg     *mrg,
                 GeglEDL *edl,
                 double   x0,
