@@ -700,7 +700,6 @@ static void split_clip (MrgEvent *event, void *data1, void *data2)
   changed++;
 }
 
-
 static void toggle_fade (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -744,8 +743,6 @@ static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
 
 
 static int help = 0;
-
-
 
 static void toggle_help (MrgEvent *event, void *data1, void *data2)
 {
@@ -974,7 +971,6 @@ static void clip_end_start_inc (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
 }
 
-
 static void clip_start_end_inc (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -987,7 +983,6 @@ static void clip_start_end_inc (MrgEvent *event, void *data1, void *data2)
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
-
 
 static void clip_start_end_dec (MrgEvent *event, void *data1, void *data2)
 {
@@ -1066,7 +1061,6 @@ static void toggle_edit_source (MrgEvent *event, void *data1, void *data2)
 }
 #endif
 
-
 static void do_quit (MrgEvent *event, void *data1, void *data2)
 {
   exited = 1;
@@ -1075,7 +1069,6 @@ static void do_quit (MrgEvent *event, void *data1, void *data2)
 }
 
 long last_frame = 0;
-
 
 void gedl_ui (Mrg *mrg, void *data);
 
@@ -1172,7 +1165,6 @@ static void scroll_to_fit (GeglEDL *edl, Mrg *mrg)
     edl->t0 = edl->frame_no - (mrg_width (mrg) * 0.2) * edl->scale;
 }
 
-
 static void shuffle_forward (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -1243,8 +1235,6 @@ static void shuffle_back (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
   changed++;
 }
-
-
 
 static void slide_forward (MrgEvent *event, void *data1, void *data2)
 {
@@ -1424,7 +1414,6 @@ static void zoom_fit (MrgEvent *event, void *data1, void *data2)
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
-
 
 static void tweaked_state (Mrg *mrg)
 {
@@ -2309,7 +2298,6 @@ void gedl_ui (Mrg *mrg, void *data)
           {
             mrg_add_binding (mrg, "v", NULL, "split clip", split_clip, edl);
           }
-          
           mrg_add_binding (mrg, "f", NULL, "toggle fade", toggle_fade, edl);
         }
 
