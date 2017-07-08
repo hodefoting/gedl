@@ -8,14 +8,13 @@
   roadmap/missing features
 
     ui
-      rewrite gedl-ui.c in lua and call it gcut
+      move gedl to gegl git repo
       detect locked or crashed ui, kill and respawn
       trimming by mouse / dragging clips around by mouse
       show a modal ui-block when generating proxies/thumbtrack on media import, instead of blocking/being blank
       gaps in timeline (will be implemented as blank clips - but ui could be different)
       insert videos from the commandline
       ui for adding/editing global filters/annotation/sound bits/beeps
-      move gedl to gegl git repo
 
     support for other timecodes, mm:ss:ff and s
     using edl files as clip sources - hopefully without even needing caches.
