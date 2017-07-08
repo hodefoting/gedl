@@ -4,22 +4,22 @@ output-path=gedl.mp4
 video-width=800
 video-height=600
 fps=25.000000
-selection-start=77
-selection-end=77
-frame-scale=0.287950
-t0=15.712000
-frame-no=77
+selection-start=85
+selection-end=85
+frame-scale=1.022652
+t0=-65.879351
+frame-no=85
 
 gegl:color value=black gegl:crop width=400 height=400 31 50 -- 
 gegl:color value=black gegl:crop width=400 height=400 0 50 -- [fade=26] over aux=[ text size=0.08rel string='note: this is a gedl video\nproject for testing features\nit relies on synthetic GEGL\npatterns instead of\nvideo footage\nto be to minimie size\nfor inclusion in gedl sources' color=white translate x=0.1rel y=0.15rel ]
 -- #annotations
-gegl:color opi=0:0 gegl:crop opi=0:0 width=400 height=400 reset-origin=true 0 80 -- svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='gedl/gcut' size=0.20000000000000001rel color='rgb(1.0000, 1.0000, 1.0000)' width=1 height=1 gegl:gaussian-blur opi=0:0 std-dev-x={  0.000000=0.400000rel  24.000000=0.000000rel  25.000000=0.000000rel  }  std-dev-y={  0.000000=0.200000rel  24.000000=0.000000rel  25.000000=0.000000rel  26.000000=0.000000rel  }  clip-extent=false gegl:translate opi=0:0 x=0.10000000000000001rel y=0.3304142951965332rel ]  gegl:lens-flare opi=0:0 pos-x={  0.000000=-2.000000  100.000000=2.000000  }  pos-y={  0.000000=0.100000  100.000000=0.910000  }
+gegl:color opi=0:0 gegl:crop opi=0:0 width=400 height=400 reset-origin=true  0 80 -- svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='gcut' font='serif' size=0.20000000000000001rel color='rgb(1.0000, 1.0000, 1.0000)' width=1 height=1 gegl:gaussian-blur opi=0:0 std-dev-x={  0.000000=0.400000rel  24.000000=0.000000rel  25.000000=0.000000rel  }  std-dev-y={  0.000000=0.200000rel  24.000000=0.000000rel  25.000000=0.000000rel  26.000000=0.000000rel  }  clip-extent=false gegl:unsharp-mask opi=0:0 gegl:translate opi=0:0 x=0.10000000000000001rel y=0.3304142951965332rel ]  gegl:lens-flare opi=0:0 pos-x={  0.000000=-2.000000  100.000000=2.000000  }  pos-y={  0.000000=0.100000  100.000000=0.910000  }  
 gegl:color opi=0:0 gegl:crop opi=0:0 width=400 height=400 0 50 -- [fade=64] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='video editing\nfileformat+render / ui' size=0.10000000000000001rel color='rgb(1.0000, 1.0000, 1.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.10000000000000001rel y=0.55924856662750244rel ]
 gegl:cell-noise opi=0:0 shape={  0.000000=1.000000  40.000000=1.850000  }  gegl:translate opi=0:0 x={  500.000000=50.000000  }  y={  500.000000=500.000000  }  gegl:crop opi=0:0 width=400 height=400 0 40 -- [fade=23] 
 gegl:simplex-noise opi=0:0 seed=605124352 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=14] 
 gegl:simplex-noise opi=0:0 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='keyframed animation' size=0.10000000000000001rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.059999999999999998rel y=0.075699806213378906rel ]
 gegl:simplex-noise opi=0:0 scale=1.1438060998916626 seed=168548944 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='cross fades' size=0.12115363776683807rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.059999999999999998rel y=0.17616629600524902rel ]
-gegl:simplex-noise opi=0:0 scale=2.982180118560791 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='parallelized rendering' size=0.10000000000000001rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.059999999999999998rel y=0.29340159893035889rel ]
+gegl:simplex-noise opi=0:0 scale=2.982180118560791 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='multi-process rendering' size=0.10000000000000001rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.059999999999999998rel y=0.29340159893035889rel ]
 gegl:simplex-noise opi=0:0 seed=1031312640 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] 
 gegl:simplex-noise opi=0:0 seed=186518848 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='content addressed caching scheme' size=0.070000000000000007rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.059999999999999998rel y=0.50016283988952637rel ]
 gegl:simplex-noise opi=0:0 scale=1.7226827144622803 seed=587856256 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='ffmpeg video en/de-code' size=0.10000000000000001rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.04365992546081543rel y=0.59999999999999998rel ]

@@ -83,7 +83,7 @@ foo++;
       gegl_buffer_get (edl->buffer_copy_temp, &roi, 1.001, fmt, buf, bounds.width * 4, GEGL_ABYSS_BLACK);
     }
 
-  surface = cairo_image_surface_create_for_data (buf, CAIRO_FORMAT_RGB24, bounds.width, bounds.height, bounds.width * 4);
+    surface = cairo_image_surface_create_for_data (buf, CAIRO_FORMAT_RGB24, bounds.width, bounds.height, bounds.width * 4);
   }
 
   cairo_save (cr);
@@ -1443,6 +1443,21 @@ static void toggle_bool (MrgEvent *e, void *data1, void *data2)
   tweaked_state (e->mrg);
 }
 
+GeglNode *snode = NULL;
+const char *sprop = NULL;
+
+static void edit_string (MrgEvent *e, void *data1, void *data2)
+{
+  GeglNode *node = data1;
+  const char *prop = data2;
+  snode = node;
+  sprop = prop;
+  changed++;
+  mrg_event_stop_propagate (e);
+  mrg_queue_draw (e->mrg, NULL);
+  tweaked_state (e->mrg);
+}
+
 static void drag_double_slider (MrgEvent *e, void *data1, void *data2)
 {
   GeglParamSpecDouble *gspec = (void*)data2;
@@ -1491,6 +1506,13 @@ static void drag_int_slider (MrgEvent *e, void *data1, void *data2)
   mrg_event_stop_propagate (e);
   changed++;
   tweaked_state (e->mrg);
+}
+
+static void update_string (const char *new_string, void *user_data)
+{
+  if (snode && sprop)
+    gegl_node_set (snode, sprop, new_string, NULL);
+  ui_tweaks++;
 }
 
 float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
@@ -1611,9 +1633,22 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
     {
       char *val = NULL;
       gegl_node_get (node, props[i]->name, &val, NULL);
-      str = g_strdup_printf ("%s: \"%s\"", props[i]->name, val);
-      mrg_printf (mrg, "%s", str);
+      mrg_printf (mrg, "%s: \"", props[i]->name);
+      if (snode && !strcmp (props[i]->name, sprop))
+      {
+        mrg_edit_start (mrg, update_string, edl);
+      }
+      else
+        mrg_text_listen (mrg, MRG_CLICK, edit_string, node, (void*)g_intern_string(props[i]->name));
+      mrg_printf (mrg, "%s", val);
+
+      if (snode && !strcmp (props[i]->name, sprop))
+        mrg_edit_end (mrg);
+      else
+        mrg_text_listen_done (mrg);
+      mrg_printf (mrg, "\"");
       g_free (val);
+      str= g_strdup ("");
     }
     else
     {
@@ -1696,6 +1731,8 @@ static void select_node (MrgEvent *e, void *data1, void *data2)
     selected_node = NULL;
   else
     selected_node = data1;
+  snode = NULL;
+  sprop = NULL;
 
   mrg_event_stop_propagate (e);
   mrg_queue_draw (e->mrg, NULL);
@@ -1762,6 +1799,7 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
       ui_clip != clip)
   {
     selected_node = NULL;
+    snode = NULL;
      if (source_start)
       {
         remove_in_betweens (source_start, source_end);
@@ -1852,7 +1890,7 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
       char tmpbuf[1024];
       sprintf (tmpbuf, "%s-anim", props[i]->name);
       GQuark anim_quark = g_quark_from_string (tmpbuf);
-
+      // this only deals with double for now
       if (g_object_get_qdata (G_OBJECT (selected_node), anim_quark))
       {
         GeglPath *path = g_object_get_qdata (G_OBJECT (selected_node), anim_quark);
@@ -2279,7 +2317,8 @@ void gedl_ui (Mrg *mrg, void *data)
   }
 
   if (!edl->clip_query_edited &&
-      !edl->filter_edited)
+      !edl->filter_edited &&
+      !snode)
   {
     mrg_add_binding (mrg, "F1", NULL, "toggle help", toggle_help, edl);
     mrg_add_binding (mrg, "q", NULL, "quit", (void*)do_quit, mrg);
