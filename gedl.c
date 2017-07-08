@@ -1251,7 +1251,7 @@ int main (int argc, char **argv)
     new_argv[0] = argv[0];
     argv = new_argv;
     argc++;
-    g_file_set_contents (argv[1], "gedl.edl", -1, NULL);
+    g_file_set_contents (argv[1], default_edl, -1, NULL);
   }
 
   edl_path = argv[1]; //realpath (argv[1], NULL);
