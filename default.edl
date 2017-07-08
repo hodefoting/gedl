@@ -4,11 +4,11 @@ output-path=gedl.mp4
 video-width=800
 video-height=600
 fps=25.000000
-selection-start=120
-selection-end=120
+selection-start=117
+selection-end=117
 frame-scale=0.287950
 t0=-8.811666
-frame-no=149
+frame-no=117
 
 gegl:color value=black gegl:crop width=400 height=400 31 50 -- 
 gegl:color value=black gegl:crop width=400 height=400 0 50 -- [fade=26] over aux=[ text size=0.08rel string='note: this is a gedl video\nproject for testing features\nit relies on synthetic GEGL\npatterns instead of\nvideo footage\nto be to minimie size\nfor inclusion in gedl sources' color=white translate x=0.1rel y=0.15rel ]

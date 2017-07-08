@@ -560,21 +560,26 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
   {
     GeglNode *producer = NULL;
     GeglNode *consumer = NULL;
-    GeglNode **nodes = NULL;
+    GeglNode   **nodes = NULL;
     const gchar **pads = NULL;
-
+    char      *prodpad = NULL;
 
     int count = gegl_node_get_consumers (selected_node, "output", &nodes, &pads);
     if (count)
       {
         consumer= nodes[0];
-        if (strcmp (pads[0], "input"))
-          producer = NULL;
       }
-    producer = gegl_node_get_producer (selected_node, "input", NULL);
+
+    producer = gegl_node_get_producer (selected_node, "input", &prodpad);
 
     if (producer && consumer)
-      gegl_node_link_many (producer, consumer, NULL);
+    {
+      fprintf (stderr, "%p %s %p %s\n", producer, prodpad, consumer, pads[0]);
+      gegl_node_connect_to (producer, prodpad, consumer, pads[0]);
+    }
+
+    if (prodpad)
+      g_free (prodpad);
 
     selected_node = NULL;
     ui_tweaks++;
@@ -583,6 +588,7 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
   {
     clip_remove (edl->active_clip);
   }
+
   gedl_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -1643,7 +1649,7 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
 
          // todo: draw markers for zero, min and max, with labels
          //       do all curves in one scaled space? - will break for 2 or more magnitudes diffs
-            
+
          for (i = -10; i < clip_get_frames (edl->active_clip) + 10; i ++)
          {
            gegl_path_calc_y_for_x (path, i, &y);
@@ -1810,30 +1816,34 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
 
       if (clip->filter_graph)
       {
-        g_free (clip->filter_graph);
-        clip->filter_graph = serialized_filter;
+        gchar *old = clip->filter_graph;
 
-        if (g_str_has_suffix (clip->filter_graph, "gegl:nop opi=0:0"))
-        {
-          clip->filter_graph[strlen(clip->filter_graph)-strlen("gegl:nop opi=0:0")]='\0';
+        if (g_str_has_suffix (serialized_filter, "gegl:nop opi=0:0"))
+        { /* XXX: ugly hack - we remove the common bit we do not want */
+          serialized_filter[strlen(serialized_filter)-strlen("gegl:nop opi=0:0")]='\0';
         }
+        clip->filter_graph = serialized_filter;
+        g_free (old);
       }
+      else
+        g_free (serialized_filter);
+
       if (clip->is_chain)
       {
-       g_free (clip->path);
-        clip->path = serialized_source;
-        if (g_str_has_suffix (clip->path, "gegl:nop opi=0:0"))
-        {
-          clip->path[strlen(clip->path)-strlen("gegl:nop opi=0:0")]='\0';
-        }
-      }
-      ui_tweaks = 0;
+        gchar *old = clip->path;
 
-#if 0
-      int old_frame = gedl_get_frame (clip->edl);
-      gedl_set_frame (clip->edl, old_frame - 1);
-      gedl_set_frame (clip->edl, old_frame);
-#endif
+        if (g_str_has_suffix (serialized_source, "gegl:nop opi=0:0"))
+        { /* XXX: ugly hack - we remove the common bit we do not want */
+          serialized_source[strlen(serialized_source)-strlen("gegl:nop opi=0:0")]='\0';
+        }
+        clip->path = serialized_source;
+        g_free (old);
+      }
+      else
+        g_free (serialized_source);
+      ui_tweaks = 0;
+      changed ++;
+
       gedl_cache_invalid (clip->edl);
     }
 
@@ -2177,6 +2187,8 @@ void gedl_ui (Mrg *mrg, void *data)
     return;
   }
 
+  /* XXX: sync ui changes here, rather than deferred  */
+
   g_mutex_lock (&edl->buffer_copy_mutex);
   if (edl->buffer_copy_temp)
     g_object_unref (edl->buffer_copy_temp);
@@ -2190,21 +2202,18 @@ void gedl_ui (Mrg *mrg, void *data)
      case GEDL_UI_MODE_FULL:
      case GEDL_UI_MODE_TIMELINE:
      case GEDL_UI_MODE_NONE:
-
-  mrg_gegl_blit (mrg, (int)(mrg_width (mrg) * 0.0), 0,
+        mrg_gegl_blit (mrg, (int)(mrg_width (mrg) * 0.0), 0,
                       (int)(mrg_width (mrg) * 1.0),
                       mrg_height (mrg),// * SPLIT_VER,
-
                       o->edl->cached_result,
                       0, 0,
         /* opacity */ 1.0 //edl->frame_no == done_frame?1.0:0.5
                       ,edl);
         break;
      case GEDL_UI_MODE_PART:
-  mrg_gegl_blit (mrg, (int)(mrg_width (mrg) * 0.2), 0,
+        mrg_gegl_blit (mrg, (int)(mrg_width (mrg) * 0.2), 0,
                       (int)(mrg_width (mrg) * 0.8),
                       mrg_height (mrg) * SPLIT_VER,
-
                       o->edl->cached_result,
                       0, 0,
         /* opacity */ 1.0 //edl->frame_no == done_frame?1.0:0.5
@@ -2413,7 +2422,6 @@ void gedl_ui (Mrg *mrg, void *data)
             }
           }
         }
-
       }
     }
   }
