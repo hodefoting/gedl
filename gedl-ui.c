@@ -1833,6 +1833,8 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
     gegl_node_set (source_start, "operation", "gegl:nop", NULL);
     gegl_node_set (source_end, "operation", "gegl:nop", NULL);
     gegl_node_link_many (source_start, source_end, NULL);
+ 
+    if (clip->is_chain)
     gegl_create_chain (clip->path, source_start, source_end,
                        clip->edl->frame_no - clip->abs_start,
                        1.0, NULL, &error);
@@ -1844,9 +1846,12 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
     gegl_node_set (filter_end,   "operation", "gegl:nop", NULL);
 
     gegl_node_link_many (filter_start, filter_end, NULL);
+    if (clip->filter_graph)
+    {
     gegl_create_chain (clip->filter_graph, filter_start, filter_end,
                        clip->edl->frame_no - clip->abs_start,
                        1.0, NULL, &error);
+    }
     ui_clip = clip;
   }
 
