@@ -227,9 +227,9 @@ struct _GeglEDL
 
   void         *mrg;
 
-  char       *clip_query;
-  int         clip_query_edited;
-  int         filter_edited;
+  char         *clip_query;
+  int           clip_query_edited;
+  int           filter_edited;
 } _GeglEDL;
 
 void update_size (GeglEDL *edl, Clip *clip);
