@@ -609,7 +609,7 @@ static void insert_filter (MrgEvent *event, void *data1, void *data2)
     const gchar **pads = NULL;
 
     int count = gegl_node_get_consumers (selected_node, "output", &nodes, &pads);
-    new = gegl_node_new_child (edl->gegl, "operation", "gegl:newsprint", NULL);
+    new = gegl_node_new_child (edl->gegl, "operation", "gegl:lens-flare", NULL);
     gegl_node_link_many (selected_node, new, NULL);
     if (count)
     {

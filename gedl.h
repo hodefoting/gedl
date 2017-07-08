@@ -10,13 +10,11 @@
     ui
       rewrite gedl-ui.c in lua and call it gcut
       detect locked or crashed ui, kill and respawn
-      templates - for both clips and filters - filters that can be chained
       trimming by mouse / dragging clips around by mouse
       show a modal ui-block when generating proxies/thumbtrack on media import, instead of blocking/being blank
       gaps in timeline (will be implemented as blank clips - but ui could be different)
       insert videos from the commandline
-      ui for adding/editing annotations, setting variables for
-        interpolation in annotations?
+      ui for adding/editing global filters/annotation/sound bits/beeps
       move gedl to gegl git repo
 
     support for other timecodes, mm:ss:ff and s
@@ -94,37 +92,34 @@ char       *gedl_make_thumb_path    (GeglEDL    *edl, const char *clip_path);
 guchar     *gedl_get_cache_bitmap   (GeglEDL *edl, int *length_ret);
 
 
-Clip  *clip_new               (GeglEDL *edl);
-void   clip_free              (Clip *clip);
+Clip       *clip_new               (GeglEDL *edl);
+void        clip_free              (Clip *clip);
 const char *clip_get_path     (Clip *clip);
-void   clip_set_path          (Clip *clip, const char *path);
-int    clip_get_start         (Clip *clip);
-int    clip_get_end           (Clip *clip);
-int    clip_get_frames        (Clip *clip);
-void   clip_set_start         (Clip *clip, int start);
-void   clip_set_end           (Clip *clip, int end);
-void   clip_set_range         (Clip *clip, int start, int end);
-int    clip_is_static_source  (Clip *clip);
-gchar *clip_get_frame_hash    (Clip *clip, int clip_frame_no);
-
-Clip *clip_get_next (Clip *self);
-Clip *clip_get_prev (Clip *self);
-
-void   clip_fetch_audio       (Clip *clip);
-void   clip_set_full          (Clip *clip, const char *path, int start, int end);
-Clip  *clip_new_full          (GeglEDL *edl, const char *path, int start, int end);
+void        clip_set_path          (Clip *clip, const char *path);
+int         clip_get_start         (Clip *clip);
+int         clip_get_end           (Clip *clip);
+int         clip_get_frames        (Clip *clip);
+void        clip_set_start         (Clip *clip, int start);
+void        clip_set_end           (Clip *clip, int end);
+void        clip_set_range         (Clip *clip, int start, int end);
+int         clip_is_static_source  (Clip *clip);
+gchar *     clip_get_frame_hash    (Clip *clip, int clip_frame_no);
+Clip  *     clip_get_next          (Clip *self);
+Clip  *     clip_get_prev          (Clip *self);
+void        clip_fetch_audio       (Clip *clip);
+void        clip_set_full          (Clip *clip, const char *path, int start, int end);
+Clip  *     clip_new_full          (GeglEDL *edl, const char *path, int start, int end);
 
 //void   clip_set_frame_no      (Clip *clip, int frame_no);
-void clip_render_frame (Clip *clip, int clip_frame_no);
+void        clip_render_frame       (Clip *clip, int clip_frame_no);
 
-
-Clip * edl_get_clip_for_frame (GeglEDL *edl, int frame);
-void   gedl_make_proxies      (GeglEDL *edl);
-void gedl_get_video_info (const char *path, int *duration, double *fps);
-void gegl_meta_set_audio (const char        *path,
-                          GeglAudioFragment *audio);
-void gegl_meta_get_audio (const char        *path,
-                          GeglAudioFragment *audio);
+Clip *      edl_get_clip_for_frame (GeglEDL           *edl, int frame);
+void        gedl_make_proxies      (GeglEDL           *edl);
+void        gedl_get_video_info    (const char        *path, int *duration, double *fps);
+void        gegl_meta_set_audio    (const char        *path,
+                                    GeglAudioFragment *audio);
+void        gegl_meta_get_audio    (const char        *path,
+                                    GeglAudioFragment *audio);
 
 #define SPLIT_VER  0.8
 
