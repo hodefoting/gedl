@@ -1454,6 +1454,7 @@ static void edit_string (MrgEvent *e, void *data1, void *data2)
   sprop = prop;
   changed++;
   mrg_event_stop_propagate (e);
+  mrg_set_cursor_pos (e->mrg, 0); // XXX: could fech strlen and use that
   mrg_queue_draw (e->mrg, NULL);
   tweaked_state (e->mrg);
 }
