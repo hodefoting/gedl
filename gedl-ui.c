@@ -581,6 +581,7 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
     if (prodpad)
       g_free (prodpad);
 
+    g_object_unref (selected_node);
     selected_node = NULL;
     ui_tweaks++;
   }
@@ -615,7 +616,7 @@ static void insert_filter (MrgEvent *event, void *data1, void *data2)
     const gchar **pads = NULL;
 
     int count = gegl_node_get_consumers (selected_node, "output", &nodes, &pads);
-    new = gegl_node_new_child (edl->gegl, "operation", "gegl:lens-flare", NULL);
+    new = gegl_node_new_child (edl->gegl, "operation", "gegl:unsharp-mask", NULL);
     gegl_node_link_many (selected_node, new, NULL);
     if (count)
     {
@@ -1830,14 +1831,11 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
 
       if (clip->is_chain)
       {
-        gchar *old = clip->path;
-
         if (g_str_has_suffix (serialized_source, "gegl:nop opi=0:0"))
         { /* XXX: ugly hack - we remove the common bit we do not want */
           serialized_source[strlen(serialized_source)-strlen("gegl:nop opi=0:0")]='\0';
         }
-        clip->path = serialized_source;
-        g_free (old);
+        clip_set_path (clip, serialized_source);
       }
       else
         g_free (serialized_source);
