@@ -1624,8 +1624,50 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
        mrg_printf (mrg, "rel");
     if (g_object_get_qdata (G_OBJECT (node), anim_quark))
     {
-       //GeglPath *path = g_object_get_qdata (G_OBJECT (node), anim_quark);
+       GeglPath *path = g_object_get_qdata (G_OBJECT (node), anim_quark);
        mrg_printf (mrg, "{anim}");
+
+       cairo_t *cr = mrg_cr (mrg);
+
+       cairo_save (cr);
+
+       cairo_scale (cr, 1.0/edl->scale, 1);
+       cairo_translate (cr,  (edl->active_clip?edl->active_clip->abs_start:0)-edl->t0,
+                        mrg_height (mrg) * SPLIT_VER);
+
+       {
+         int i;
+         gdouble y = 0.0;
+         gdouble miny = 100000.0;
+         gdouble maxy = -100000.0;
+
+         // todo: draw markers for zero, min and max, with labels
+         //       do all curves in one scaled space? - will break for 2 or more magnitudes diffs
+            
+         for (i = -10; i < clip_get_frames (edl->active_clip) + 10; i ++)
+         {
+           gegl_path_calc_y_for_x (path, i, &y);
+           if (y < miny) miny = y;
+           if (y > maxy) maxy = y;
+         }
+
+         cairo_new_path (cr);
+         gegl_path_calc_y_for_x (path, 0, &y);
+         y = VID_HEIGHT * 0.9 - ((y - miny) / (maxy - miny)) * VID_HEIGHT * 0.8;
+         cairo_move_to (cr, 0, y);
+         for (i = -10; i < clip_get_frames (edl->active_clip) + 10; i ++)
+         {
+           gegl_path_calc_y_for_x (path, i, &y);
+           y = VID_HEIGHT * 0.9 - ((y - miny) / (maxy - miny)) * VID_HEIGHT * 0.8;
+           cairo_line_to (cr, i, y);
+         }
+       }
+
+
+       cairo_restore (cr);
+       cairo_set_line_width (cr, 2.0);
+       cairo_set_source_rgba (cr, 1.0, 0.0, 0.0, 255);
+       cairo_stroke (cr);
     }
     if (g_object_get_qdata (G_OBJECT (node), g_quark_from_string (props[i]->name)))
        mrg_printf (mrg, "{???}");
@@ -1953,18 +1995,21 @@ void gedl_draw (Mrg     *mrg,
       cairo_user_to_device (cr, &tx, &ty);
       cairo_identity_matrix (cr);
       mrg_set_xy (mrg, tx, y + VID_HEIGHT);
-      mrg_printf (mrg, "%s", clip->filter_graph);
+      mrg_printf (mrg, "%s", clip->filter_graph); // only used for annotations for now - could script vars
       cairo_restore (cr);
     }
     else
     {
       Clip *next = clip_get_next (clip);
       render_clip (mrg, edl, clip->path, clip->start, frames, t, y, clip->fade, next?next->fade:0);
+      /* .. check if we are having anim things going on.. if so - print it here  */
     }
+
     if (clip == edl->active_clip)
       cairo_set_source_rgba (cr, 1, 1, 0.5, 1.0);
     else
       cairo_set_source_rgba (cr, 1, 1, 1, 0.5);
+
     mrg_listen (mrg, MRG_PRESS, clicked_clip, clip, edl);
     mrg_listen (mrg, MRG_DRAG, drag_clip, clip, edl);
     mrg_listen (mrg, MRG_RELEASE, released_clip, clip, edl);
