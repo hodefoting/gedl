@@ -4,11 +4,11 @@ output-path=gedl.mp4
 video-width=800
 video-height=600
 fps=25.000000
-selection-start=432
-selection-end=432
+selection-start=724
+selection-end=724
 frame-scale=1.022652
-t0=-81.624320
-frame-no=432
+t0=189.502720
+frame-no=724
 
 gegl:color value=black gegl:crop width=400 height=400 31 50 -- 
 gegl:color value=black gegl:crop width=400 height=400 0 50 -- [fade=26] over aux=[ text size=0.08rel string='note: this is a gedl video\nproject for testing features\nit relies on synthetic GEGL\npatterns instead of\nvideo footage\nto be to minimie size\nfor inclusion in gedl sources' color=white translate x=0.1rel y=0.15rel ]
@@ -29,9 +29,9 @@ gegl:simplex-noise gegl:crop width=400 height=400 0 36 -- [fade=34]
 gegl:fractal-explorer zoom={ 0=120 60=1300} shiftx={ 0=-320 60=-2500} shifty=-180 gegl:crop width=480 height=640 0 60 -- [fade=30] 
 gegl:sinus complexity={ 1=0.5 40=4.0 80=0.2 } gegl:crop width=400 height=400 0 80 -- [fade=60] 
 gegl:noise-solid opi=0:0 y-size=4.6258320808410645 seed=668093247 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='TODO' size=0.10000000000000001rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.050000000000000003rel y=0.29999999999999999rel ]
-gegl:noise-solid opi=0:0 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='graph/node ui for filters' size=0.10728198289871216rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.10000000000000001rel y=0.40000000000000002rel ]
+gegl:noise-solid opi=0:0 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='UI for authoring this' size=0.10728198289871216rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.10000000000000001rel y=0.40000000000000002rel ]
 gegl:noise-solid opi=0:0 height=2201 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='clip database' size=0.10000000000000001rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.10000000000000001rel y=0.5rel ]
-gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ text size=0.1rel string='audio overlay' color=yellow translate x=0.1rel y=0.6rel ]
+gegl:noise-solid opi=0:0 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] svg:src-over opi=0:0 aux=[  gegl:text opi=0:0 string='overlays:audio filter' size=0.10000000000000001rel color='rgb(1.0000, 1.0000, 0.0000)' width=1 height=1 gegl:translate opi=0:0 x=0.10000000000000001rel y=0.59999999999999998rel ]
 gegl:noise-solid opi=0:0 x-size=3.060732364654541 y-size=2.842573881149292 seed=490063231 gegl:crop opi=0:0 width=400 height=400 0 25 -- [fade=34] 
 gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ text size=0.1rel string='subtitle baking' color=yellow translate x=0.1rel y=0.7rel ]
 gegl:noise-solid gegl:crop width=400 height=400 0 25 -- [fade=34] over aux=[ text size=0.1rel string='network rendering' color=yellow translate x=0.1rel y=0.8rel ]
