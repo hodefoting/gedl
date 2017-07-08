@@ -141,7 +141,6 @@ foo++;
   cairo_restore (cr);
 }
 
-
 typedef struct _State State;
 
 struct _State {
@@ -1459,6 +1458,16 @@ static void edit_string (MrgEvent *e, void *data1, void *data2)
   tweaked_state (e->mrg);
 }
 
+
+static void end_edit (MrgEvent *e, void *data1, void *data2)
+{
+  snode = NULL;
+  sprop = NULL;
+  mrg_event_stop_propagate (e);
+  mrg_set_cursor_pos (e->mrg, 0); // XXX: could fech strlen and use that
+  mrg_queue_draw (e->mrg, NULL);
+}
+
 static void drag_double_slider (MrgEvent *e, void *data1, void *data2)
 {
   GeglParamSpecDouble *gspec = (void*)data2;
@@ -2315,6 +2324,11 @@ void gedl_ui (Mrg *mrg, void *data)
   if (!renderer_done (edl))
     mrg_printf (mrg, "... ");
 
+  }
+
+  if (snode)
+  {
+    mrg_add_binding (mrg, "escape", NULL, "end edit", end_edit, edl);
   }
 
   if (!edl->clip_query_edited &&
