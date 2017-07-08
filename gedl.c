@@ -910,7 +910,7 @@ gedl_monitor_start (GeglEDL *edl)
   edl->monitor = g_file_monitor_file (g_file_new_for_path (edl->path),
                                       G_FILE_MONITOR_NONE,
                                       NULL, NULL);
-  g_signal_connect (edl->monitor, "changed", G_CALLBACK (file_changed), edl);
+  if(0)g_signal_connect (edl->monitor, "changed", G_CALLBACK (file_changed), edl);
 }
 
 GeglEDL *gedl_new_from_path (const char *path)
