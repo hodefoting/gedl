@@ -1500,10 +1500,8 @@ static void drag_double_slider (MrgEvent *e, void *data1, void *data2)
     for (i = 0; i < nodes; i ++)
     {
       gegl_path_get_node (path, i, &path_item);
-      fprintf (stderr, "  %i %f=%f\n", i, path_item.point[0].x, path_item.point[0].y);
       if (fabs (path_item.point[0].x - clip_frame_no) < 0.01)
       {
-              fprintf (stderr, "replace %i %i=%f\n", i, clip_frame_no, new_val);
         path_item.point[0].x = clip_frame_no;
         path_item.point[0].y = new_val;
         gegl_path_replace_node (path, i, &path_item);
@@ -1511,14 +1509,12 @@ static void drag_double_slider (MrgEvent *e, void *data1, void *data2)
       }
       else if (path_item.point[0].x > clip_frame_no)
       {
-        fprintf (stderr, "insert %i %i=%f\n", i, clip_frame_no, new_val);
         path_item.point[0].x = clip_frame_no;
         path_item.point[0].y = new_val;
         gegl_path_insert_node (path, i - 1, &path_item);
         goto done;
       }
     }
-    fprintf (stderr, "app-end\n");
     path_item.type = 'L';
     path_item.point[0].x = clip_frame_no;
     path_item.point[0].y = new_val;
