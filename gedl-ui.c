@@ -596,6 +596,23 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
 
 static GeglNode *filter_start;
 
+static void make_rel_props (GeglNode *node)
+{
+  unsigned int n_props;
+  GParamSpec ** props = gegl_operation_list_properties (gegl_node_get_operation (node),
+                      &n_props);
+
+  for (int i = 0; i <n_props; i ++)
+  {
+    char tmpbuf[1024];
+    sprintf (tmpbuf, "%s-rel", props[i]->name);
+    GQuark rel_quark = g_quark_from_string (tmpbuf);
+   
+    g_object_set_qdata_full (G_OBJECT(node), rel_quark,  g_strdup("foo"), g_free);
+
+  }
+}
+
 static void insert_filter (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
@@ -616,6 +633,8 @@ static void insert_filter (MrgEvent *event, void *data1, void *data2)
 
     int count = gegl_node_get_consumers (selected_node, "output", &nodes, &pads);
     new = gegl_node_new_child (edl->gegl, "operation", "gegl:unsharp-mask", NULL);
+    make_rel_props (new);
+
     gegl_node_link_many (selected_node, new, NULL);
     if (count)
     {
