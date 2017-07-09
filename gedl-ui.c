@@ -698,7 +698,6 @@ static void split_clip (MrgEvent *event, void *data1, void *data2)
   clip_split (edl->active_clip, clip_frame_no);
   {
     //edl->active_clip = clip;
-
   }
   gedl_cache_invalid (edl);
   mrg_event_stop_propagate (event);
@@ -746,7 +745,6 @@ static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
   mrg_queue_draw (event->mrg, NULL);
   changed++;
 }
-
 
 static int help = 0;
 
@@ -1470,12 +1468,16 @@ static void end_edit (MrgEvent *e, void *data1, void *data2)
 
 static void drag_double_slider (MrgEvent *e, void *data1, void *data2)
 {
+  gpointer *data = data1;
   GeglParamSpecDouble *gspec = (void*)data2;
   GParamSpec          *spec  = (void*)data2;
-  GeglNode            *node  = (void*)data1;
+  GeglNode            *node  = data[1];
+  GeglEDL             *edl   = data[0];
   char tmpbuf[1024];
   sprintf (tmpbuf, "%s-rel", spec->name);
   GQuark rel_quark = g_quark_from_string (tmpbuf);
+  sprintf (tmpbuf, "%s-anim", spec->name);
+  GQuark anim_quark = g_quark_from_string (tmpbuf);
   double ui_min = gspec->ui_minimum;
   double ui_max = gspec->ui_maximum;
   if (g_object_get_qdata (G_OBJECT (node), rel_quark) && 1)
@@ -1485,7 +1487,50 @@ static void drag_double_slider (MrgEvent *e, void *data1, void *data2)
     }
 
   float new_val = e->x * (ui_max - ui_min) + ui_min;
-  gegl_node_set (node, spec->name, new_val, NULL);
+
+  if (g_object_get_qdata (G_OBJECT (node), anim_quark))
+  {
+    GeglPath *path = g_object_get_qdata (G_OBJECT (node), anim_quark);
+    int nodes = gegl_path_get_n_nodes (path);
+    int i;
+    int clip_frame_no=0;
+    GeglPathItem path_item;
+    gedl_get_clip (edl, edl->frame_no, &clip_frame_no);
+
+    for (i = 0; i < nodes; i ++)
+    {
+      gegl_path_get_node (path, i, &path_item);
+      fprintf (stderr, "  %i %f=%f\n", i, path_item.point[0].x, path_item.point[0].y);
+      if (fabs (path_item.point[0].x - clip_frame_no) < 0.01)
+      {
+              fprintf (stderr, "replace %i %i=%f\n", i, clip_frame_no, new_val);
+        path_item.point[0].x = clip_frame_no;
+        path_item.point[0].y = new_val;
+        gegl_path_replace_node (path, i, &path_item);
+        goto done;
+      }
+      else if (path_item.point[0].x > clip_frame_no)
+      {
+        fprintf (stderr, "insert %i %i=%f\n", i, clip_frame_no, new_val);
+        path_item.point[0].x = clip_frame_no;
+        path_item.point[0].y = new_val;
+        gegl_path_insert_node (path, i - 1, &path_item);
+        goto done;
+      }
+    }
+    fprintf (stderr, "app-end\n");
+    path_item.type = 'L';
+    path_item.point[0].x = clip_frame_no;
+    path_item.point[0].y = new_val;
+    gegl_path_insert_node (path, -1, &path_item);
+done:
+    if(0);
+
+  }
+  else
+  {
+    gegl_node_set (node, spec->name, new_val, NULL);
+  }
 
   mrg_queue_draw (e->mrg, NULL);
   mrg_event_stop_propagate (e);
@@ -1568,7 +1613,12 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
       cairo_save (mrg_cr (mrg));
       cairo_scale (mrg_cr (mrg), width, 1.0);
 
-      mrg_listen (mrg, MRG_DRAG, drag_double_slider, node, gspec);
+      gpointer *data = g_new0 (gpointer, 3);
+      data[0]=edl;
+      data[1]=node;
+      data[2]=gspec;
+      mrg_listen_full (mrg, MRG_DRAG, drag_double_slider, data, gspec, (void*)g_free, NULL);
+
       cairo_restore (mrg_cr (mrg));
       cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1.0);
       cairo_stroke (mrg_cr (mrg));
@@ -1725,7 +1775,6 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
        mrg_printf (mrg, "{???}");
   }
 
-
   return y;
 }
 
@@ -1810,22 +1859,23 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
   {
     selected_node = NULL;
     snode = NULL;
-     if (source_start)
-      {
-        remove_in_betweens (source_start, source_end);
-        g_object_unref (source_start);
-        source_start = NULL;
-        g_object_unref (source_end);
-        source_end = NULL;
-      }
-     if (filter_start)
-      {
-        remove_in_betweens (filter_start, filter_end);
-        g_object_unref (filter_start);
-        filter_start = NULL;
-        g_object_unref (filter_end);
-        filter_end = NULL;
-      }
+    if (source_start)
+     {
+       remove_in_betweens (source_start, source_end);
+       g_object_unref (source_start);
+       source_start = NULL;
+       g_object_unref (source_end);
+       source_end = NULL;
+     }
+
+    if (filter_start)
+     {
+       remove_in_betweens (filter_start, filter_end);
+       g_object_unref (filter_start);
+       filter_start = NULL;
+       g_object_unref (filter_end);
+       filter_end = NULL;
+     }
 
     source_start = gegl_node_new ();
     source_end   = gegl_node_new ();
@@ -1833,11 +1883,11 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
     gegl_node_set (source_start, "operation", "gegl:nop", NULL);
     gegl_node_set (source_end, "operation", "gegl:nop", NULL);
     gegl_node_link_many (source_start, source_end, NULL);
- 
+
     if (clip->is_chain)
-    gegl_create_chain (clip->path, source_start, source_end,
-                       clip->edl->frame_no - clip->abs_start,
-                       1.0, NULL, &error);
+      gegl_create_chain (clip->path, source_start, source_end,
+                         clip->edl->frame_no - clip->abs_start,
+                         1.0, NULL, &error);
 
     filter_start = gegl_node_new ();
     filter_end = gegl_node_new ();
@@ -1848,9 +1898,9 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
     gegl_node_link_many (filter_start, filter_end, NULL);
     if (clip->filter_graph)
     {
-    gegl_create_chain (clip->filter_graph, filter_start, filter_end,
-                       clip->edl->frame_no - clip->abs_start,
-                       1.0, NULL, &error);
+      gegl_create_chain (clip->filter_graph, filter_start, filter_end,
+                         clip->edl->frame_no - clip->abs_start,
+                         1.0, NULL, &error);
     }
     ui_clip = clip;
   }
@@ -1892,6 +1942,7 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
       }
       else
         g_free (serialized_source);
+
       ui_tweaks = 0;
       changed ++;
 
@@ -2390,7 +2441,6 @@ void gedl_ui (Mrg *mrg, void *data)
       {
         mrg_add_binding (mrg, "x", NULL, "remove clip", remove_clip, edl);
         mrg_add_binding (mrg, "d", NULL, "duplicate clip", duplicate_clip, edl);
-        //mrg_add_binding (mrg, "i", NULL, "insert clip", insert, edl);
 
         if (edl->active_clip)
         {
