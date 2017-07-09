@@ -1456,6 +1456,16 @@ static void edit_string (MrgEvent *e, void *data1, void *data2)
   tweaked_state (e->mrg);
 }
 
+static void jump_to_pos (MrgEvent *e, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  gint pos = GPOINTER_TO_INT(data2);
+
+  fprintf (stderr, "set frame %i\n", pos);
+  edl->frame_no = pos;
+  mrg_event_stop_propagate (e);
+  mrg_queue_draw (e->mrg, NULL);
+}
 
 static void end_edit (MrgEvent *e, void *data1, void *data2)
 {
@@ -1500,7 +1510,7 @@ static void drag_double_slider (MrgEvent *e, void *data1, void *data2)
     for (i = 0; i < nodes; i ++)
     {
       gegl_path_get_node (path, i, &path_item);
-      if (fabs (path_item.point[0].x - clip_frame_no) < 0.01)
+      if (fabs (path_item.point[0].x - clip_frame_no) < 0.5)
       {
         path_item.point[0].x = clip_frame_no;
         path_item.point[0].y = new_val;
@@ -1759,13 +1769,32 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
            y = VID_HEIGHT * 0.9 - ((y - miny) / (maxy - miny)) * VID_HEIGHT * 0.8;
            cairo_line_to (cr, i, y);
          }
-       }
 
 
        cairo_restore (cr);
        cairo_set_line_width (cr, 2.0);
-       cairo_set_source_rgba (cr, 1.0, 0.0, 0.0, 255);
+       cairo_set_source_rgba (cr, 1.0, 0.5, 0.5, 255);
        cairo_stroke (cr);
+       cairo_save (cr);
+
+       cairo_translate (cr,  ((edl->active_clip?edl->active_clip->abs_start:0)-edl->t0) * 1.0 / edl->scale,
+                        mrg_height (mrg) * SPLIT_VER);
+
+       cairo_set_source_rgba (cr, 1.0, 0.5, 0.5, 255);
+           int nodes = gegl_path_get_n_nodes (path);
+           GeglPathItem path_item;
+
+          for (i = 0; i < nodes; i ++)
+          {
+            gegl_path_get_node (path, i, &path_item);
+
+            cairo_arc (cr, path_item.point[0].x * 1.0/edl->scale, -0.5 * mrg_em (mrg),
+                       mrg_em (mrg) * 0.5, 0.0, 3.1415*2);
+            mrg_listen (mrg, MRG_PRESS, jump_to_pos, edl, GINT_TO_POINTER( (int)(path_item.point[0].x + edl->active_clip->abs_start)));
+            cairo_fill (cr);
+          }
+       cairo_restore (cr);
+       }
     }
     if (g_object_get_qdata (G_OBJECT (node), g_quark_from_string (props[i]->name)))
        mrg_printf (mrg, "{???}");
