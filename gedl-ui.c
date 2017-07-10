@@ -1563,6 +1563,46 @@ done:
   tweaked_state (e->mrg);
 }
 
+
+static void remove_key (MrgEvent *e, void *data1, void *data2)
+{
+  gpointer *data = data1;
+  GeglEDL             *edl   = data[0];
+  GeglNode            *node  = data[1];
+  const char          *pname = data[2];
+  int  clip_frame_no  = GPOINTER_TO_INT(data[3]);
+  char tmpbuf[1024];
+  sprintf (tmpbuf, "%s-anim", pname);
+  GQuark anim_quark = g_quark_from_string (tmpbuf);
+
+  fprintf (stderr, "remove key %p %s %i\n", node, pname, clip_frame_no);
+
+  if (g_object_get_qdata (G_OBJECT (node), anim_quark))
+  {
+    GeglPath *path = g_object_get_qdata (G_OBJECT (node), anim_quark);
+    int nodes = gegl_path_get_n_nodes (path);
+    int i;
+    int clip_frame_no=0;
+    GeglPathItem path_item;
+    gedl_get_clip (edl, edl->frame_no, &clip_frame_no);
+
+    for (i = 0; i < nodes; i ++)
+    {
+      gegl_path_get_node (path, i, &path_item);
+      if (fabs (path_item.point[0].x - clip_frame_no) < 0.5)
+      {
+        gegl_path_remove_node (path, i);
+        break;
+      }
+    }
+  }
+
+  mrg_queue_draw (e->mrg, NULL);
+  mrg_event_stop_propagate (e);
+  changed++;
+  tweaked_state (e->mrg);
+}
+
 static void drag_int_slider (MrgEvent *e, void *data1, void *data2)
 {
   GeglParamSpecInt *gspec = (void*)data2;
@@ -1638,11 +1678,13 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
       cairo_save (mrg_cr (mrg));
       cairo_scale (mrg_cr (mrg), width, 1.0);
 
+      {
       gpointer *data = g_new0 (gpointer, 3);
       data[0]=edl;
       data[1]=node;
       data[2]=gspec;
       mrg_listen_full (mrg, MRG_DRAG, drag_double_slider, data, gspec, (void*)g_free, NULL);
+      }
 
       cairo_restore (mrg_cr (mrg));
       cairo_set_source_rgba (mrg_cr (mrg), 1,1,1,1.0);
@@ -1752,7 +1794,31 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
     if (g_object_get_qdata (G_OBJECT (node), anim_quark))
     {
        GeglPath *path = g_object_get_qdata (G_OBJECT (node), anim_quark);
+       int clip_frame_no;
+       gedl_get_clip (edl, edl->frame_no, &clip_frame_no);
        mrg_printf (mrg, "{anim}");
+       {
+         GeglPathItem path_item;
+         int nodes = gegl_path_get_n_nodes (path);
+         int j;
+         for (j = 0 ; j < nodes; j ++)
+         {
+           gegl_path_get_node (path, j, &path_item);
+           if (fabs (path_item.point[0].x - clip_frame_no) < 0.5)
+           {
+      gpointer *data = g_new0 (gpointer, 4);
+      data[0]=edl;
+      data[1]=node;
+      data[2]=(void*)g_intern_string(props[i]->name);
+      data[3]=GINT_TO_POINTER(clip_frame_no);
+             mrg_text_listen_full (mrg, MRG_CLICK, remove_key, data, node, (void*)g_free, NULL);
+             mrg_printf (mrg, "(key)");
+             mrg_text_listen_done (mrg);
+           }
+         }
+         // if this prop has keyframe here - permit deleting it from
+         // here
+       }
 
        cairo_t *cr = mrg_cr (mrg);
 
@@ -1763,7 +1829,7 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
                         mrg_height (mrg) * SPLIT_VER);
 
        {
-         int i;
+         int j;
          gdouble y = 0.0;
          gdouble miny = 100000.0;
          gdouble maxy = -100000.0;
@@ -1771,9 +1837,9 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
          // todo: draw markers for zero, min and max, with labels
          //       do all curves in one scaled space? - will break for 2 or more magnitudes diffs
 
-         for (i = -10; i < clip_get_frames (edl->active_clip) + 10; i ++)
+         for (j = -10; j < clip_get_frames (edl->active_clip) + 10; j ++)
          {
-           gegl_path_calc_y_for_x (path, i, &y);
+           gegl_path_calc_y_for_x (path, j, &y);
            if (y < miny) miny = y;
            if (y > maxy) maxy = y;
          }
@@ -1782,11 +1848,11 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
          gegl_path_calc_y_for_x (path, 0, &y);
          y = VID_HEIGHT * 0.9 - ((y - miny) / (maxy - miny)) * VID_HEIGHT * 0.8;
          cairo_move_to (cr, 0, y);
-         for (i = -10; i < clip_get_frames (edl->active_clip) + 10; i ++)
+         for (j = -10; j < clip_get_frames (edl->active_clip) + 10; j ++)
          {
-           gegl_path_calc_y_for_x (path, i, &y);
+           gegl_path_calc_y_for_x (path, j, &y);
            y = VID_HEIGHT * 0.9 - ((y - miny) / (maxy - miny)) * VID_HEIGHT * 0.8;
-           cairo_line_to (cr, i, y);
+           cairo_line_to (cr, j, y);
          }
 
 
@@ -1803,9 +1869,9 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
            int nodes = gegl_path_get_n_nodes (path);
            GeglPathItem path_item;
 
-          for (i = 0; i < nodes; i ++)
+          for (j = 0; j < nodes; j ++)
           {
-            gegl_path_get_node (path, i, &path_item);
+            gegl_path_get_node (path, j, &path_item);
 
             cairo_arc (cr, path_item.point[0].x * 1.0/edl->scale, -0.5 * mrg_em (mrg),
                        mrg_em (mrg) * 0.5, 0.0, 3.1415*2);
