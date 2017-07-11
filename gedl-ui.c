@@ -617,26 +617,13 @@ static void make_rel_props (GeglNode *node)
   }
 }
 
-static void insert_filter (MrgEvent *event, void *data1, void *data2)
-{
-  GeglEDL *edl = data1;
 
-  if (!edl->active_clip)
-    return;
-
-  if (!selected_node)
-  {
-    selected_node = filter_start;
-    fprintf (stderr, "%p\n", filter_start);
-  }
-
+  void insert_node (GeglNode *selected_node, GeglNode *new)
   {
     GeglNode **nodes = NULL;
-    GeglNode *new = NULL;
     const gchar **pads = NULL;
 
     int count = gegl_node_get_consumers (selected_node, "output", &nodes, &pads);
-    new = gegl_node_new_child (edl->gegl, "operation", "gegl:unsharp-mask", NULL);
     make_rel_props (new);
 
     gegl_node_link_many (selected_node, new, NULL);
@@ -644,10 +631,29 @@ static void insert_filter (MrgEvent *event, void *data1, void *data2)
     {
       gegl_node_connect_to (new, "output", nodes[0], pads[0]);
     }
-    selected_node = new;
   }
-  ui_tweaks++;
-  gedl_cache_invalid (edl);
+
+char *filter_query = NULL;
+
+static void insert_filter (MrgEvent *event, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+
+  if (!edl->active_clip)
+    return;
+
+  filter_query = g_strdup ("");
+  mrg_set_cursor_pos (event->mrg, 0);
+
+  if (!selected_node)
+    selected_node = filter_start;
+
+#if 0
+  GeglNode *new = NULL;
+  new = gegl_node_new_child (edl->gegl, "operation", "gegl:unsharp-mask", NULL);
+  insert_node (selected_node, new);
+  selected_node = new;
+#endif
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 
@@ -2042,6 +2048,7 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
         }
         clip->filter_graph = serialized_filter;
         g_free (old);
+        fprintf (stderr, "{%s}\n", clip->filter_graph);
       }
       else
         g_free (serialized_filter);
@@ -2082,6 +2089,100 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
     }
   }
 }
+
+/* XXX: add some constarint?  like having input, or output pad or both - or
+ * being a specific subclass - as well as sort, so that best (prefix_) match
+ * comes first
+ */
+char **gedl_get_completions (const char *filter_query)
+{
+  gchar **completions = NULL;
+  gchar **operations = gegl_list_operations (NULL);
+  gchar *alloc = NULL;
+  int matches = 0;
+  int memlen = sizeof (gpointer);
+
+  // score matches, sort them - and default to best
+
+  for (int i = 0; operations[i]; i++)
+  {
+    if (strstr (operations[i], filter_query))
+    {
+      matches ++;
+      memlen += strlen (operations[i]) + 1 + sizeof (gpointer);
+    }
+  }
+
+  completions = g_malloc0 (memlen);
+  alloc = ((void*)completions) + (matches + 1) * sizeof (gpointer);
+
+  int match = 0;
+  for (int i = 0; operations[i]; i++)
+  {
+    if (strstr (operations[i], filter_query))
+    {
+      completions[match] = alloc;
+      strcpy (alloc, operations[i]);
+      alloc += strlen (alloc) + 1;
+      match++;
+    }
+  }
+  g_free (operations);
+
+  if (match == 0)
+  {
+    return NULL;
+    g_free (completions);
+  }
+  return completions;
+}
+
+static void complete_filter_query_edit (MrgEvent *e, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  gchar **completions = gedl_get_completions (filter_query);
+  if (!selected_node)
+    selected_node = filter_start;
+
+  if (!completions)
+    return;
+
+  GeglNode *new = NULL;
+  new = gegl_node_new_child (edl->gegl, "operation", completions[0], NULL);
+  if (filter_query)
+    g_free (filter_query);
+  filter_query = NULL;
+  insert_node (selected_node, new);
+  selected_node = new;
+
+
+  g_free (completions);
+  ui_tweaks++;
+  gedl_cache_invalid (edl);
+  mrg_queue_draw (e->mrg, NULL);
+  mrg_event_stop_propagate (e);
+}
+
+static void end_filter_query_edit (MrgEvent *e, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  if (filter_query)
+    g_free (filter_query);
+  filter_query = NULL;
+  mrg_event_stop_propagate (e);
+  
+  ui_tweaks++;
+  gedl_cache_invalid (edl);
+  mrg_queue_draw (e->mrg, NULL);
+}
+
+static void update_filter_query (const char *new_string, void *user_data)
+{
+  if (filter_query)
+    g_free (filter_query);
+  filter_query = g_strdup (new_string);
+}
+
 
 void gedl_draw (Mrg     *mrg,
                 GeglEDL *edl,
@@ -2132,6 +2233,33 @@ void gedl_draw (Mrg     *mrg,
       y2 -= mrg_em (mrg) * 1.5;
     }
     y2 = print_nodes (mrg, edl, filter_start, mrg_em (mrg), y2);
+
+    if (filter_query)
+    {
+      mrg_set_xy (mrg, mrg_em(mrg) * 1, y2);
+      mrg_edit_start (mrg, update_filter_query, edl);
+      mrg_printf (mrg, "%s", filter_query);
+      mrg_edit_end (mrg);
+    
+      mrg_add_binding (mrg, "escape", NULL, "end edit", end_filter_query_edit, edl);
+      mrg_add_binding (mrg, "return", NULL, "end edit", complete_filter_query_edit, edl);
+
+      // XXX: print completions that are clickable?
+      {
+        gchar **operations = gedl_get_completions (filter_query);
+        mrg_start (mrg, NULL, NULL);
+        mrg_set_xy (mrg, mrg_em(mrg) * 1, mrg_height (mrg) * SPLIT_VER + mrg_em (mrg));
+        gint matches=0;
+        for (int i = 0; operations[i] && matches < 40; i++)
+          {
+            mrg_printf (mrg, "%s", operations[i]);
+            mrg_printf (mrg, " ");
+            matches ++;
+          }
+        mrg_end(mrg);
+        g_free (operations);
+      }
+    }
   }
 
   cairo_set_source_rgba (cr, 1, 1,1, 1);
@@ -2384,10 +2512,14 @@ gchar *message = NULL;
 extern int cache_hits;
 extern int cache_misses;
 
+long babl_ticks (void);
+
 void gedl_ui (Mrg *mrg, void *data)
 {
   State *o = data;
   GeglEDL *edl = o->edl;
+
+  int long start_time = babl_ticks ();
 
   mrg_stylesheet_add (mrg, css, NULL, 0, NULL);
   mrg_set_style (mrg, "font-size: 11px");
@@ -2454,6 +2586,7 @@ void gedl_ui (Mrg *mrg, void *data)
      break;
   }
 
+  fprintf (stderr, "%f\n", 1.0 / ((babl_ticks () - start_time)/1000.0/ 1000.0));
   if (edl->ui_mode != GEDL_UI_MODE_NONE)
   {
 
@@ -2503,6 +2636,7 @@ void gedl_ui (Mrg *mrg, void *data)
 
   if (!edl->clip_query_edited &&
       !edl->filter_edited &&
+      !filter_query &&
       !snode)
   {
     mrg_add_binding (mrg, "F1", NULL, "toggle help", toggle_help, edl);
@@ -2665,6 +2799,8 @@ void gedl_ui (Mrg *mrg, void *data)
      case GEDL_UI_MODE_NONE:
         break;
   }
+
+  fprintf (stderr, "b:%f\n", 1.0 / ((babl_ticks () - start_time)/1000.0/ 1000.0));
 }
 
 gboolean cache_renderer_iteration (Mrg *mrg, gpointer data)
@@ -2708,7 +2844,7 @@ int gedl_ui_main (GeglEDL *edl)
   mrg_add_timeout (mrg, 90 /* seconds */  * 1000, cache_renderer_iteration, edl);
 
   gedl_get_duration (edl);
-  mrg_set_target_fps (mrg, -1);
+  //mrg_set_target_fps (mrg, -1);
 //  gedl_set_use_proxies (edl, 1);
   toggle_use_proxies (NULL, edl, NULL);
   renderer_start (edl);
