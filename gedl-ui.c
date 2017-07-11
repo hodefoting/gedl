@@ -604,11 +604,15 @@ static void make_rel_props (GeglNode *node)
 
   for (int i = 0; i <n_props; i ++)
   {
-    char tmpbuf[1024];
-    sprintf (tmpbuf, "%s-rel", props[i]->name);
-    GQuark rel_quark = g_quark_from_string (tmpbuf);
-   
-    g_object_set_qdata_full (G_OBJECT(node), rel_quark,  g_strdup("foo"), g_free);
+    const char *unit = gegl_operation_get_property_key (gegl_node_get_operation (node), props[i]->name, "unit");
+
+    if (unit && !strcmp (unit, "pixel-distance"))
+    {
+      char tmpbuf[1024];
+      sprintf (tmpbuf, "%s-rel", props[i]->name);
+      GQuark rel_quark = g_quark_from_string (tmpbuf);
+      g_object_set_qdata_full (G_OBJECT(node), rel_quark,  g_strdup("foo"), g_free);
+    }
 
   }
 }
