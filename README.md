@@ -59,7 +59,7 @@ https://www.youtube.com/watch?v=n91QbTMawuc
    SDL-1.2
    ffmpeg
 
-### File format tutorial
+### File format
 
 An example gedl edl file is as follows:
 
@@ -102,14 +102,6 @@ with something like the following:
 The output settings  for video-width, video-height and fps have been detected
 from the first video clip - gedl works well if all clips have the same fps.
 
-One way to speed up gedl ui editing is to set a low resolution and the key
-use-proxies to 1, then gedl will generate thumbnail videos - this is a useful
-way to bring the video resolution down termporarily to do the rough edit before
-tuning full resolution (you can also toggle between these by entering the
-resolutions). (todo: configure a preview resolution as well as a target
-resolution - and toggle which of them is active - with proxy generation only
-for preview resolution.. and slave render / caching to target resolution.
-
 After each clip a gegl image processing chain following the format documented
 at http://gegl.org/gegl-chain.html
 
@@ -124,7 +116,18 @@ permits the pipeline to be used for proxies as well as for full size video.
 
 Values can also be keyframed by supplying them inside inside curly brackets,
 containg keyframe=value pairs in a clip local interpolated time space {0=3.0
-3=0.2 10=}.
+3=0.2 10=}. The format for the animated properties are likely to change as
+the current place-holder linear only format is supplanted.
+
+### future plans
+
+Elements acting on top of the single-track timeline, possibly covering all the
+timeline or just some clips. For filtering/replacing/overlaying video/audio.
+This working similar to annotations/comments, that float with clips as
+preceding clips in the timeline change duration / position. This should expand
+the possible feature scope to video picture in picture, global color / mood
+adjustments - audio bleeping, mixing in music - and probably more.
+
 
 ### caching architecture
 
