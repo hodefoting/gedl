@@ -9,7 +9,6 @@
 #include <mrg.h>
 #include <gegl.h>
 #include "gedl.h"
-#include "renderer.h"
 #include <gegl-paramspecs.h>
 
 static int exited = 0;

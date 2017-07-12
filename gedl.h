@@ -236,4 +236,13 @@ void remove_in_betweens (GeglNode *nop_scaled, GeglNode *nop_filtered);
 int  is_connected (GeglNode *a, GeglNode *b);
 void gedl_update_buffer (GeglEDL *edl);
 
+#ifdef MICRO_RAPTOR_GUI
+ /* renderer.h */
+void renderer_toggle_playing (MrgEvent *event, void *data1, void *data2);
+void gedl_cache_invalid (GeglEDL *edl);
+int renderer_done (GeglEDL *edl);
+void renderer_start (GeglEDL *edl);
+
+#endif
+
 #endif
