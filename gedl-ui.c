@@ -2585,7 +2585,7 @@ void gedl_ui (Mrg *mrg, void *data)
      break;
   }
 
-  fprintf (stderr, "%f\n", 1.0 / ((babl_ticks () - start_time)/1000.0/ 1000.0));
+  if(0)fprintf (stderr, "%f\n", 1.0 / ((babl_ticks () - start_time)/1000.0/ 1000.0));
   if (edl->ui_mode != GEDL_UI_MODE_NONE)
   {
 
@@ -2799,7 +2799,7 @@ void gedl_ui (Mrg *mrg, void *data)
         break;
   }
 
-  fprintf (stderr, "b:%f\n", 1.0 / ((babl_ticks () - start_time)/1000.0/ 1000.0));
+  if(0)fprintf (stderr, "b:%f\n", 1.0 / ((babl_ticks () - start_time)/1000.0/ 1000.0));
 }
 
 gboolean cache_renderer_iteration (Mrg *mrg, gpointer data)
