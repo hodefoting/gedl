@@ -20,20 +20,20 @@ https://patreon.com/pippin
 
 ### Features
 
--single-track editing, with cross fades
--tuning of in/out points.
--video audio correctly cut
--shuffling of clips
--background render processes rendering target-resolution cached frames.
--proxy media support, permits editing with scaled down files for interactive speeds when editing workstation cannot deal with fullhd / 4k source footage at interactive speeds.
--ui preview renderer using proxies - in separate thread for ui drawing/interaction; to keep it from blocking interaction.
--drag and drop of media from desktop file managers
--editing filter op chains per clip
--editing frame-source chains for clips (media files like images and video get implicit graphs)
--tuning scalar/string/boolean properties of ops
--animating scalar properties of ops (only linear interpolation/key-framing for
+ - single-track editing, with cross fades
+ - tuning of in/out points.
+ - video audio correctly cut
+ - shuffling of clips
+ - background render processes rendering target-resolution cached frames.
+ - proxy media support, permits editing with scaled down files for interactive speeds when editing workstation cannot deal with fullhd / 4k source footage at interactive speeds.
+ - ui preview renderer using proxies - in separate thread for ui drawing/interaction; to keep it from blocking interaction.
+ - drag and drop of media from desktop file managers
+ - editing filter op chains per clip
+ - editing frame-source chains for clips (media files like images and video get implicit graphs)
+ - tuning scalar/string/boolean properties of ops
+ - animating scalar properties of ops (only linear interpolation/key-framing for
 now)
--timestamped auto-save
+ - timestamped auto-save
 
 ### UI hints
 
