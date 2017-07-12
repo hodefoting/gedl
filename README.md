@@ -3,29 +3,14 @@
 ## GEGL Edit Decision List
 
 GEGL is a video editing engine using GEGL. It uses video frame input and output
-sources in GEGL that decode and encode video frames along with gegl-chain to
-provide a system for using GIMPs image processing engine and operations also
-for processing video.
+sources in GEGL that decode and encode video frames along with a
+commandline/oneliner friendly sparse serialization format. The same
+serialization format that can be used with the gegl binary to do commandline
+image processing.
 
-A graphical user interface that is evolving together with a human readable and
-a custom human extendable text-file format is available for gedl, rewriting the
-UI in lua and calling it gcut is being considered.
-
-The low-resolution editing proxies gedl makes it possible to edit fullhd videos from SLRs on lightweight underpowered computers - rendering out full resolution video that these devices can just about play.
-
-gedl stores cached rendered frames as single jpgs or pngs, the names are the
-hash of input data and relevant filters and frame. As meta-data for each image
-file the corresponding PCM data is stored as meta-data. This reproducible cache
-per frame permits shared multi-process background rendering, making good use of
-multi-core machines. (It is possible some clever use of shell-scripts and rsync
-would be enough to be able to use a more powerful server for doing the
-rendering and transfering rendered frames back into cache.)
-
-The GEGL video from Libre Graphics Meeting 2016 in London,
-https://www.youtube.com/watch?v=GJJPgLGrSgc was made from raw footage using
-gedl, the default testproject of gedl which is in this repo as default.edl
-produces the following video when rendered:
-https://www.youtube.com/watch?v=n91QbTMawuc
+At the moment there is two interfaces to gedl, the text-file format, and gcut a
+microraptor gui interface. There are plans for forking gcut with a partial lua
+rewrite and maintaining both front ends for a while.
 
 ![screenshot](http://pippin.gimp.org/gedl/gedl-help.png)
 
@@ -35,13 +20,20 @@ https://patreon.com/pippin
 
 ### Features
 
- - animated (key-framed) nodal video sources
- - animated (key-framed) nodal per clip filters
- - cross fading
- - single track editing UI
- - context sensitive keyboard help
- - drag and drop of videos/images from file managers
- - proxy editing, permitting editing high-res video results on low powered computers
+-single-track editing, with cross fades
+-tuning of in/out points.
+-video audio correctly cut
+-shuffling of clips
+-background render processes rendering target-resolution cached frames.
+-proxy media support, permits editing with scaled down files for interactive speeds when editing workstation cannot deal with fullhd / 4k source footage at interactive speeds.
+-ui preview renderer using proxies - in separate thread for ui drawing/interaction; to keep it from blocking interaction.
+-drag and drop of media from desktop file managers
+-editing filter op chains per clip
+-editing frame-source chains for clips (media files like images and video get implicit graphs)
+-tuning scalar/string/boolean properties of ops
+-animating scalar properties of ops (only linear interpolation/key-framing for
+now)
+-timestamped auto-save
 
 ### UI hints
 
@@ -51,12 +43,23 @@ are different for the first and last frames of a clip compared with the
 mid-clip frames, when jumping between clips with up/down arrows, one jumps
 between the first frames of clips.
 
+### Example output
+
+The GEGL video from Libre Graphics Meeting 2016 in London,
+https://www.youtube.com/watch?v=GJJPgLGrSgc was made from raw footage using
+gedl, the default testproject of gedl which is in this repo as default.edl
+produces the following video when rendered the first time (TODO: update this
+video with newer render):
+https://www.youtube.com/watch?v=n91QbTMawuc
+
 ### Dependencies:
 
    gegl-0.3.16  http://gegl.org/
    mrg          https://github.com/hodefoting/mrg/
    SDL-1.2
    ffmpeg
+
+### File format tutorial
 
 An example gedl edl file is as follows:
 
