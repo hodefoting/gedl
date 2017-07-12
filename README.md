@@ -12,7 +12,7 @@ At the moment there is two interfaces to gedl, the text-file format, and gcut a
 microraptor gui interface. There are plans for forking gcut with a partial lua
 rewrite and maintaining both front ends for a while.
 
-![screenshot](http://pippin.gimp.org/gedl/gedl-help.png)
+![screenshot](http://pippin.gimp.org/gedl/gedl2.png)
 
 Creating this experiment and improving the underlying technologies to make it
 possible, was made possible through community sponsorship via
