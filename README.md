@@ -59,8 +59,8 @@ preceding clips in the timeline change duration / position. This should expand
 the possible feature scope to video picture in picture, global color / mood
 adjustments - audio bleeping, mixing in music - and probably more.
 
-A likely more maintained list of issues and tasks for development are
-maintained at the top of [gedl.h](https://github.com/hodefoting/gedl/blob/master/gedl.h)
+See [gedl.h](https://github.com/hodefoting/gedl/blob/master/gedl.h) for more
+up-to date plans and documentation of at least some of the known issues.
 
 ### UI hints
 

@@ -12,6 +12,10 @@
       rescaling playback speed of clips
       support importing clips of different fps
 
+      support for configuring the final background render to be as high
+      fidelity as GEGL processing allows - rather than sharing tuning for
+      preview rendering.
+
       support for other timecodes, mm:ss:ff and s
       using edl files as clip sources - hopefully without even needing caches.
 
