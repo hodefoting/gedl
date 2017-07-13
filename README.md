@@ -75,10 +75,15 @@ pre-GEGL 2004era video editor called bauxite, gegl:ff-load and gegl:ff-save,
 which provide the ability to load and save a specific video frame, and
 associated audio, for video files. It could be possible to add alternatives to
 these operations using for instance gstreamer, and the rest of gedl would
-remain unchanged. It is planned to rewrite the UI part from C to lua aiming for
-shorter interaction cycles during development - less fragile code to open up
-for easier outside contributions, as well as learning from mistakes in the UI
-prototype proof of concept written in C - both of them with microraptor gui.
+remain unchanged.
+
+It is planned to rewrite the UI part from C to lua, even if even this C ui is
+very young, it will however use the same toolkit, cairo and microraptor gui,
+aiming for shorter interaction cycles during development and less fragile code
+and opening up for easier outside contributions, as well as learning from
+mistakes and short comings in the UI prototype proof of concept written in C,
+with mrg and cairo, anything that can be drawn can be made interactive, thus at
+least editing animation curves could be made a lot more visual and interactive.
 
 ### UI hints
 
