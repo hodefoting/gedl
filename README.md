@@ -2,18 +2,11 @@
 
 ## GEGL Edit Decision List
 
-GEGL is a video editing engine using GEGL. It uses video frame input and output
+gedl is a video editing engine using GEGL. It uses video frame input and output
 sources in GEGL that decode and encode video frames along with a
 commandline/oneliner friendly sparse serialization format. The same
 serialization format that can be used with the gegl binary to do commandline
 image processing.
-
-At the moment there is two interfaces to gedl, the text-file format, and gcut a
-microraptor gui interface. There are plans for forking gcut with a partial lua
-rewrite and maintaining both front ends for a while.
-
-![screenshot](http://pippin.gimp.org/gedl/gedl-help.png)
-![screenshot](http://pippin.gimp.org/gedl/gedl2.png)
 
 ### Features
 
@@ -31,6 +24,31 @@ rewrite and maintaining both front ends for a while.
  - animating scalar properties of ops (only linear interpolation/key-framing for
 now)
  - timestamped auto-save
+
+### Screenshots
+
+The basic view, with the F1 keyboard shortcut help overlaid over the video.
+
+![screenshot](http://pippin.gimp.org/gedl/gedl-help.png)
+
+In this screenshot, showing the purely synthetic used gegl operations default
+project of gedl. Showing visualization of keyframed parameters and permit
+setting them through sliders. Slanted clip transitions indicates cross-fades.
+Note that the current UI is the first attempt at a direct mapping of the file
+format.
+
+![screenshot](http://pippin.gimp.org/gedl/gedl2.png)
+
+
+### Example output
+
+The GEGL video from Libre Graphics Meeting 2016 in London,
+https://www.youtube.com/watch?v=GJJPgLGrSgc was made from raw footage using
+gedl, the default testproject of gedl which is in this repo as default.edl
+produces the following video when rendered the first time (TODO: update this
+video with newer render):
+https://www.youtube.com/watch?v=n91QbTMawuc
+
 
 ### Development plans
 
@@ -52,14 +70,6 @@ are different for the first and last frames of a clip compared with the
 mid-clip frames, when jumping between clips with up/down arrows, one jumps
 between the first frames of clips.
 
-### Example output
-
-The GEGL video from Libre Graphics Meeting 2016 in London,
-https://www.youtube.com/watch?v=GJJPgLGrSgc was made from raw footage using
-gedl, the default testproject of gedl which is in this repo as default.edl
-produces the following video when rendered the first time (TODO: update this
-video with newer render):
-https://www.youtube.com/watch?v=n91QbTMawuc
 
 ### Dependencies:
 
