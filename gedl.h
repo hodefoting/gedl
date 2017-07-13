@@ -25,6 +25,7 @@
         subtitles
 
     ui
+      port gedl-ui.c to lua
       detect locked or crashed ui, kill and respawn
       trimming by mouse / dragging clips around by mouse
       show a modal ui-block when generating proxies/thumbtrack on media import, instead of blocking/being blank

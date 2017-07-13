@@ -62,6 +62,16 @@ adjustments - audio bleeping, mixing in music - and probably more.
 See [gedl.h](https://github.com/hodefoting/gedl/blob/master/gedl.h) for more
 up-to date plans and documentation of at least some of the known issues.
 
+The amount of code, written in C is about equally divided 50/50 between the
+core rendering logic in C and the UI, both about 3000 lines. All the actual
+work and flexibility is provided by GEGL itself, new operations become
+automatically available in both GIMP and gedl when they are added to GEGL the
+system.  Two ops in particular in GEGL which trace their history back to a
+pre-GEGL 2004era video editor called bauxite, gegl:ff-load and gegl:ff-save,
+which provide the ability to load and save a specific video frame in a video
+file, 
+
+
 ### UI hints
 
 The current UI is the minimal amount of UI needed for keyboard centered editing
@@ -133,10 +143,10 @@ pipelines with interpolated parameters as filters on a video clip. The suffix
 rel used in the gaussian blur is dependant on the height of the video - this
 permits the pipeline to be used for proxies as well as for full size video.
 
-Values can also be keyframed by supplying them inside inside curly brackets,
+Values can also be animated by supplying them inside inside curly brackets,
 containg keyframe=value pairs in a clip local interpolated time space {0=3.0
-3=0.2 10=}. The format for the animated properties are likely to change as
-the current place-holder linear only format is supplanted.
+3=0.2 10=}. The format for the animated properties are likely to change as the
+current place-holder linear only format is supplanted.
 
 ### caching architecture
 
