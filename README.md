@@ -52,6 +52,10 @@ https://www.youtube.com/watch?v=n91QbTMawuc
 
 ### Development plans
 
+The UI is written using microraptor gui, which means that things that can be
+done with simple HTML+CSS or drawn using cairo when programming can be made
+interactive in the local coordiantes drawn with for callbacks. 
+
 Elements acting on top of the single-track timeline, possibly covering all the
 timeline or just some clips. For filtering/replacing/overlaying video/audio.
 This working similar to annotations/comments, that float with clips as
@@ -68,9 +72,13 @@ work and flexibility is provided by GEGL itself, new operations become
 automatically available in both GIMP and gedl when they are added to GEGL the
 system.  Two ops in particular in GEGL which trace their history back to a
 pre-GEGL 2004era video editor called bauxite, gegl:ff-load and gegl:ff-save,
-which provide the ability to load and save a specific video frame in a video
-file, 
-
+which provide the ability to load and save a specific video frame, and
+associated audio, for video files. It could be possible to add alternatives to
+these operations using for instance gstreamer, and the rest of gedl would
+remain unchanged. It is planned to rewrite the UI part from C to lua aiming for
+shorter interaction cycles during development - less fragile code to open up
+for easier outside contributions, as well as learning from mistakes in the UI
+prototype proof of concept written in C - both of them with microraptor gui.
 
 ### UI hints
 
