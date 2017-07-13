@@ -6,9 +6,21 @@
     ogv render files are more compatible than generated mp4 files, firefox among few that renders the mp4 in audio sync
 
   roadmap/missing features
+    move gedl to gegl git repo
+
+    engine
+      rescaling playback speed of clips
+      support importing clips of different fps
+
+      support for other timecodes, mm:ss:ff and s
+      using edl files as clip sources - hopefully without even needing caches.
+
+      global filters
+        overlaying of audio from wav / mp3 files
+        operation chains
+        subtitles
 
     ui
-      move gedl to gegl git repo
       detect locked or crashed ui, kill and respawn
       trimming by mouse / dragging clips around by mouse
       show a modal ui-block when generating proxies/thumbtrack on media import, instead of blocking/being blank
@@ -16,12 +28,6 @@
       insert videos from the commandline
       ui for adding/editing global filters/annotation/sound bits/beeps
 
-    support for other timecodes, mm:ss:ff and s
-    using edl files as clip sources - hopefully without even needing caches.
-
-    global filters
-      overlaying of audio from wav / mp3 files
-      subtitles - subitles should be easy to do across clips, thus belongs here
 
 #endif
 

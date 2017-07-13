@@ -12,11 +12,8 @@ At the moment there is two interfaces to gedl, the text-file format, and gcut a
 microraptor gui interface. There are plans for forking gcut with a partial lua
 rewrite and maintaining both front ends for a while.
 
+![screenshot](http://pippin.gimp.org/gedl/gedl-help.png)
 ![screenshot](http://pippin.gimp.org/gedl/gedl2.png)
-
-Creating this experiment and improving the underlying technologies to make it
-possible, was made possible through community sponsorship via
-https://patreon.com/pippin
 
 ### Features
 
@@ -34,6 +31,18 @@ https://patreon.com/pippin
  - animating scalar properties of ops (only linear interpolation/key-framing for
 now)
  - timestamped auto-save
+
+### Development plans
+
+Elements acting on top of the single-track timeline, possibly covering all the
+timeline or just some clips. For filtering/replacing/overlaying video/audio.
+This working similar to annotations/comments, that float with clips as
+preceding clips in the timeline change duration / position. This should expand
+the possible feature scope to video picture in picture, global color / mood
+adjustments - audio bleeping, mixing in music - and probably more.
+
+A likely more maintained list of issues and tasks for development are
+maintained at the top of [gedl.h](https://github.com/hodefoting/gedl/blob/master/gedl.h)
 
 ### UI hints
 
@@ -118,16 +127,6 @@ Values can also be keyframed by supplying them inside inside curly brackets,
 containg keyframe=value pairs in a clip local interpolated time space {0=3.0
 3=0.2 10=}. The format for the animated properties are likely to change as
 the current place-holder linear only format is supplanted.
-
-### future plans
-
-Elements acting on top of the single-track timeline, possibly covering all the
-timeline or just some clips. For filtering/replacing/overlaying video/audio.
-This working similar to annotations/comments, that float with clips as
-preceding clips in the timeline change duration / position. This should expand
-the possible feature scope to video picture in picture, global color / mood
-adjustments - audio bleeping, mixing in music - and probably more.
-
 
 ### caching architecture
 
