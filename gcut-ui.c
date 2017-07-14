@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <mrg.h>
 #include <gegl.h>
-#include "gedl.h"
+#include "gcut.h"
 #include <gegl-paramspecs.h>
 
 static int exited = 0;
@@ -35,6 +35,7 @@ static void mrg_gegl_blit (Mrg *mrg,
                           GeglEDL *edl)
 {
   GeglRectangle bounds;
+  float scale = 1.0;
 
   cairo_t *cr = mrg_cr (mrg);
   cairo_surface_t *surface = NULL;
@@ -63,7 +64,6 @@ static void mrg_gegl_blit (Mrg *mrg,
     copy_buf_len = bounds.width * bounds.height * 4;
     copy_buf = malloc (copy_buf_len);
   }
-      float scale = 1.0;
   {
     static int foo = 0;
     unsigned char *buf = copy_buf;
@@ -168,6 +168,7 @@ static void insert_clip (GeglEDL *edl, const char *path,
   GList *iter;
   Clip *clip, *cur_clip;
   int end_frame = edl->frame_no;
+  int clip_frame_no;
   if (in < 0)
     in = 0;
   if (out < 0)
@@ -180,7 +181,7 @@ static void insert_clip (GeglEDL *edl, const char *path,
     }
     else
     {
-      gedl_get_video_info (path, &duration, NULL);
+      gcut_get_video_info (path, &duration, NULL);
       out = duration;
     }
     if (out < in)
@@ -188,15 +189,14 @@ static void insert_clip (GeglEDL *edl, const char *path,
   }
   clip = clip_new_full (edl, path, in, out);
   clip->title = g_strdup (basename (path));
-  int clip_frame_no;
-  cur_clip = gedl_get_clip (edl, edl->frame_no, &clip_frame_no);
+  cur_clip = gcut_get_clip (edl, edl->frame_no, &clip_frame_no);
 
   if (empty_selection (edl))
   {
-    gedl_get_duration (edl);
+    gcut_get_duration (edl);
     if (edl->frame_no != cur_clip->abs_start)
     {
-      gedl_get_duration (edl);
+      gcut_get_duration (edl);
       clip_split (cur_clip, clip_frame_no);
       cur_clip = edl_get_clip_for_frame (edl, edl->frame_no);
     }
@@ -205,6 +205,9 @@ static void insert_clip (GeglEDL *edl, const char *path,
   {
     Clip *last_clip;
     int sin, sout;
+    int cur_clip_frame_no;
+    int last_clip_frame_no;
+
     sin = edl->selection_start;
     sout = edl->selection_end + 1;
     if (sin > sout)
@@ -212,13 +215,11 @@ static void insert_clip (GeglEDL *edl, const char *path,
       sout = edl->selection_start + 1;
       sin = edl->selection_end;
     }
-    int cur_clip_frame_no;
-    cur_clip = gedl_get_clip (edl, sin, &cur_clip_frame_no);
+    cur_clip = gcut_get_clip (edl, sin, &cur_clip_frame_no);
     clip_split (cur_clip, cur_clip_frame_no);
-    gedl_get_duration (edl);
-    int last_clip_frame_no;
-    cur_clip = gedl_get_clip (edl, sin, &cur_clip_frame_no);
-    last_clip = gedl_get_clip (edl, sout, &last_clip_frame_no);
+    gcut_get_duration (edl);
+    cur_clip = gcut_get_clip (edl, sin, &cur_clip_frame_no);
+    last_clip = gcut_get_clip (edl, sout, &last_clip_frame_no);
     if (cur_clip == last_clip)
     {
       clip_split (last_clip, last_clip_frame_no);
@@ -242,7 +243,7 @@ static void insert_clip (GeglEDL *edl, const char *path,
 
   edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
 
-  gedl_make_proxies (edl);
+  gcut_make_proxies (edl);
 }
 
 static void drag_dropped (MrgEvent *ev, void *data1, void *data2)
@@ -351,14 +352,14 @@ static void stop_playing (MrgEvent *event, void *data1, void *data2)
 static void select_all (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  gint end = gedl_get_duration (edl) - 1;
+  gint end = gcut_get_duration (edl) - 1;
   if (edl->selection_start == 0 && edl->selection_end == end)
   {
-    gedl_set_selection (edl, 0, 0);
+    gcut_set_selection (edl, 0, 0);
   }
   else
   {
-    gedl_set_selection (edl, 0, end);
+    gcut_set_selection (edl, 0, end);
   }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -422,10 +423,10 @@ static void extend_selection_to_previous_cut (MrgEvent *event, void *data1, void
   int sel_start, sel_end;
   edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
 
-  gedl_get_selection (edl, &sel_start, &sel_end);
+  gcut_get_selection (edl, &sel_start, &sel_end);
   prev_cut (event, data1, data2);
   sel_start = edl->frame_no;
-  gedl_set_selection (edl, sel_start, sel_end);
+  gcut_set_selection (edl, sel_start, sel_end);
 
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -438,10 +439,10 @@ static void extend_selection_to_next_cut (MrgEvent *event, void *data1, void *da
   GeglEDL *edl = data1;
   int sel_start, sel_end;
 
-  gedl_get_selection (edl, &sel_start, &sel_end);
+  gcut_get_selection (edl, &sel_start, &sel_end);
   next_cut (event, data1, data2);
   sel_start = edl->frame_no;
-  gedl_set_selection (edl, sel_start, sel_end);
+  gcut_set_selection (edl, sel_start, sel_end);
 
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -453,7 +454,7 @@ static void extend_selection_to_the_left (MrgEvent *event, void *data1, void *da
   GeglEDL *edl = data1;
   int sel_start, sel_end;
 
-  gedl_get_selection (edl, &sel_start, &sel_end);
+  gcut_get_selection (edl, &sel_start, &sel_end);
   if (edl->frame_no == sel_end)
   {
     sel_end --;
@@ -470,7 +471,7 @@ static void extend_selection_to_the_left (MrgEvent *event, void *data1, void *da
     sel_end --;
     edl->frame_no --;
   }
-  gedl_set_selection (edl, sel_start, sel_end);
+  gcut_set_selection (edl, sel_start, sel_end);
 
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -483,7 +484,7 @@ static void extend_selection_to_the_right (MrgEvent *event, void *data1, void *d
   GeglEDL *edl = data1;
   int sel_start, sel_end;
 
-  gedl_get_selection (edl, &sel_start, &sel_end);
+  gcut_get_selection (edl, &sel_start, &sel_end);
   if (edl->frame_no == sel_end)
   {
     sel_end ++;
@@ -500,7 +501,7 @@ static void extend_selection_to_the_right (MrgEvent *event, void *data1, void *d
     sel_end ++;
     edl->frame_no ++;
   }
-  gedl_set_selection (edl, sel_start, sel_end);
+  gcut_set_selection (edl, sel_start, sel_end);
 
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -588,7 +589,7 @@ static void remove_clip (MrgEvent *event, void *data1, void *data2)
     clip_remove (edl->active_clip);
   }
 
-  gedl_cache_invalid (edl);
+  gcut_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -608,16 +609,16 @@ static void make_rel_props (GeglNode *node)
     if (unit && !strcmp (unit, "pixel-distance"))
     {
       char tmpbuf[1024];
+      GQuark rel_quark;
       sprintf (tmpbuf, "%s-rel", props[i]->name);
-      GQuark rel_quark = g_quark_from_string (tmpbuf);
+      rel_quark = g_quark_from_string (tmpbuf);
       g_object_set_qdata_full (G_OBJECT(node), rel_quark,  g_strdup("foo"), g_free);
     }
 
   }
 }
 
-
-  void insert_node (GeglNode *selected_node, GeglNode *new)
+static void insert_node (GeglNode *selected_node, GeglNode *new)
   {
     GeglNode **nodes = NULL;
     const gchar **pads = NULL;
@@ -681,11 +682,11 @@ static void toggle_use_proxies (MrgEvent *event, void *data1, void *data2)
 
   if (!edl->playing) // disallowing - to avoid some races
   {
-    gedl_set_use_proxies (edl, edl->use_proxies?0:1);
-    gedl_cache_invalid (edl);
+    gcut_set_use_proxies (edl, edl->use_proxies?0:1);
+    gcut_cache_invalid (edl);
 
     if (edl->use_proxies)
-      gedl_make_proxies (edl);
+      gcut_make_proxies (edl);
   }
 
   if (event)
@@ -713,7 +714,7 @@ static void split_clip (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
   int clip_frame_no = 0;
-  Clip *clip = gedl_get_clip (edl, edl->frame_no, &clip_frame_no);
+  Clip *clip = gcut_get_clip (edl, edl->frame_no, &clip_frame_no);
   if (!edl->active_clip)
     return;
 
@@ -727,7 +728,7 @@ static void split_clip (MrgEvent *event, void *data1, void *data2)
   {
     //edl->active_clip = clip;
   }
-  gedl_cache_invalid (edl);
+  gcut_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
@@ -748,7 +749,7 @@ static void toggle_fade (MrgEvent *event, void *data1, void *data2)
   {
     edl->active_clip->fade = (edl->frame - edl->active_clip->abs_start)*2;
   }
-  gedl_cache_invalid (edl);
+  gcut_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
@@ -768,7 +769,7 @@ static void duplicate_clip (MrgEvent *event, void *data1, void *data2)
       clip->filter_graph = g_strdup (edl->active_clip->filter_graph);
     edl->active_clip = clip;
   }
-  gedl_cache_invalid (edl);
+  gcut_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
   changed++;
@@ -787,7 +788,7 @@ static void save_edl (GeglEDL *edl)
 {
   if (edl->path)
   {
-    gedl_save_path (edl, edl->path);
+    gcut_save_path (edl, edl->path);
   }
 }
 
@@ -814,8 +815,8 @@ static void set_range (MrgEvent *event, void *data1, void *data2)
   GeglEDL *edl = data1;
   int start, end;
 
-  gedl_get_selection (edl, &start, &end);
-  gedl_set_range (edl, start, end);
+  gcut_get_selection (edl, &start, &end);
+  gcut_set_range (edl, start, end);
   mrg_queue_draw (event->mrg, NULL);
 }
 
@@ -973,7 +974,7 @@ static void clip_end_start_dec (MrgEvent *event, void *data1, void *data2)
   clip1->end--;
   clip2->start--;
   edl->frame_no--;
-  gedl_cache_invalid (edl);
+  gcut_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -998,7 +999,7 @@ static void clip_end_start_inc (MrgEvent *event, void *data1, void *data2)
   clip2->start++;
   edl->frame_no++;
 
-  gedl_cache_invalid (edl);
+  gcut_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -1011,7 +1012,7 @@ static void clip_start_end_inc (MrgEvent *event, void *data1, void *data2)
       edl->active_clip->end++;
       edl->active_clip->start++;
     }
-  gedl_cache_invalid (edl);
+  gcut_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -1024,7 +1025,7 @@ static void clip_start_end_dec (MrgEvent *event, void *data1, void *data2)
       edl->active_clip->end--;
       edl->active_clip->start--;
     }
-  gedl_cache_invalid (edl);
+  gcut_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -1037,7 +1038,7 @@ static void clip_end_inc (MrgEvent *event, void *data1, void *data2)
       edl->active_clip->end++;
       edl->frame_no++;
     }
-  gedl_cache_invalid (edl);
+  gcut_cache_invalid (edl);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -1049,7 +1050,7 @@ static void clip_end_dec (MrgEvent *event, void *data1, void *data2)
     {
       edl->active_clip->end--;
       edl->frame_no--;
-      gedl_cache_invalid (edl);
+      gcut_cache_invalid (edl);
     }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -1062,7 +1063,7 @@ static void clip_start_inc (MrgEvent *event, void *data1, void *data2)
   if (edl->active_clip)
     {
       edl->active_clip->start++;
-      gedl_cache_invalid (edl);
+      gcut_cache_invalid (edl);
     }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -1074,7 +1075,7 @@ static void clip_start_dec (MrgEvent *event, void *data1, void *data2)
   if (edl->active_clip)
     {
       edl->active_clip->start--;
-      gedl_cache_invalid (edl);
+      gcut_cache_invalid (edl);
     }
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
@@ -1088,7 +1089,7 @@ static void toggle_edit_source (MrgEvent *event, void *data1, void *data2)
   edl->active_source->editing = !edl->active_source->editing;
   if (edl->active_source->editing)
     mrg_set_cursor_pos (event->mrg, strlen (edl->active_source->title));
-  gedl_cache_invalid (edl);
+  gcut_cache_invalid (edl);
   mrg_queue_draw (event->mrg, NULL);
 }
 #endif
@@ -1102,7 +1103,7 @@ static void do_quit (MrgEvent *event, void *data1, void *data2)
 
 long last_frame = 0;
 
-void gedl_ui (Mrg *mrg, void *data);
+void gcut_ui (Mrg *mrg, void *data);
 
 static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
 {
@@ -1134,16 +1135,19 @@ static void zoom_timeline (MrgEvent *event, void *data1, void *data2)
 #define PAD_DIM     8
 int VID_HEIGHT=96; // XXX: ugly global
 
-void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start, int clip_frames, double x, double y, int fade, int fade2)
+static void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start, int clip_frames, double x, double y, int fade, int fade2)
 {
   char *thumb_path;
+  int width, height;
+  cairo_t *cr = mrg_cr (mrg);
+  MrgImage *img;
+
   if (!clip_path)
   {
     return; // XXX: draw string!
   }
-  thumb_path = gedl_make_thumb_path (edl, clip_path);
+  thumb_path = gcut_make_thumb_path (edl, clip_path);
 
-  cairo_t *cr = mrg_cr (mrg);
   if (fade || fade2)
   {
     cairo_move_to (cr, x, y + VID_HEIGHT/2);
@@ -1158,8 +1162,7 @@ void render_clip (Mrg *mrg, GeglEDL *edl, const char *clip_path, int clip_start,
     cairo_rectangle (cr, x, y, clip_frames, VID_HEIGHT);
   }
 
-  int width, height;
-  MrgImage *img = mrg_query_image (mrg, thumb_path, &width, &height);
+  img = mrg_query_image (mrg, thumb_path, &width, &height);
   g_free (thumb_path);
   if (!edl->playing && img && width > 0)
   {
@@ -1200,11 +1203,12 @@ static void scroll_to_fit (GeglEDL *edl, Mrg *mrg)
 static void shuffle_forward (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  gedl_cache_invalid (edl);
 
   GList *prev = NULL,
         *next = NULL,
         *self = g_list_find (edl->clips, edl->active_clip);
+
+  gcut_cache_invalid (edl);
 
   if (self)
   {
@@ -1234,12 +1238,13 @@ static void shuffle_forward (MrgEvent *event, void *data1, void *data2)
 static void shuffle_back (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  gedl_cache_invalid (edl);
 
   GList *prev = NULL,
         *prevprev = NULL,
         *next = NULL,
         *self = g_list_find (edl->clips, edl->active_clip);
+
+  gcut_cache_invalid (edl);
 
   if (self)
   {
@@ -1271,12 +1276,14 @@ static void shuffle_back (MrgEvent *event, void *data1, void *data2)
 static void slide_forward (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  gedl_cache_invalid (edl);
-    edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
 
   GList *prev = NULL,
-        *next = NULL,
-        *self = g_list_find (edl->clips, edl->active_clip);
+        *next = NULL, *self;
+  
+  edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+  self = g_list_find (edl->clips, edl->active_clip);
+
+  gcut_cache_invalid (edl);
   /*
         situations to deal with:
           inside mergable clips
@@ -1350,12 +1357,15 @@ static void slide_forward (MrgEvent *event, void *data1, void *data2)
 static void slide_back (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  gedl_cache_invalid (edl);
-    edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
 
   GList *prev = NULL,
         *next = NULL,
-        *self = g_list_find (edl->clips, edl->active_clip);
+        *self;
+
+  edl->active_clip = edl_get_clip_for_frame (edl, edl->frame_no);
+  self = g_list_find (edl->clips, edl->active_clip);
+
+  gcut_cache_invalid (edl);
   /*
         situations to deal with:
           inside mergable clips
@@ -1430,7 +1440,7 @@ static void slide_back (MrgEvent *event, void *data1, void *data2)
 static void zoom_1 (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  gedl_cache_invalid (edl);
+  gcut_cache_invalid (edl);
   edl->scale = 1.0;
   scroll_to_fit (edl, event->mrg);
   mrg_event_stop_propagate (event);
@@ -1440,9 +1450,9 @@ static void zoom_1 (MrgEvent *event, void *data1, void *data2)
 static void zoom_fit (MrgEvent *event, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  gedl_cache_invalid (edl);
+  gcut_cache_invalid (edl);
   edl->t0 = 0.0;
-  edl->scale = gedl_get_duration (edl) * 1.0 / mrg_width (event->mrg);
+  edl->scale = gcut_get_duration (edl) * 1.0 / mrg_width (event->mrg);
   mrg_event_stop_propagate (event);
   mrg_queue_draw (event->mrg, NULL);
 }
@@ -1507,24 +1517,26 @@ static void end_edit (MrgEvent *e, void *data1, void *data2)
 static void drag_double_slider (MrgEvent *e, void *data1, void *data2)
 {
   gpointer *data = data1;
+  float new_val;
   GeglParamSpecDouble *gspec = (void*)data2;
   GParamSpec          *spec  = (void*)data2;
   GeglNode            *node  = data[1];
   GeglEDL             *edl   = data[0];
   char tmpbuf[1024];
-  sprintf (tmpbuf, "%s-rel", spec->name);
-  GQuark rel_quark = g_quark_from_string (tmpbuf);
-  sprintf (tmpbuf, "%s-anim", spec->name);
-  GQuark anim_quark = g_quark_from_string (tmpbuf);
   double ui_min = gspec->ui_minimum;
   double ui_max = gspec->ui_maximum;
+  GQuark rel_quark, anim_quark;
+  sprintf (tmpbuf, "%s-rel", spec->name);
+  rel_quark = g_quark_from_string (tmpbuf);
+  sprintf (tmpbuf, "%s-anim", spec->name);
+  anim_quark = g_quark_from_string (tmpbuf);
   if (g_object_get_qdata (G_OBJECT (node), rel_quark) && 1)
     {
       ui_min /= 1000.0;
       ui_max /= 1000.0;
     }
 
-  float new_val = e->x * (ui_max - ui_min) + ui_min;
+  new_val = e->x * (ui_max - ui_min) + ui_min;
 
   if (g_object_get_qdata (G_OBJECT (node), anim_quark))
   {
@@ -1533,7 +1545,7 @@ static void drag_double_slider (MrgEvent *e, void *data1, void *data2)
     int i;
     int clip_frame_no=0;
     GeglPathItem path_item;
-    gedl_get_clip (edl, edl->frame_no, &clip_frame_no);
+    gcut_get_clip (edl, edl->frame_no, &clip_frame_no);
 
     for (i = 0; i < nodes; i ++)
     {
@@ -1581,8 +1593,9 @@ static void remove_key (MrgEvent *e, void *data1, void *data2)
   const char          *pname = data[2];
   int  clip_frame_no  = GPOINTER_TO_INT(data[3]);
   char tmpbuf[1024];
+  GQuark anim_quark;
   sprintf (tmpbuf, "%s-anim", pname);
-  GQuark anim_quark = g_quark_from_string (tmpbuf);
+  anim_quark = g_quark_from_string (tmpbuf);
 
   fprintf (stderr, "remove key %p %s %i\n", node, pname, clip_frame_no);
 
@@ -1593,7 +1606,7 @@ static void remove_key (MrgEvent *e, void *data1, void *data2)
     int i;
     int clip_frame_no=0;
     GeglPathItem path_item;
-    gedl_get_clip (edl, edl->frame_no, &clip_frame_no);
+    gcut_get_clip (edl, edl->frame_no, &clip_frame_no);
 
     for (i = 0; i < nodes; i ++)
     {
@@ -1618,17 +1631,19 @@ static void drag_int_slider (MrgEvent *e, void *data1, void *data2)
   GParamSpec       *spec  = (void*)data2;
   GeglNode         *node  = (void*)data1;
   char tmpbuf[1024];
-  sprintf (tmpbuf, "%s-rel", spec->name);
-  GQuark rel_quark = g_quark_from_string (tmpbuf);
+  GQuark rel_quark;
   double ui_min = gspec->ui_minimum;
   double ui_max = gspec->ui_maximum;
+  gint new_val;
+  sprintf (tmpbuf, "%s-rel", spec->name);
+  rel_quark = g_quark_from_string (tmpbuf);
   if (g_object_get_qdata (G_OBJECT (node), rel_quark) && 1)
     {
       ui_min /= 1000.0;
       ui_max /= 1000.0;
     }
 
-  gint new_val = e->x * (ui_max - ui_min) + ui_min;
+  new_val = e->x * (ui_max - ui_min) + ui_min;
   gegl_node_set (node, spec->name, new_val, NULL);
 
   mrg_queue_draw (e->mrg, NULL);
@@ -1644,7 +1659,7 @@ static void update_string (const char *new_string, void *user_data)
   ui_tweaks++;
 }
 
-float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
+static float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
 {
   unsigned int n_props;
   GParamSpec ** props = gegl_operation_list_properties (gegl_node_get_operation (node),
@@ -1653,26 +1668,27 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
   for (int i = 0; i <n_props; i ++)
   {
     char *str = NULL;
-    mrg_set_xy (mrg, x, y);
     GType type = props[i]->value_type;
-
     char tmpbuf[1024];
+    GQuark rel_quark, anim_quark;
+
+    mrg_set_xy (mrg, x, y);
 
     sprintf (tmpbuf, "%s-rel", props[i]->name);
-    GQuark rel_quark = g_quark_from_string (tmpbuf);
+    rel_quark = g_quark_from_string (tmpbuf);
     sprintf (tmpbuf, "%s-anim", props[i]->name);
-    GQuark anim_quark = g_quark_from_string (tmpbuf);
+    anim_quark = g_quark_from_string (tmpbuf);
     mrg_set_xy (mrg, x, y);
 
     if (g_type_is_a (type, G_TYPE_DOUBLE))
     {
       GeglParamSpecDouble *gspec = (void*)props[i];
       double val;
-      gegl_node_get (node, props[i]->name, &val, NULL);
       double width = mrg_width (mrg) - x - mrg_em(mrg) * 15;
       double ui_min = gspec->ui_minimum;
       double ui_max = gspec->ui_maximum;
 
+      gegl_node_get (node, props[i]->name, &val, NULL);
       if (g_object_get_qdata (G_OBJECT (node), rel_quark) && 1)
       {
         ui_min /= 1000.0;
@@ -1720,11 +1736,11 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
     {
       GeglParamSpecDouble *gspec = (void*)props[i];
       gint val;
-      gegl_node_get (node, props[i]->name, &val, NULL);
       double width = mrg_width (mrg) - x - mrg_em(mrg) * 15;
       double ui_min = gspec->ui_minimum;
       double ui_max = gspec->ui_maximum;
 
+      gegl_node_get (node, props[i]->name, &val, NULL);
       if (g_object_get_qdata (G_OBJECT (node), rel_quark) && 1)
       {
         ui_min /= 1000.0;
@@ -1792,6 +1808,8 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
       mrg_printf (mrg, "%s", str);
     }
 
+
+
     if (str)
     {
       g_free (str);
@@ -1802,9 +1820,10 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
        mrg_printf (mrg, "rel");
     if (g_object_get_qdata (G_OBJECT (node), anim_quark))
     {
+       cairo_t *cr = mrg_cr (mrg);
        GeglPath *path = g_object_get_qdata (G_OBJECT (node), anim_quark);
        int clip_frame_no;
-       gedl_get_clip (edl, edl->frame_no, &clip_frame_no);
+       gcut_get_clip (edl, edl->frame_no, &clip_frame_no);
        mrg_printf (mrg, "{anim}");
        {
          GeglPathItem path_item;
@@ -1829,7 +1848,6 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
          // here
        }
 
-       cairo_t *cr = mrg_cr (mrg);
 
        cairo_save (cr);
 
@@ -1875,6 +1893,7 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
                         mrg_height (mrg) * SPLIT_VER);
 
        cairo_set_source_rgba (cr, 1.0, 0.5, 0.5, 255);
+        {
            int nodes = gegl_path_get_n_nodes (path);
            GeglPathItem path_item;
 
@@ -1887,11 +1906,13 @@ float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
             mrg_listen (mrg, MRG_PRESS, jump_to_pos, edl, GINT_TO_POINTER( (int)(path_item.point[0].x + edl->active_clip->abs_start)));
             cairo_fill (cr);
           }
+        }
        cairo_restore (cr);
        }
     }
     if (g_object_get_qdata (G_OBJECT (node), g_quark_from_string (props[i]->name)))
        mrg_printf (mrg, "{???}");
+
   }
 
   return y;
@@ -1916,7 +1937,34 @@ static void select_node (MrgEvent *e, void *data1, void *data2)
   mrg_queue_draw (e->mrg, NULL);
 }
 
-float print_nodes (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
+static void rounded_rectangle (cairo_t *cr, double x, double y, double width, double height, double aspect,
+                        double corner_radius)
+{
+  double radius;
+  double degrees = M_PI / 180.0;
+
+  if (corner_radius < 0.0)
+    corner_radius = height / 10.0;   /* and corner curvature radius */
+
+  radius= corner_radius / aspect;
+
+cairo_new_sub_path (cr);
+cairo_arc (cr, x + width - radius, y + radius, radius, -90 * degrees, 0 * degrees);
+cairo_arc (cr, x + width - radius, y + height - radius, radius, 0 * degrees, 90 * degrees);
+cairo_arc (cr, x + radius, y + height - radius, radius, 90 * degrees, 180 * degrees);
+cairo_arc (cr, x + radius, y + radius, radius, 180 * degrees, 270 * degrees);
+cairo_close_path (cr);
+
+#if 0
+cairo_set_source_rgb (cr, 0.5, 0.5, 1);
+cairo_fill_preserve (cr);
+cairo_set_source_rgba (cr, 0.5, 0, 0, 0.5);
+cairo_set_line_width (cr, 10.0);
+cairo_stroke (cr);
+#endif
+}
+
+static float print_nodes (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
 {
     while (node)
     {
@@ -1928,28 +1976,37 @@ float print_nodes (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
       {
         if (node == selected_node)
           y = print_props (mrg, edl, node, x + mrg_em(mrg) * 0.5, y);
+#if 0
+        rounded_rectangle (mrg_cr (mrg), x-0.5*mrg_em(mrg), y - mrg_em (mrg) * 1.0, mrg_em(mrg) * 10.0, mrg_em (mrg) * 1.2, 0.4, -1);
+
+        cairo_rectangle (mrg_cr (mrg), x + 1.0 * mrg_em (mrg), y - mrg_em (mrg) * 1.4, mrg_em(mrg) * 0.1, mrg_em (mrg) * 0.4);
+#endif
 
         mrg_set_xy (mrg, x, y);
         mrg_text_listen (mrg, MRG_CLICK, select_node, node, NULL);
         mrg_printf (mrg, "%s", gegl_node_get_operation (node));
         mrg_text_listen_done (mrg);
+
         y -= mrg_em (mrg) * 1.5;
       }
 
-      GeglNode **nodes = NULL;
-      const gchar **pads = NULL;
-
-      int count = gegl_node_get_consumers (node, "output", &nodes, &pads);
-      if (count)
       {
-        node = nodes[0];
-        if (strcmp (pads[0], "input"))
+        GeglNode **nodes = NULL;
+        const gchar **pads = NULL;
+
+        int count = gegl_node_get_consumers (node, "output", &nodes, &pads);
+        if (count)
+        {
+          node = nodes[0];
+          if (strcmp (pads[0], "input"))
+            node = NULL;
+        }
+        else
           node = NULL;
+        g_free (nodes);
+        g_free (pads);
       }
-      else
-        node = NULL;
-      g_free (nodes);
-      g_free (pads);
+
       //if (node && node == clip->nop_crop)
        // node = NULL;
       if (node)
@@ -1970,7 +2027,7 @@ float print_nodes (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
     return y;
 }
 
-void update_ui_clip (Clip *clip, int clip_frame_no)
+static void update_ui_clip (Clip *clip, int clip_frame_no)
 {
   GError *error = NULL;
   if (ui_clip == NULL ||
@@ -2026,7 +2083,8 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
 
   if (selected_node)
   {
-    unsigned int n_props;
+    GParamSpec ** props;
+    unsigned int  n_props;
 
     if (ui_tweaks)
     {
@@ -2066,16 +2124,18 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
       ui_tweaks = 0;
       changed ++;
 
-      gedl_cache_invalid (clip->edl);
+      gcut_cache_invalid (clip->edl);
     }
 
-    GParamSpec ** props = gegl_operation_list_properties (gegl_node_get_operation (selected_node), &n_props);
+    props = gegl_operation_list_properties (gegl_node_get_operation (selected_node), &n_props);
 
     for (int i = 0; i <n_props; i ++)
     {
+      GQuark anim_quark;
       char tmpbuf[1024];
+
       sprintf (tmpbuf, "%s-anim", props[i]->name);
-      GQuark anim_quark = g_quark_from_string (tmpbuf);
+      anim_quark = g_quark_from_string (tmpbuf);
       // this only deals with double for now
       if (g_object_get_qdata (G_OBJECT (selected_node), anim_quark))
       {
@@ -2089,17 +2149,31 @@ void update_ui_clip (Clip *clip, int clip_frame_no)
   }
 }
 
+static int array_contains_string (gchar **array, const char *str)
+{
+  int i;
+  for ( i = 0; array[i]; i++)
+  {
+    if (!strcmp (array[i], str))
+      return 1;
+  }
+  return 0;
+}
+
 /* XXX: add some constarint?  like having input, or output pad or both - or
  * being a specific subclass - as well as sort, so that best (prefix_) match
  * comes first
  */
-char **gedl_get_completions (const char *filter_query)
+static char **gcut_get_completions (const char *filter_query)
 {
   gchar **completions = NULL;
   gchar **operations = gegl_list_operations (NULL);
   gchar *alloc = NULL;
   int matches = 0;
-  int memlen = sizeof (gpointer);
+  int memlen = sizeof (gpointer); // for terminating NULL
+  int match = 0;
+
+  if (!filter_query || filter_query[0]=='\0') return NULL;
 
   // score matches, sort them - and default to best
 
@@ -2113,9 +2187,10 @@ char **gedl_get_completions (const char *filter_query)
   }
 
   completions = g_malloc0 (memlen);
-  alloc = ((void*)completions) + (matches + 1) * sizeof (gpointer);
+  alloc = ((gchar*)completions) + (matches + 1) * sizeof (gpointer);
 
-  int match = 0;
+  if (0)
+  {
   for (int i = 0; operations[i]; i++)
   {
     if (strstr (operations[i], filter_query))
@@ -2126,12 +2201,41 @@ char **gedl_get_completions (const char *filter_query)
       match++;
     }
   }
+  }
+
+  if(1){
+    char *with_gegl = g_strdup_printf ("gegl:%s", filter_query);
+    for (int i = 0; operations[i]; i++)
+    {
+      if (g_str_has_prefix (operations[i], filter_query) ||
+          g_str_has_prefix (operations[i], with_gegl))
+      {
+        completions[match] = alloc;
+        strcpy (alloc, operations[i]);
+        alloc += strlen (alloc) + 1;
+        match++;
+      }
+    }
+
+    for (int i = 0; operations[i]; i++)
+    {
+      if (strstr (operations[i], filter_query) &&
+          !array_contains_string (completions, operations[i]))
+      {
+        completions[match] = alloc;
+        strcpy (alloc, operations[i]);
+        alloc += strlen (alloc) + 1;
+        match++;
+      }
+    }
+    g_free (with_gegl);
+  }
   g_free (operations);
 
   if (match == 0)
   {
-    return NULL;
     g_free (completions);
+    return NULL;
   }
   return completions;
 }
@@ -2139,7 +2243,7 @@ char **gedl_get_completions (const char *filter_query)
 static void complete_filter_query_edit (MrgEvent *e, void *data1, void *data2)
 {
   GeglEDL *edl = data1;
-  gchar **completions = gedl_get_completions (filter_query);
+  gchar **completions = gcut_get_completions (filter_query);
   if (!selected_node)
     selected_node = filter_start;
 
@@ -2157,7 +2261,7 @@ static void complete_filter_query_edit (MrgEvent *e, void *data1, void *data2)
 
   g_free (completions);
   ui_tweaks++;
-  gedl_cache_invalid (edl);
+  gcut_cache_invalid (edl);
   mrg_queue_draw (e->mrg, NULL);
   mrg_event_stop_propagate (e);
 }
@@ -2171,7 +2275,7 @@ static void end_filter_query_edit (MrgEvent *e, void *data1, void *data2)
   mrg_event_stop_propagate (e);
   
   ui_tweaks++;
-  gedl_cache_invalid (edl);
+  gcut_cache_invalid (edl);
   mrg_queue_draw (e->mrg, NULL);
 }
 
@@ -2183,7 +2287,7 @@ static void update_filter_query (const char *new_string, void *user_data)
 }
 
 
-void gedl_draw (Mrg     *mrg,
+void gcut_draw (Mrg     *mrg,
                 GeglEDL *edl,
                 double   x0,
                 double    y,
@@ -2194,7 +2298,7 @@ void gedl_draw (Mrg     *mrg,
   GList *l;
   cairo_t *cr = mrg_cr (mrg);
   double t;
-  int duration = gedl_get_duration (edl); // causes update of abs_start
+  int duration = gcut_get_duration (edl); // causes update of abs_start
 
   VID_HEIGHT = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.8;
   int scroll_height = mrg_height (mrg) * (1.0 - SPLIT_VER) * 0.2;
@@ -2206,7 +2310,7 @@ void gedl_draw (Mrg     *mrg,
 
   float y2 = y - mrg_em (mrg) * 1.5;
 
-  edl->active_clip = gedl_get_clip (edl, edl->frame_no, &clip_frame_no);
+  edl->active_clip = gcut_get_clip (edl, edl->frame_no, &clip_frame_no);
 
   if (edl->active_clip) // && edl->active_clip->filter_graph)
   {
@@ -2245,18 +2349,21 @@ void gedl_draw (Mrg     *mrg,
 
       // XXX: print completions that are clickable?
       {
-        gchar **operations = gedl_get_completions (filter_query);
-        mrg_start (mrg, NULL, NULL);
-        mrg_set_xy (mrg, mrg_em(mrg) * 1, mrg_height (mrg) * SPLIT_VER + mrg_em (mrg));
-        gint matches=0;
-        for (int i = 0; operations[i] && matches < 40; i++)
+          gchar **operations = gcut_get_completions (filter_query);
+          mrg_start (mrg, NULL, NULL);
+          mrg_set_xy (mrg, mrg_em(mrg) * 1, mrg_height (mrg) * SPLIT_VER + mrg_em (mrg));
+          if (operations)
           {
-            mrg_printf (mrg, "%s", operations[i]);
-            mrg_printf (mrg, " ");
-            matches ++;
-          }
-        mrg_end(mrg);
-        g_free (operations);
+          gint matches=0;
+          for (int i = 0; operations[i] && matches < 40; i++)
+            {
+              mrg_printf (mrg, "%s", operations[i]);
+              mrg_printf (mrg, " ");
+              matches ++;
+            }
+          mrg_end(mrg);
+          g_free (operations);
+        }
       }
     }
   }
@@ -2300,7 +2407,7 @@ void gedl_draw (Mrg     *mrg,
   }
 
   int start = 0, end = 0;
-  gedl_get_range (edl, &start, &end);
+  gcut_get_range (edl, &start, &end);
   cairo_rectangle (cr, start, y, end - start, scroll_height);
   cairo_set_source_rgba (cr, 0, 0.11, 0.0, 0.5);
   cairo_fill_preserve (cr);
@@ -2328,7 +2435,7 @@ void gedl_draw (Mrg     *mrg,
   cairo_scale (cr, 1.0/fpx, 1);
   cairo_translate (cr, -t0, 0);
 
-  gedl_get_selection (edl, &start, &end);
+  gcut_get_selection (edl, &start, &end);
   cairo_rectangle (cr, start + 0.5, y - PAD_DIM, end - start, VID_HEIGHT + PAD_DIM * 2);
   cairo_set_source_rgba (cr, 1, 0, 0, 0.75);
   cairo_fill (cr);
@@ -2389,7 +2496,7 @@ void gedl_draw (Mrg     *mrg,
 
      if (bitlen == 0)
      {
-       bitmap = gedl_get_cache_bitmap (edl, &bitlen);
+       bitmap = gcut_get_cache_bitmap (edl, &bitlen);
        bitticks = babl_ticks ();
      }
      cairo_set_source_rgba (cr, 0.3, 1, 0.3, 1.0);
@@ -2460,7 +2567,7 @@ static void update_filter (const char *new_string, void *user_data)
   if (edl->active_clip->filter_graph)
     g_free (edl->active_clip->filter_graph);
   edl->active_clip->filter_graph = g_strdup (new_string);
-  gedl_cache_invalid (edl);
+  gcut_cache_invalid (edl);
   mrg_queue_draw (edl->mrg, NULL);
 }
 #endif
@@ -2513,7 +2620,7 @@ extern int cache_misses;
 
 long babl_ticks (void);
 
-void gedl_ui (Mrg *mrg, void *data)
+void gcut_ui (Mrg *mrg, void *data)
 {
   State *o = data;
   GeglEDL *edl = o->edl;
@@ -2574,7 +2681,7 @@ void gedl_ui (Mrg *mrg, void *data)
      case GEDL_UI_MODE_FULL:
      case GEDL_UI_MODE_TIMELINE:
      case GEDL_UI_MODE_PART:
-     gedl_draw (mrg, edl, 0, mrg_height (mrg) * SPLIT_VER, edl->scale, edl->t0);
+     gcut_draw (mrg, edl, 0, mrg_height (mrg) * SPLIT_VER, edl->scale, edl->t0);
 
 
 
@@ -2761,8 +2868,8 @@ void gedl_ui (Mrg *mrg, void *data)
             }
           }
           else {
-            Clip *start_clip = gedl_get_clip (edl, edl->selection_start, NULL);
-            Clip *end_clip = gedl_get_clip (edl, edl->selection_end, NULL);
+            Clip *start_clip = gcut_get_clip (edl, edl->selection_start, NULL);
+            Clip *end_clip = gcut_get_clip (edl, edl->selection_end, NULL);
             GList *start_iter = g_list_find (edl->clips, start_clip);
             GList *end_iter = g_list_find (edl->clips, end_clip);
 
@@ -2813,7 +2920,7 @@ gboolean cache_renderer_iteration (Mrg *mrg, gpointer data)
       for (i = 0; i < render_slaves; i ++)
       {
         char *cmd = g_strdup_printf ("%s %s cache %i %i&",
-                                     gedl_binary_path,
+                                     gcut_binary_path,
                                      edl->path, i, render_slaves);
         save_edl (edl);
         system (cmd);
@@ -2823,8 +2930,8 @@ gboolean cache_renderer_iteration (Mrg *mrg, gpointer data)
   return TRUE;
 }
 
-int gedl_ui_main (GeglEDL *edl);
-int gedl_ui_main (GeglEDL *edl)
+int gcut_ui_main (GeglEDL *edl);
+int gcut_ui_main (GeglEDL *edl)
 {
   Mrg *mrg = mrg_new (800, 600, NULL);
   //Mrg *mrg = mrg_new (-1, -1, NULL);
@@ -2835,20 +2942,20 @@ int gedl_ui_main (GeglEDL *edl)
   edl->mrg = mrg;
 
   edl->cache_flags = CACHE_TRY_ALL;// | CACHE_MAKE_ALL;
-  mrg_set_ui (mrg, gedl_ui, &o);
+  mrg_set_ui (mrg, gcut_ui, &o);
 
   mrg_add_timeout (mrg, 10100, save_idle, edl);
 
   cache_renderer_iteration (mrg, edl);
   mrg_add_timeout (mrg, 90 /* seconds */  * 1000, cache_renderer_iteration, edl);
 
-  gedl_get_duration (edl);
+  gcut_get_duration (edl);
   //mrg_set_target_fps (mrg, -1);
-//  gedl_set_use_proxies (edl, 1);
+//  gcut_set_use_proxies (edl, 1);
   toggle_use_proxies (NULL, edl, NULL);
   renderer_start (edl);
   mrg_main (mrg);
-  gedl_free (edl);
+  gcut_free (edl);
   gegl_exit ();
 
   return 0;

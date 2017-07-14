@@ -1,9 +1,9 @@
-gedl: *.c *.h Makefile default.edl.inc
-	gcc *.c `pkg-config gegl-0.3 sdl mrg gexiv2 --cflags --libs` -Wall -g -o gedl -O2
+gcut: *.c *.h Makefile default.edl.inc
+	gcc *.c `pkg-config gegl-0.3 sdl mrg gexiv2 --cflags --libs` -Wall -g -o gcut -O2
 clean:
-	rm gedl
-install: gedl
-	install gedl /usr/local/bin
+	rm gcut
+install: gcut
+	install gcut /usr/local/bin
 
 default.edl.inc: default.edl
 	cat $< | \
