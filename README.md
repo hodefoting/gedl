@@ -29,7 +29,7 @@ now)
 
 The basic view, with the F1 keyboard shortcut help overlaid over the video.
 
-![screenshot](http://pippin.gimp.org/gedl/gcut-help.png)
+![screenshot](http://pippin.gimp.org/gedl/gedl-help.png)
 
 In this screenshot, showing the purely synthetic used gegl operations default
 project of gcut. Showing visualization of keyframed parameters and permit
