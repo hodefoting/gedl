@@ -7,6 +7,10 @@ written as GEGL operations to be reused for video, and basic motion graphics.
 And serves as an additional application and use case for verifying and
 improving GEGLs behavior for gcut as well as other GEGL using applications.
 
+*note*: development has moved within the [GEGL git
+repo](https://git.gnome.org/browse/gegl/tree/gcut). This repo will continue
+getting copies of updates to gcut in gegl as well as updated to the README
+
 ### Features
 
  - single-track editing, with cross fades
@@ -35,7 +39,8 @@ In this screenshot, showing the purely synthetic used gegl operations default
 project of gcut. Showing visualization of keyframed parameters and permit
 setting them through sliders. Slanted clip transitions indicates cross-fades.
 Note that the current UI is the first attempt at a direct mapping of the file
-format.
+format. The chains of operations are shown with indentation, first the clip
+ones if any and then the clip filters.
 
 ![screenshot](http://pippin.gimp.org/gedl/gedl2.png)
 
@@ -54,7 +59,7 @@ https://www.youtube.com/watch?v=n91QbTMawuc
 
 The UI is written using microraptor gui, which means that things that can be
 done with simple HTML+CSS or drawn using cairo when programming can be made
-interactive in the local coordiantes drawn with for callbacks. 
+interactive in the local coordiantes drawn with for callbacks.
 
 Elements acting on top of the single-track timeline, possibly covering all the
 timeline or just some clips. For filtering/replacing/overlaying video/audio.
@@ -63,7 +68,7 @@ preceding clips in the timeline change duration / position. This should expand
 the possible feature scope to video picture in picture, global color / mood
 adjustments - audio bleeping, mixing in music - and probably more.
 
-See [gcut.h](https://github.com/hodefoting/gedl/blob/master/gcut.h) for more
+See [gcut.h](https://git.gnome.org/browse/gegl/tree/gcut/gcut.h) for more
 up-to date plans and documentation of at least some of the known issues.
 
 The amount of code, written in C is about equally divided 50/50 between the
