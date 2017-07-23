@@ -1,11 +1,21 @@
+#include "config.h"
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <gegl.h>
-#include <gexiv2/gexiv2.h>
+#include <libgen.h>
 #include <gegl-audio-fragment.h>
+
+#if HAVE_GEXIV2
+#include <gexiv2/gexiv2.h>
+#endif
+
+#ifdef G_OS_WIN32
+#define realpath(a,b) _fullpath(b,a,_MAX_PATH)
+#define SIGUSR2 (-1) /* quick and dirty, FIXME */
+#endif
 
 /* GEGL edit decision list - a digital video cutter and splicer */
 
@@ -129,6 +139,7 @@ GeglEDL *gcut_new           (void)
 
   edl->clip_query = strdup ("");
   edl->use_proxies = 0;
+  edl->ui_mode = GEDL_UI_MODE_PART;
 
   g_mutex_init (&edl->buffer_copy_mutex);
   return edl;
@@ -520,36 +531,6 @@ int gcut_get_duration (GeglEDL *edl)
 }
 #include <string.h>
 
-static void gcut_parse_clip (GeglEDL *edl, const char *line)
-{
-  int start = 0; int end = 0; int duration = 0;
-  const char *rest = NULL;
-  char path[1024];
-  if (line[0] == '#' ||
-      line[1] == '#' ||
-      strlen (line) < 4)
-    return;
-
-  if (strstr (line, "--"))
-    rest = strstr (line, "--") + 2;
-
-  if (rest) while (*rest == ' ')rest++;
-
-  sscanf (line, "%s %i %i %i", path, &start, &end, &duration);
-  if (strlen (path) > 3)
-    {
-      SourceClip *sclip = g_new0 (SourceClip, 1);
-      edl->clip_db = g_list_append (edl->clip_db, sclip);
-      sclip->path = g_strdup (path);
-      sclip->start = start;
-      sclip->end = end;
-      sclip->duration = duration;
-      if (rest)
-        sclip->title = g_strdup (rest);
-    }
-  /* todo: parse hh:mm:ss.nn timestamps,
-   */
-}
 
 void gcut_parse_line (GeglEDL *edl, const char *line)
 {
@@ -704,8 +685,8 @@ GeglEDL *gcut_new_from_string (const char *string, const char *parent_path)
       case '\n':
        if (clips_done)
        {
-         if (line->len > 2)
-           gcut_parse_clip (edl, line->str);
+      //   if (line->len > 2)
+      //     gcut_parse_clip (edl, line->str);
          g_string_assign (line, "");
        }
        else
@@ -838,7 +819,7 @@ void gcut_update_video_size (GeglEDL *edl)
 
 static void generate_gcut_dir (GeglEDL *edl)
 {
-  char *tmp = g_strdup_printf ("cd %s; mkdir .gcut 2>/dev/null ; mkdir .gcut/cache 2>/dev/null mkdir .gcut/proxy 2>/dev/null mkdir .gcut/thumb 2>/dev/null ; mkdir .gcut/video 2>/dev/null; mkdir .gcut/history 2>/dev/null", edl->parent_path);
+  char *tmp = g_strdup_printf ("cd %s; mkdir .gcut 2>/dev/null ; mkdir .gcut/cache 2>/dev/null ; mkdir .gcut/proxy 2>/dev/null ; mkdir .gcut/thumb 2>/dev/null ; mkdir .gcut/video 2>/dev/null; mkdir .gcut/history 2>/dev/null", edl->parent_path);
   system (tmp);
   g_free (tmp);
 }
@@ -961,7 +942,7 @@ GeglEDL *gcut_new_from_path (const char *path)
       }
       else
       {
-        edl->path = g_strdup_printf ("%s/%s", parent, basename (path));
+        edl->path = g_strdup_printf ("%s/%s", parent, basename ((void*)path));
       }
     }
     g_free (parent);
@@ -1183,7 +1164,16 @@ int gegl_make_thumb_video (GeglEDL *edl, const char *path, const char *thumb_pat
 #endif
 }
 
+#if HAVE_MRG
 int gcut_ui_main (GeglEDL *edl);
+#else
+int gcut_ui_main (GeglEDL *edl);
+int gcut_ui_main (GeglEDL *edl)
+{
+  fprintf (stderr, "gcut built without mrg UI\n");
+  return -1;
+}
+#endif
 
 int gegl_make_thumb_video (GeglEDL *edl, const char *path, const char *thumb_path);
 void gcut_make_proxies (GeglEDL *edl)
@@ -1230,6 +1220,23 @@ static void gcut_start_sanity (void)
 
 gint iconographer_main (gint    argc, gchar **argv);
 
+gint str_has_video_suffix (const gchar *edl_path);
+gint str_has_video_suffix (const gchar *edl_path)
+{
+  if (g_str_has_suffix (edl_path, ".mp4") ||
+      g_str_has_suffix (edl_path, ".avi") ||
+      g_str_has_suffix (edl_path, ".ogv") ||
+      g_str_has_suffix (edl_path, ".mkv") ||
+      g_str_has_suffix (edl_path, ".webm") ||
+      g_str_has_suffix (edl_path, ".MP4") ||
+      g_str_has_suffix (edl_path, ".OGV") ||
+      g_str_has_suffix (edl_path, ".MKV") ||
+      g_str_has_suffix (edl_path, ".WEBM") ||
+      g_str_has_suffix (edl_path, ".AVI"))
+    return 1;
+  return 0;
+}
+
 int main (int argc, char **argv)
 {
   GeglEDL *edl = NULL;
@@ -1246,8 +1253,8 @@ int main (int argc, char **argv)
     return iconographer_main (argc-1, argv + 1);
   }
 
-  setenv ("GEGL_USE_OPENCL", "no", 1);
-  setenv ("GEGL_MIPMAP_RENDERING", "1", 1);
+  g_setenv ("GEGL_USE_OPENCL", "no", 1);
+  g_setenv ("GEGL_MIPMAP_RENDERING", "1", 1);
 
   init (argc, argv);
   gcut_start_sanity ();
@@ -1263,14 +1270,15 @@ int main (int argc, char **argv)
 
   edl_path = argv[1]; //realpath (argv[1], NULL);
 
-  if (g_str_has_suffix (edl_path, ".mp4") ||
-      g_str_has_suffix (edl_path, ".ogv") ||
-      g_str_has_suffix (edl_path, ".mkv") ||
-      g_str_has_suffix (edl_path, ".MKV") ||
-      g_str_has_suffix (edl_path, ".avi") ||
-      g_str_has_suffix (edl_path, ".MP4") ||
-      g_str_has_suffix (edl_path, ".OGV") ||
-      g_str_has_suffix (edl_path, ".AVI"))
+  if (str_has_video_suffix (edl_path))
+  {
+    char * path = realpath (edl_path, NULL);
+    char * rpath = g_strdup_printf ("%s.edl", path);
+    if (g_file_test (rpath, G_FILE_TEST_IS_REGULAR))
+      edl_path = rpath;
+  }
+
+  if (str_has_video_suffix (edl_path))
   {
     char str[1024];
     int duration;
@@ -1450,13 +1458,6 @@ char *gcut_serialize (GeglEDL *edl)
     }
   }
   g_string_append_printf (ser, "-----\n");
-  for (l = edl->clip_db; l; l = l->next)
-  {
-    SourceClip *clip = l->data;
-    g_string_append_printf (ser, "%s %d %d %d%s%s%s\n", clip->path, clip->start, clip->end, clip->duration,
-        "", //(edl->active_source == clip)?" [active]":"",
-        clip->title?" -- ":"",clip->title?clip->title:"");
-  }
   ret=ser->str;
   g_string_free (ser, FALSE);
   return ret;
@@ -1466,6 +1467,7 @@ void
 gegl_meta_set_audio (const char        *path,
                      GeglAudioFragment *audio)
 {
+#if HAVE_GEXIV2
   GError *error = NULL;
   GExiv2Metadata *e2m = gexiv2_metadata_new ();
   gexiv2_metadata_open_path (e2m, path, &error);
@@ -1499,12 +1501,14 @@ gegl_meta_set_audio (const char        *path,
     g_string_free (str, TRUE);
   }
   g_object_unref (e2m);
+#endif
 }
 
 void
 gegl_meta_get_audio (const char        *path,
                      GeglAudioFragment *audio)
 {
+#if HAVE_GEXIV2
   GError *error = NULL;
   GExiv2Metadata *e2m = gexiv2_metadata_new ();
   gexiv2_metadata_open_path (e2m, path, &error);
@@ -1564,6 +1568,7 @@ gegl_meta_get_audio (const char        *path,
   else
     g_warning ("%s", error->message);
   g_object_unref (e2m);
+#endif
 }
 
 void gcut_set_selection (GeglEDL *edl, int start_frame, int end_frame)

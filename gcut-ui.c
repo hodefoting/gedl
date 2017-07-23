@@ -79,6 +79,8 @@ foo++;
         scale = height / bounds.height;
 
       // XXX: the 1.001 instead of 1.00 is to work around a gegl bug
+      // XXX: should have written which bug, when adding this XXX comment
+      //      so that testing if it was gone was easier.
       gegl_buffer_get (edl->buffer_copy_temp, &roi, 1.001, fmt, buf, bounds.width * 4, GEGL_ABYSS_BLACK);
     }
 
@@ -1480,6 +1482,7 @@ static void toggle_bool (MrgEvent *e, void *data1, void *data2)
 
 GeglNode *snode = NULL;
 const char *sprop = NULL;
+char *tmpstr = NULL;
 
 static void edit_string (MrgEvent *e, void *data1, void *data2)
 {
@@ -1487,6 +1490,54 @@ static void edit_string (MrgEvent *e, void *data1, void *data2)
   const char *prop = data2;
   snode = node;
   sprop = prop;
+  changed++;
+  mrg_event_stop_propagate (e);
+  mrg_set_cursor_pos (e->mrg, 0); // XXX: could fech strlen and use that
+  mrg_queue_draw (e->mrg, NULL);
+  tweaked_state (e->mrg);
+}
+
+
+static void edit_int_string (MrgEvent *e, void *data1, void *data2)
+{
+  GeglNode *node = data1;
+  const char *prop = data2;
+  if (tmpstr)
+    g_warning ("tmp str set\n");
+  if (!tmpstr)
+    tmpstr = g_malloc0 (20);
+
+  snode = node;
+  sprop = prop;
+  {
+    gint val;
+    gegl_node_get (node, prop, &val, NULL);
+    sprintf (tmpstr, "%d", val);
+  }
+  changed++;
+  mrg_event_stop_propagate (e);
+  mrg_set_cursor_pos (e->mrg, 0); // XXX: could fech strlen and use that
+  mrg_queue_draw (e->mrg, NULL);
+  tweaked_state (e->mrg);
+}
+
+
+static void edit_double_string (MrgEvent *e, void *data1, void *data2)
+{
+  GeglNode *node = data1;
+  const char *prop = data2;
+  if (tmpstr)
+    g_warning ("tmp str set\n");
+  if (!tmpstr)
+    tmpstr = g_malloc0 (20);
+
+  snode = node;
+  sprop = prop;
+  {
+    gdouble val;
+    gegl_node_get (node, prop, &val, NULL);
+    sprintf (tmpstr, "%f", val);
+  }
   changed++;
   mrg_event_stop_propagate (e);
   mrg_set_cursor_pos (e->mrg, 0); // XXX: could fech strlen and use that
@@ -1509,11 +1560,17 @@ static void end_edit (MrgEvent *e, void *data1, void *data2)
 {
   snode = NULL;
   sprop = NULL;
+  if (tmpstr)
+  {
+    g_free (tmpstr);
+    tmpstr = NULL;
+  }
   mrg_event_stop_propagate (e);
   mrg_set_cursor_pos (e->mrg, 0); // XXX: could fech strlen and use that
   mrg_queue_draw (e->mrg, NULL);
 }
 
+#if 0
 static void drag_double_slider (MrgEvent *e, void *data1, void *data2)
 {
   gpointer *data = data1;
@@ -1583,6 +1640,7 @@ done:
   changed++;
   tweaked_state (e->mrg);
 }
+#endif
 
 
 static void remove_key (MrgEvent *e, void *data1, void *data2)
@@ -1625,6 +1683,7 @@ static void remove_key (MrgEvent *e, void *data1, void *data2)
   tweaked_state (e->mrg);
 }
 
+#if 0
 static void drag_int_slider (MrgEvent *e, void *data1, void *data2)
 {
   GeglParamSpecInt *gspec = (void*)data2;
@@ -1650,6 +1709,36 @@ static void drag_int_slider (MrgEvent *e, void *data1, void *data2)
   mrg_event_stop_propagate (e);
   changed++;
   tweaked_state (e->mrg);
+}
+#endif
+
+
+static void update_double_string (const char *new_string, void *user_data)
+{
+  gdouble val = g_strtod (new_string, NULL);
+  GParamSpecDouble *spec = (void*)gegl_operation_find_property (gegl_node_get_operation(snode), sprop);
+
+  if (val < spec->minimum) val = spec->minimum;
+  if (val > spec->maximum) val = spec->maximum;
+  sprintf (tmpstr, "%.5f", val);
+
+  if (snode && sprop)
+    gegl_node_set (snode, sprop, val, NULL);
+  ui_tweaks++;
+}
+
+static void update_int_string (const char *new_string, void *user_data)
+{
+  int val = atoi (new_string);
+  GParamSpecInt *spec = (void*)gegl_operation_find_property (gegl_node_get_operation(snode), sprop);
+
+  if (val < spec->minimum) val = spec->minimum;
+  if (val > spec->maximum) val = spec->maximum;
+  sprintf (tmpstr, "%d", val);
+
+  if (snode && sprop)
+    gegl_node_set (snode, sprop, val, NULL);
+  ui_tweaks++;
 }
 
 static void update_string (const char *new_string, void *user_data)
@@ -1682,13 +1771,16 @@ static float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float
 
     if (g_type_is_a (type, G_TYPE_DOUBLE))
     {
-      GeglParamSpecDouble *gspec = (void*)props[i];
       double val;
+#if 0
+      GeglParamSpecDouble *gspec = (void*)props[i];
       double width = mrg_width (mrg) - x - mrg_em(mrg) * 15;
       double ui_min = gspec->ui_minimum;
       double ui_max = gspec->ui_maximum;
+#endif
 
       gegl_node_get (node, props[i]->name, &val, NULL);
+#if 0
       if (g_object_get_qdata (G_OBJECT (node), rel_quark) && 1)
       {
         ui_min /= 1000.0;
@@ -1722,25 +1814,41 @@ static float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float
       cairo_fill (mrg_cr (mrg));
 
       cairo_restore (mrg_cr (mrg));
+#endif
 
-      str = g_strdup_printf ("%s:%f", props[i]->name, val);
-      while (str[strlen(str)-1]=='0')
+      mrg_printf (mrg, "%s: ", props[i]->name);
+      str = g_strdup_printf ("%.5f", val);
+
+      if (snode && !strcmp (props[i]->name, sprop))
       {
-        if (str[strlen(str)-2]=='.')
-          break;
-        str[strlen(str)-1]='\0';
+        mrg_edit_start (mrg, update_double_string, edl);
+        mrg_printf (mrg, "%s", tmpstr);
       }
-      mrg_printf (mrg, "%s", str);
+      else
+      {
+        mrg_text_listen (mrg, MRG_CLICK, edit_double_string, node, (void*)g_intern_string(props[i]->name));
+        mrg_printf (mrg, "%s", str);
+      }
+
+      if (snode && !strcmp (props[i]->name, sprop))
+        mrg_edit_end (mrg);
+      else
+        mrg_text_listen_done (mrg);
+      str = g_strdup ("");
+
     }
     else if (g_type_is_a (type, G_TYPE_INT))
     {
-      GeglParamSpecDouble *gspec = (void*)props[i];
       gint val;
+#if 0
+      GeglParamSpecDouble *gspec = (void*)props[i];
       double width = mrg_width (mrg) - x - mrg_em(mrg) * 15;
       double ui_min = gspec->ui_minimum;
       double ui_max = gspec->ui_maximum;
+#endif
 
       gegl_node_get (node, props[i]->name, &val, NULL);
+#if 0
       if (g_object_get_qdata (G_OBJECT (node), rel_quark) && 1)
       {
         ui_min /= 1000.0;
@@ -1768,9 +1876,28 @@ static float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float
       cairo_fill (mrg_cr (mrg));
 
       cairo_restore (mrg_cr (mrg));
+#endif
 
-      str = g_strdup_printf ("%s:%d", props[i]->name, val);
-      mrg_printf (mrg, "%s", str);
+      mrg_printf (mrg, "%s: ", props[i]->name);
+      str = g_strdup_printf ("%d", val);
+
+
+      if (snode && !strcmp (props[i]->name, sprop))
+      {
+        mrg_edit_start (mrg, update_int_string, edl);
+        mrg_printf (mrg, "%s", tmpstr);
+      }
+      else
+      {
+        mrg_text_listen (mrg, MRG_CLICK, edit_int_string, node, (void*)g_intern_string(props[i]->name));
+        mrg_printf (mrg, "%s", str);
+      }
+
+      if (snode && !strcmp (props[i]->name, sprop))
+        mrg_edit_end (mrg);
+      else
+        mrg_text_listen_done (mrg);
+      str = g_strdup ("");
     }
     else if (g_type_is_a (type, G_TYPE_BOOLEAN))
     {
@@ -1802,9 +1929,30 @@ static float print_props (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float
       g_free (val);
       str= g_strdup ("");
     }
+    else if (g_type_is_a (type, G_TYPE_STRING))
+    {
+      char *val = NULL;
+      gegl_node_get (node, props[i]->name, &val, NULL);
+      mrg_printf (mrg, "%s: \"", props[i]->name);
+      if (snode && !strcmp (props[i]->name, sprop))
+      {
+        mrg_edit_start (mrg, update_string, edl);
+      }
+      else
+        mrg_text_listen (mrg, MRG_CLICK, edit_string, node, (void*)g_intern_string(props[i]->name));
+      mrg_printf (mrg, "%s", val);
+
+      if (snode && !strcmp (props[i]->name, sprop))
+        mrg_edit_end (mrg);
+      else
+        mrg_text_listen_done (mrg);
+      mrg_printf (mrg, "\"");
+      g_free (val);
+      str= g_strdup ("");
+    }
     else
     {
-      str = g_strdup_printf ("%s: [todo: handle this property type]", props[i]->name);
+      str = g_strdup_printf ("%s: [unhandled]", props[i]->name);
       mrg_printf (mrg, "%s", str);
     }
 
@@ -1963,6 +2111,185 @@ cairo_set_line_width (cr, 10.0);
 cairo_stroke (cr);
 #endif
 }
+static void remove_clip (MrgEvent *event, void *data1, void *data2);
+
+
+static int array_contains_string (gchar **array, const char *str)
+{
+  int i;
+  for ( i = 0; array[i]; i++)
+  {
+    if (!strcmp (array[i], str))
+      return 1;
+  }
+  return 0;
+}
+
+/* XXX: add some constarint?  like having input, or output pad or both - or
+ * being a specific subclass - as well as sort, so that best (prefix_) match
+ * comes first
+ */
+static char **gcut_get_completions (const char *filter_query)
+{
+  gchar **completions = NULL;
+  gchar **operations = gegl_list_operations (NULL);
+  gchar *alloc = NULL;
+  int matches = 0;
+  int memlen = sizeof (gpointer); // for terminating NULL
+  int match = 0;
+
+  if (!filter_query || filter_query[0]=='\0') return NULL;
+
+  // score matches, sort them - and default to best
+
+  for (int i = 0; operations[i]; i++)
+  {
+    if (strstr (operations[i], filter_query))
+    {
+      matches ++;
+      memlen += strlen (operations[i]) + 1 + sizeof (gpointer);
+    }
+  }
+
+  completions = g_malloc0 (memlen);
+  alloc = ((gchar*)completions) + (matches + 1) * sizeof (gpointer);
+
+  if (0)
+  {
+  for (int i = 0; operations[i]; i++)
+  {
+    if (strstr (operations[i], filter_query))
+    {
+      completions[match] = alloc;
+      strcpy (alloc, operations[i]);
+      alloc += strlen (alloc) + 1;
+      match++;
+    }
+  }
+  }
+
+  if(1){
+    char *with_gegl = g_strdup_printf ("gegl:%s", filter_query);
+    for (int i = 0; operations[i]; i++)
+    {
+      if (g_str_has_prefix (operations[i], filter_query) ||
+          g_str_has_prefix (operations[i], with_gegl))
+      {
+        completions[match] = alloc;
+        strcpy (alloc, operations[i]);
+        alloc += strlen (alloc) + 1;
+        match++;
+      }
+    }
+
+    for (int i = 0; operations[i]; i++)
+    {
+      if (strstr (operations[i], filter_query) &&
+          !array_contains_string (completions, operations[i]))
+      {
+        completions[match] = alloc;
+        strcpy (alloc, operations[i]);
+        alloc += strlen (alloc) + 1;
+        match++;
+      }
+    }
+    g_free (with_gegl);
+  }
+  g_free (operations);
+
+  if (match == 0)
+  {
+    g_free (completions);
+    return NULL;
+  }
+  return completions;
+}
+
+static int strarray_count (gchar **strs)
+{
+  int i ;
+  for (i= 0; strs && strs[i]; i++);
+  return i;
+}
+
+int tab_index = 0;
+
+
+static void filter_query_tab (MrgEvent *e, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  tab_index++;
+  mrg_event_stop_propagate (e);
+  
+  ui_tweaks++;
+  gcut_cache_invalid (edl);
+  mrg_queue_draw (e->mrg, NULL);
+}
+
+
+static void filter_query_tab_reverse (MrgEvent *e, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  tab_index--;
+  if (tab_index <0)
+    tab_index = 0;
+  mrg_event_stop_propagate (e);
+  
+  ui_tweaks++;
+  gcut_cache_invalid (edl);
+  mrg_queue_draw (e->mrg, NULL);
+}
+
+static void end_filter_query_edit (MrgEvent *e, void *data1, void *data2)
+{
+  GeglEDL *edl = data1;
+  if (filter_query)
+    g_free (filter_query);
+  filter_query = NULL;
+  mrg_event_stop_propagate (e);
+  
+  ui_tweaks++;
+  gcut_cache_invalid (edl);
+  mrg_queue_draw (e->mrg, NULL);
+}
+
+static void update_filter_query (const char *new_string, void *user_data)
+{
+  tab_index = 0;
+  if (filter_query)
+    g_free (filter_query);
+  filter_query = g_strdup (new_string);
+}
+
+static void complete_filter_query_edit (MrgEvent *e, void *data1, void *data2)
+{
+  GeglNode *new = NULL;
+  GeglEDL *edl = data1;
+  gchar **completions = gcut_get_completions (filter_query);
+  int n_completions = strarray_count (completions);
+  if (!selected_node)
+    selected_node = filter_start;
+  if (tab_index > n_completions-1)
+       tab_index = 0;
+
+  if (!completions)
+    return;
+
+  new = gegl_node_new_child (edl->gegl, "operation", completions[tab_index], NULL);
+  if (filter_query)
+    g_free (filter_query);
+  filter_query = NULL;
+  insert_node (selected_node, new);
+  selected_node = new;
+
+
+  g_free (completions);
+  ui_tweaks++;
+  gcut_cache_invalid (edl);
+  mrg_queue_draw (e->mrg, NULL);
+  mrg_event_stop_propagate (e);
+}
+
 
 static float print_nodes (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float y)
 {
@@ -1974,20 +2301,120 @@ static float print_nodes (Mrg *mrg, GeglEDL *edl, GeglNode *node, float x, float
           (node != filter_start) &&
           (node != filter_end))
       {
+        float start_y = y;
+
         if (node == selected_node)
           y = print_props (mrg, edl, node, x + mrg_em(mrg) * 0.5, y);
+#if 1
+        rounded_rectangle (mrg_cr (mrg), x-0.5 * mrg_em(mrg), y - mrg_em (mrg) * 1.0, mrg_em(mrg) * 10.0, mrg_em (mrg) * 1.2, 0.4, -1);
+#endif
 #if 0
-        rounded_rectangle (mrg_cr (mrg), x-0.5*mrg_em(mrg), y - mrg_em (mrg) * 1.0, mrg_em(mrg) * 10.0, mrg_em (mrg) * 1.2, 0.4, -1);
 
         cairo_rectangle (mrg_cr (mrg), x + 1.0 * mrg_em (mrg), y - mrg_em (mrg) * 1.4, mrg_em(mrg) * 0.1, mrg_em (mrg) * 0.4);
 #endif
+        mrg_listen (mrg, MRG_CLICK, select_node, node, NULL);
 
         mrg_set_xy (mrg, x, y);
-        mrg_text_listen (mrg, MRG_CLICK, select_node, node, NULL);
         mrg_printf (mrg, "%s", gegl_node_get_operation (node));
-        mrg_text_listen_done (mrg);
 
         y -= mrg_em (mrg) * 1.5;
+
+        if (selected_node == node)
+        {
+          cairo_rectangle (mrg_cr (mrg), x + 0.0 * mrg_em (mrg), y + mrg_em(mrg)*0.25, mrg_em (mrg) * 12.0, (start_y-y));
+          cairo_set_source_rgba (mrg_cr (mrg), 1.0, 0.0, 0.0, 1.0);
+          cairo_stroke (mrg_cr (mrg));
+
+          mrg_set_xy (mrg, x + 10.4 * mrg_em (mrg), y + mrg_em (mrg) * 1.5);
+          mrg_text_listen (mrg, MRG_CLICK, remove_clip, edl, edl);
+          mrg_printf (mrg, " X ");
+          mrg_text_listen_done (mrg);
+
+          mrg_set_xy (mrg, x, y);
+
+    if (filter_query)
+    {
+      gchar **completions = gcut_get_completions (filter_query);
+      int n_completions = strarray_count (completions);
+      if (tab_index >= n_completions)
+        tab_index = 0;
+
+
+      if (completions)
+      {
+        char *full = completions[tab_index];
+        char *prep = strstr (completions[tab_index], filter_query);
+        int pre = 0;
+        int post = 0;
+
+        if (prep) pre = prep-full;
+
+        if (pre)
+        {
+          char tmpbuf[64]="";
+          int i;
+          for (i = 0; i < 64; i ++) tmpbuf[i]=0;
+          for (i = 0; i < pre; i ++)
+            tmpbuf[i] = completions[tab_index][i];
+          mrg_printf (mrg, "%s", tmpbuf);
+        }
+
+        mrg_edit_start (mrg, update_filter_query, edl);
+        mrg_printf (mrg, "%s", filter_query);
+        mrg_edit_end (mrg);
+        post = strlen (completions[tab_index]) - strlen (filter_query) - pre;
+
+        if (post)
+        {
+          char tmpbuf[64]="";
+          int i;
+          for (i = 0; i < post; i ++)
+            tmpbuf[i] = completions[tab_index][
+               strlen(completions[tab_index]) - post + i];
+          mrg_printf (mrg, "%s", tmpbuf);
+        }
+      }
+      else
+      {
+        mrg_edit_start (mrg, update_filter_query, edl);
+        mrg_printf (mrg, "%s", filter_query);
+        mrg_edit_end (mrg);
+      }
+    
+      mrg_add_binding (mrg, "escape", NULL, "end edit", end_filter_query_edit, edl);
+      mrg_add_binding (mrg, "shift-tab", NULL, "end edit", filter_query_tab_reverse, edl);
+      mrg_add_binding (mrg, "tab", NULL, "end edit", filter_query_tab, edl);
+      mrg_add_binding (mrg, "return", NULL, "end edit", complete_filter_query_edit, edl);
+
+      if (completions && 0)
+      {
+        gint matches=0;
+        mrg_start (mrg, NULL, NULL);
+        mrg_set_xy (mrg, mrg_em(mrg) * 1, mrg_height (mrg) * SPLIT_VER + mrg_em (mrg));
+        for (int i = 0; completions[i] && matches < 40; i++)
+          {
+            if (i == tab_index)
+            mrg_printf (mrg, "[%s]", completions[i]);
+            else
+            mrg_printf (mrg, "%s", completions[i]);
+            mrg_printf (mrg, " ");
+            matches ++;
+          }
+        mrg_end(mrg);
+      }
+
+      if (completions)
+        g_free (completions);
+    }
+    else
+    {
+      mrg_text_listen (mrg, MRG_CLICK, insert_filter, edl, edl);
+      mrg_printf (mrg, "[ add filter ]");
+      mrg_text_listen_done (mrg);
+    }
+          y -= mrg_em (mrg) * 1.0;
+        }
+
       }
 
       {
@@ -2105,7 +2532,6 @@ static void update_ui_clip (Clip *clip, int clip_frame_no)
         }
         clip->filter_graph = serialized_filter;
         g_free (old);
-        fprintf (stderr, "{%s}\n", clip->filter_graph);
       }
       else
         g_free (serialized_filter);
@@ -2147,143 +2573,6 @@ static void update_ui_clip (Clip *clip, int clip_frame_no)
       }
     }
   }
-}
-
-static int array_contains_string (gchar **array, const char *str)
-{
-  int i;
-  for ( i = 0; array[i]; i++)
-  {
-    if (!strcmp (array[i], str))
-      return 1;
-  }
-  return 0;
-}
-
-/* XXX: add some constarint?  like having input, or output pad or both - or
- * being a specific subclass - as well as sort, so that best (prefix_) match
- * comes first
- */
-static char **gcut_get_completions (const char *filter_query)
-{
-  gchar **completions = NULL;
-  gchar **operations = gegl_list_operations (NULL);
-  gchar *alloc = NULL;
-  int matches = 0;
-  int memlen = sizeof (gpointer); // for terminating NULL
-  int match = 0;
-
-  if (!filter_query || filter_query[0]=='\0') return NULL;
-
-  // score matches, sort them - and default to best
-
-  for (int i = 0; operations[i]; i++)
-  {
-    if (strstr (operations[i], filter_query))
-    {
-      matches ++;
-      memlen += strlen (operations[i]) + 1 + sizeof (gpointer);
-    }
-  }
-
-  completions = g_malloc0 (memlen);
-  alloc = ((gchar*)completions) + (matches + 1) * sizeof (gpointer);
-
-  if (0)
-  {
-  for (int i = 0; operations[i]; i++)
-  {
-    if (strstr (operations[i], filter_query))
-    {
-      completions[match] = alloc;
-      strcpy (alloc, operations[i]);
-      alloc += strlen (alloc) + 1;
-      match++;
-    }
-  }
-  }
-
-  if(1){
-    char *with_gegl = g_strdup_printf ("gegl:%s", filter_query);
-    for (int i = 0; operations[i]; i++)
-    {
-      if (g_str_has_prefix (operations[i], filter_query) ||
-          g_str_has_prefix (operations[i], with_gegl))
-      {
-        completions[match] = alloc;
-        strcpy (alloc, operations[i]);
-        alloc += strlen (alloc) + 1;
-        match++;
-      }
-    }
-
-    for (int i = 0; operations[i]; i++)
-    {
-      if (strstr (operations[i], filter_query) &&
-          !array_contains_string (completions, operations[i]))
-      {
-        completions[match] = alloc;
-        strcpy (alloc, operations[i]);
-        alloc += strlen (alloc) + 1;
-        match++;
-      }
-    }
-    g_free (with_gegl);
-  }
-  g_free (operations);
-
-  if (match == 0)
-  {
-    g_free (completions);
-    return NULL;
-  }
-  return completions;
-}
-
-static void complete_filter_query_edit (MrgEvent *e, void *data1, void *data2)
-{
-  GeglNode *new = NULL;
-  GeglEDL *edl = data1;
-  gchar **completions = gcut_get_completions (filter_query);
-  if (!selected_node)
-    selected_node = filter_start;
-
-  if (!completions)
-    return;
-
-  new = gegl_node_new_child (edl->gegl, "operation", completions[0], NULL);
-  if (filter_query)
-    g_free (filter_query);
-  filter_query = NULL;
-  insert_node (selected_node, new);
-  selected_node = new;
-
-
-  g_free (completions);
-  ui_tweaks++;
-  gcut_cache_invalid (edl);
-  mrg_queue_draw (e->mrg, NULL);
-  mrg_event_stop_propagate (e);
-}
-
-static void end_filter_query_edit (MrgEvent *e, void *data1, void *data2)
-{
-  GeglEDL *edl = data1;
-  if (filter_query)
-    g_free (filter_query);
-  filter_query = NULL;
-  mrg_event_stop_propagate (e);
-  
-  ui_tweaks++;
-  gcut_cache_invalid (edl);
-  mrg_queue_draw (e->mrg, NULL);
-}
-
-static void update_filter_query (const char *new_string, void *user_data)
-{
-  if (filter_query)
-    g_free (filter_query);
-  filter_query = g_strdup (new_string);
 }
 
 
@@ -2337,35 +2626,6 @@ static void gcut_draw (Mrg     *mrg,
     }
     y2 = print_nodes (mrg, edl, filter_start, mrg_em (mrg), y2);
 
-    if (filter_query)
-    {
-      mrg_set_xy (mrg, mrg_em(mrg) * 1, y2);
-      mrg_edit_start (mrg, update_filter_query, edl);
-      mrg_printf (mrg, "%s", filter_query);
-      mrg_edit_end (mrg);
-    
-      mrg_add_binding (mrg, "escape", NULL, "end edit", end_filter_query_edit, edl);
-      mrg_add_binding (mrg, "return", NULL, "end edit", complete_filter_query_edit, edl);
-
-      // XXX: print completions that are clickable?
-      {
-          gchar **operations = gcut_get_completions (filter_query);
-          mrg_start (mrg, NULL, NULL);
-          mrg_set_xy (mrg, mrg_em(mrg) * 1, mrg_height (mrg) * SPLIT_VER + mrg_em (mrg));
-          if (operations)
-          {
-          gint matches=0;
-          for (int i = 0; operations[i] && matches < 40; i++)
-            {
-              mrg_printf (mrg, "%s", operations[i]);
-              mrg_printf (mrg, " ");
-              matches ++;
-            }
-          mrg_end(mrg);
-          g_free (operations);
-        }
-      }
-    }
   }
 
   cairo_set_source_rgba (cr, 1, 1,1, 1);
@@ -2669,8 +2929,8 @@ void gcut_ui (Mrg *mrg, void *data)
                       ,edl);
         break;
      case GEDL_UI_MODE_PART:
-        mrg_gegl_blit (mrg, (int)(mrg_width (mrg) * 0.2), 0,
-                      (int)(mrg_width (mrg) * 0.8),
+        mrg_gegl_blit (mrg, (int)(mrg_em(mrg) * 22), 0,
+                      (int)-1,
                       mrg_height (mrg) * SPLIT_VER,
                       o->edl->cached_result,
                       0, 0,
@@ -2679,18 +2939,13 @@ void gcut_ui (Mrg *mrg, void *data)
         break;
   }
 
-
   switch (edl->ui_mode)
   {
      case GEDL_UI_MODE_FULL:
      case GEDL_UI_MODE_TIMELINE:
      case GEDL_UI_MODE_PART:
-     gcut_draw (mrg, edl, 0, mrg_height (mrg) * SPLIT_VER, edl->scale, edl->t0);
-
-
-
-
-  break;
+       gcut_draw (mrg, edl, 0, mrg_height (mrg) * SPLIT_VER, edl->scale, edl->t0);
+       break;
      case GEDL_UI_MODE_NONE:
         break;
      break;
