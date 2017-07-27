@@ -15,6 +15,7 @@ getting copies of updates to gcut in gegl as well as updated to the README
 
  - single-track editing, with cross fades
  - keeps source audio when editing (plans to also permit overriding)
+ - mixing of different fps source videos, and per clip slowdown/speedup
  - tuning of in/out points.
  - video audio correctly cut
  - shuffling of clips
@@ -39,8 +40,9 @@ In this screenshot, showing the purely synthetic used gegl operations default
 project of gcut. Showing visualization of keyframed parameters and permit
 setting them through sliders. Slanted clip transitions indicates cross-fades.
 Note that the current UI is the first attempt at a direct mapping of the file
-format. The chains of operations are shown with indentation, first the clip
-ones if any and then the clip filters.
+format. The chains of operations are shown with indentation, as well as as
+nodes - adding clones / reusing nodes is planned by connecting across bits of
+the hierarchy like other graph/node editors.
 
 ![screenshot](http://pippin.gimp.org/gedl/gedl2.png)
 

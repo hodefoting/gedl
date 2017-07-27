@@ -11,6 +11,7 @@ Clip *clip_new (GeglEDL *edl)
   Clip *clip = g_malloc0 (sizeof (Clip));
   clip->edl  = edl;
   clip->gegl = gegl_node_new ();
+  clip->rate = 1.0;
 
   clip->chain_loader = gegl_node_new_child (clip->gegl, "operation", "gegl:nop", NULL);
 
@@ -179,47 +180,53 @@ void clip_set_path (Clip *clip, const char *in_path)
   }
 }
 
-int clip_get_start (Clip *clip)
+double clip_get_start (Clip *clip)
 {
   return clip->start;
 }
 
-int clip_get_end (Clip *clip)
+double clip_get_end (Clip *clip)
 {
   return clip->end;
 }
 
-int clip_get_frames (Clip *clip)
+static inline double clip_fps (Clip *clip)
 {
-  int frames = clip_get_end (clip) - clip_get_start (clip) + 1;
-  if (frames < 0) frames = 0;
-  if (clip->is_meta)
-    return 0;
-  return frames;
+  if (!clip) return 0.0;
+  return clip->fps>0.01?clip->fps:clip->edl->fps;
 }
 
-void clip_set_start (Clip *clip, int start)
+double clip_get_duration (Clip *clip)
+{
+  double duration = clip_get_end (clip) - clip_get_start (clip) + 1.0/clip_fps(clip);
+  if (duration < 0) duration = 0;
+  if (clip->is_meta)
+    return 0;
+  return duration;
+}
+
+void clip_set_start (Clip *clip, double start)
 {
   clip->start = start;
 }
-void clip_set_end (Clip *clip, int end)
+void clip_set_end (Clip *clip, double end)
 {
   clip->end = end;
 }
 
-void clip_set_range (Clip *clip, int start, int end)
+void clip_set_range (Clip *clip, double start, double end)
 {
   clip_set_start (clip, start);
   clip_set_end (clip, end);
 }
 
-void clip_set_full (Clip *clip, const char *path, int start, int end)
+void clip_set_full (Clip *clip, const char *path, double start, double end)
 {
   clip_set_path (clip, path);
   clip_set_range (clip, start, end);
 }
 
-Clip *clip_new_full (GeglEDL *edl, const char *path, int start, int end)
+Clip *clip_new_full (GeglEDL *edl, const char *path, double start, double end)
 {
   Clip *clip = clip_new (edl);
   clip_set_full (clip, path, start, end);
@@ -257,8 +264,8 @@ static void clip_set_proxied (Clip *clip)
     }
 }
 
-void clip_set_frame_no (Clip *clip, int clip_frame_no);
-void clip_set_frame_no (Clip *clip, int clip_frame_no)
+void clip_set_frame_no (Clip *clip, double clip_frame_no);
+void clip_set_frame_no (Clip *clip, double clip_frame_no)
 {
   if (clip_frame_no < 0)
     clip_frame_no = 0;
@@ -275,10 +282,15 @@ void clip_set_frame_no (Clip *clip, int clip_frame_no)
 
   if (!clip_is_static_source (clip))
     {
+      double fps = clip_fps (clip);
+
       if (clip->edl->use_proxies)
-        gegl_node_set (clip->proxy_loader, "frame", clip_frame_no, NULL);
+      {
+        gegl_node_set (clip->proxy_loader, "frame", (gint)(clip_frame_no * fps), NULL);
+      }
       else
-        gegl_node_set (clip->full_loader, "frame", clip_frame_no, NULL);
+        gegl_node_set (clip->full_loader, "frame", (gint)(clip_frame_no * fps), NULL);
+
     }
 }
 
@@ -348,7 +360,7 @@ void remove_in_betweens (GeglNode *nop_scaled, GeglNode *nop_filtered)
  gegl_node_link_many (nop_scaled, nop_filtered, NULL);
 }
 
-static void clip_rig_chain (Clip *clip, int clip_frame_no)
+static void clip_rig_chain (Clip *clip, double clip_pos)
 {
   GeglEDL *edl = clip->edl;
   int use_proxies = edl->use_proxies;
@@ -373,42 +385,42 @@ static void clip_rig_chain (Clip *clip, int clip_frame_no)
     else
       gegl_node_link_many (clip->chain_loader, clip->loader, NULL);
 
-    gegl_create_chain (clip->path, clip->chain_loader, clip->loader, clip_frame_no - clip->start,
+    gegl_create_chain (clip->path, clip->chain_loader, clip->loader, clip_pos - clip->start,
                        edl->height,
                        NULL, NULL);//&error);
   }
 
-      if (clip->filter_graph)
-        {
-           GError *error = NULL;
-           gegl_create_chain (clip->filter_graph, clip->nop_scaled, clip->nop_crop, clip_frame_no - clip->start, edl->height, NULL, &error);
-           if (error)
-             {
-               /* should set error string */
-               fprintf (stderr, "%s\n", error->message);
-               g_error_free (error);
-             }
+  if (clip->filter_graph)
+    {
+       GError *error = NULL;
+       gegl_create_chain (clip->filter_graph, clip->nop_scaled, clip->nop_crop, clip_pos - clip->start, edl->height, NULL, &error);
+       if (error)
+         {
+           /* should set error string */
+           fprintf (stderr, "%s\n", error->message);
+           g_error_free (error);
          }
-      /**********************************************************************/
+     }
+  /**********************************************************************/
 
-
-      // flags,..    FULL   PREVIEW   FULL_CACHE|PREVIEW  STORE_FULL_CACHE
-      clip_set_frame_no (clip, clip_frame_no);
+  // flags,..    FULL   PREVIEW   FULL_CACHE|PREVIEW  STORE_FULL_CACHE
+  clip_set_frame_no (clip, clip_pos);
   g_mutex_unlock (&clip->mutex);
 }
 
-void clip_render_frame (Clip *clip, int clip_frame_no)
+void clip_render_pos (Clip *clip, double clip_frame_pos)
 {
-      clip_rig_chain (clip, clip_frame_no);
-      g_mutex_lock (&clip->mutex);
-      gegl_node_process (clip->loader); // for the audio fetch
-      clip_fetch_audio (clip);
+  double pos = 
+    clip->start + (clip_frame_pos - clip->start) * clip->rate;
 
-      g_mutex_unlock (&clip->mutex);
+  clip_rig_chain (clip, pos);
+  g_mutex_lock (&clip->mutex);
+  gegl_node_process (clip->loader); // for the audio fetch
+  clip_fetch_audio (clip);
+  g_mutex_unlock (&clip->mutex);
 }
 
-
-gchar *clip_get_frame_hash (Clip *clip, int clip_frame_no)
+gchar *clip_get_pos_hash (Clip *clip, double clip_frame_pos)
 {
   GeglEDL *edl = clip->edl;
   gchar *frame_recipe;
@@ -416,10 +428,13 @@ gchar *clip_get_frame_hash (Clip *clip, int clip_frame_no)
   GChecksum *hash;
   int is_static_source = clip_is_static_source (clip);
 
-  frame_recipe = g_strdup_printf ("%s: %s %i %s %ix%i",
-      "gcut-pre-4",
+  // quantize to clip/project fps 
+  //clip_frame_pos = ((int)(clip_frame_pos * clip_fps (clip) + 0.5))/ clip_fps (clip);
+
+  frame_recipe = g_strdup_printf ("%s: %.3f %s %.3f %s %ix%i",
+      "gcut-pre-4", clip->rate,
       clip_get_path (clip),
-      clip->filter_graph || (!is_static_source) ? clip_frame_no : 0,
+      clip->filter_graph || (!is_static_source) ? clip_frame_pos : 0.0,
       clip->filter_graph,
       edl->video_width,
       edl->video_height);
